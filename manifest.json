@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.8.1 IPE锚点",
+    "display_name": "红霞导演室 v0.4.8.2 浮窗开关",
     "loading_order": 22,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.8.1",
-    "description": "IPE锚点版：红霞浮窗优先贴着已成功显示的 IPE 快捷入口生成，点击弹出完整导演室面板"
+    "version": "0.4.8.2",
+    "description": "修复小红霞点击弹不出面板，并新增显示/隐藏小红霞浮窗开关"
 }

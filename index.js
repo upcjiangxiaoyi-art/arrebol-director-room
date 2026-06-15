@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.8.1.1 探针直连
+ * Arrebol Director Room 红霞导演室 v0.4.8.2.2.1 探针直连
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v0481-ipe-anchor";
+    var EXT = "arrebol-director-room-v0482-popup-switch";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -22,6 +22,7 @@
         autoInjectEmotion: true,
         autoInjectPlot: true,
         injectMode: "visible",
+        showFloatingWindow: true,
 
         range: "30",
         customRange: 0,
@@ -221,6 +222,9 @@
 
         var aiP = qForm("adr044-auto-inject-plot");
         if (aiP) save("autoInjectPlot", !!aiP.checked);
+
+        var sfw = qForm("adr044-show-floating-window");
+        if (sfw) save("showFloatingWindow", !!sfw.checked);
 
         saveNow();
     }
@@ -1167,7 +1171,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v0.4.8.1】\n";
+        out += "【红霞探针 v0.4.8.2.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1286,10 +1290,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.8.1.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.8.2.2.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">IPE锚点版：抽屉保留兜底，红霞浮窗优先贴着已成功显示的 IPE 按钮生成。</div>'
+            + '<div class="adr044-note">浮窗开关版：小红霞可在共享设置中显示/隐藏；点击小红霞会直接弹出完整导演室面板。</div>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1308,6 +1312,7 @@
             + opt(st.injectMode, "visible", "可见文本注入（推荐测试）")
             + opt(st.injectMode, "hidden", "HTML 注释隐藏注入")
             + '</select>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '</details>'
 
             + '<div class="adr044-tabs">'
@@ -1439,6 +1444,17 @@
             });
         }
 
+        var showFab = qForm("adr044-show-floating-window");
+        if (showFab && !showFab.__adr044Bound) {
+            showFab.__adr044Bound = true;
+            showFab.addEventListener("change", function () {
+                save("showFloatingWindow", !!showFab.checked);
+                saveNow();
+                if (showFab.checked) adr048EnsureFabLater();
+                else adr048RemoveFab();
+            });
+        }
+
         ["emotion", "plot"].forEach(function (type) {
             var modelSelect = q("#adr044-" + type + "-model-select");
             if (modelSelect && !modelSelect.__adr044Bound) {
@@ -1489,7 +1505,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v0.4.8.1】\n";
+        out += "【红霞精准读取预览 v0.4.8.2.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1578,7 +1594,7 @@
 
         // 把外层抽屉壳换成浮窗面板壳，但内部保留 adr044 ids，便于复用核心逻辑。
         html = html.replace('id="adr044-drawer"', 'id="adr048-popup-inner"');
-        html = html.replace('🎬 红霞导演室 v0.4.8.1', '🎬 红霞导演室');
+        html = html.replace('🎬 红霞导演室 v0.4.8.2.2', '🎬 红霞导演室');
         html = html.replace('class="inline-drawer-toggle inline-drawer-header"', 'class="adr048-popup-header"');
         html = html.replace('<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>', '<button type="button" id="adr048-popup-close">×</button>');
         html = html.replace('class="inline-drawer-content"', 'class="adr048-popup-content"');
@@ -1610,28 +1626,70 @@
         }
     }
 
+
     function adr048OpenPopupPanel() {
         try {
             adr048CreatePopupPanel();
-            var p = rootDoc().querySelector("#adr048-popup-panel");
-            if (!p) return;
+            var d = rootDoc();
+            var p = d.querySelector("#adr048-popup-panel");
+            var shell = d.querySelector("#adr048-popup-shell");
+            if (!p || !shell) {
+                console.error("[ADR0482] popup elements missing");
+                return;
+            }
+
             p.setAttribute("data-open", "1");
-            p.style.setProperty("display", "block", "important");
-            p.style.setProperty("visibility", "visible", "important");
-            p.style.setProperty("opacity", "1", "important");
+
+            // 强制打开遮罩层
+            adr048SetImportant(p, "display", "block");
+            adr048SetImportant(p, "visibility", "visible");
+            adr048SetImportant(p, "opacity", "1");
+            adr048SetImportant(p, "pointer-events", "auto");
+            adr048SetImportant(p, "position", "fixed");
+            adr048SetImportant(p, "inset", "0");
+            adr048SetImportant(p, "z-index", "2147483646");
+
+            // 强制打开面板壳
+            adr048SetImportant(shell, "display", "block");
+            adr048SetImportant(shell, "visibility", "visible");
+            adr048SetImportant(shell, "opacity", "1");
+            adr048SetImportant(shell, "pointer-events", "auto");
+            adr048SetImportant(shell, "position", "fixed");
+            adr048SetImportant(shell, "left", "10px");
+            adr048SetImportant(shell, "right", "10px");
+            adr048SetImportant(shell, "top", "72px");
+            adr048SetImportant(shell, "bottom", "72px");
+            adr048SetImportant(shell, "z-index", "2147483647");
+            adr048SetImportant(shell, "overflow", "auto");
+            adr048SetImportant(shell, "-webkit-overflow-scrolling", "touch");
+
+            try {
+                var content = shell.querySelector(".adr048-popup-content");
+                if (content) adr048SetImportant(content, "display", "block");
+            } catch (e1) {}
+
             adr048BindPopupPanel();
             bindDirect();
+
+            try {
+                shell.scrollTop = 0;
+            } catch (e2) {}
         } catch (e) {
-            console.error("[ADR048] open popup failed", e);
+            console.error("[ADR0482] open popup failed", e);
+            try { alert("红霞面板打开失败：" + (e.message || String(e))); } catch (_) {}
         }
     }
+
 
     function adr048ClosePopupPanel() {
         try {
             var p = rootDoc().querySelector("#adr048-popup-panel");
             if (!p) return;
             p.setAttribute("data-open", "0");
-            p.style.setProperty("display", "none", "important");
+            adr048SetImportant(p, "display", "none");
+            adr048SetImportant(p, "visibility", "hidden");
+            adr048SetImportant(p, "opacity", "0");
+            adr048SetImportant(p, "pointer-events", "none");
         } catch (e) {}
     }
 
@@ -1669,10 +1727,32 @@
     }
 
 
+
+    function adr048RemoveFab() {
+        try {
+            var d = rootDoc();
+            var btn = d.querySelector("#adr048-fab");
+            if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+        } catch (e) {}
+    }
+
+    function adr048ShouldShowFab() {
+        try {
+            return settings().showFloatingWindow !== false;
+        } catch (e) {
+            return true;
+        }
+    }
+
     function adr048CreateFab() {
         try {
             var d = rootDoc();
             if (!d) return;
+
+            if (!adr048ShouldShowFab()) {
+                adr048RemoveFab();
+                return;
+            }
 
             var btn = d.querySelector("#adr048-fab");
             if (!btn) {
@@ -1815,10 +1895,20 @@
             // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
             if (!btn.__adr048ClickBound) {
                 btn.__adr048ClickBound = true;
-                btn.addEventListener("click", function(ev) {
+
+                function hardOpen(ev) {
                     try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
-                    adr048OpenPopupPanel();
-                }, true);
+                    setTimeout(function () {
+                        try { adr048OpenPopupPanel(); } catch (e2) { console.error(e2); }
+                    }, 20);
+                    return false;
+                }
+
+                btn.onclick = hardOpen;
+                btn.addEventListener("click", hardOpen, true);
+                btn.addEventListener("pointerup", hardOpen, true);
+                // touchend 已被拖拽逻辑使用，这里也补一层延迟硬开。
+                btn.addEventListener("touchend", hardOpen, true);
             }
         } catch (e2) {
             console.error("[ADR0481] create anchored fab failed", e2);
@@ -1827,6 +1917,10 @@
 
     function adr048EnsureFabLater() {
         adr048CreatePopupPanel();
+        if (!adr048ShouldShowFab()) {
+            adr048RemoveFab();
+            return;
+        }
         adr048CreateFab();
         setTimeout(adr048CreateFab, 400);
         setTimeout(adr048CreateFab, 900);
