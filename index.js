@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.4.3
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.5.3
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1050,7 +1050,7 @@
 
             chat[idx].mes = mes.trimEnd() + add;
 
-            // v1.0.5.6.4.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
+            // v1.0.5.6.5.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
             adrDSaveThenRedrawAfterInject();
             return true;
         } catch (e) {
@@ -1435,7 +1435,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.6.4.3.2】\n";
+        out += "【红霞探针 v1.0.5.6.5.3.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1574,7 +1574,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.4.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.5.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -2201,7 +2201,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.6.4.3.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.6.5.3.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2812,23 +2812,75 @@
         } catch (e) {}
     }
 
+
+    var ADR_D_AUTO_STATE_KEY = "arrebol_d_auto_trigger_state_v1";
+
+    function adrDAutoStateAll() {
+        try {
+            var s = rootWin().localStorage.getItem(ADR_D_AUTO_STATE_KEY) || "{}";
+            var obj = JSON.parse(s);
+            return obj && typeof obj === "object" ? obj : {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function adrDSaveAutoStateAll(obj) {
+        try {
+            rootWin().localStorage.setItem(ADR_D_AUTO_STATE_KEY, JSON.stringify(obj || {}));
+        } catch (e) {}
+    }
+
+    function adrDAutoStateKey(type) {
+        return String(adrDChatKey ? adrDChatKey() : "chat") + "::" + String(type || "emotion");
+    }
+
+    function adrDGetAutoState(type, count) {
+        var all = adrDAutoStateAll();
+        var key = adrDAutoStateKey(type);
+        var item = all[key];
+
+        if (!item || typeof item !== "object" || !Number.isFinite(Number(item.base))) {
+            item = { base: Number(count) || 0, updatedAt: Date.now() };
+            all[key] = item;
+            adrDSaveAutoStateAll(all);
+        }
+
+        return item;
+    }
+
+    function adrDSetAutoBaseline(type, count) {
+        var all = adrDAutoStateAll();
+        var key = adrDAutoStateKey(type);
+        all[key] = { base: Number(count) || 0, updatedAt: Date.now() };
+        adrDSaveAutoStateAll(all);
+    }
+
+    function adrDAdvanceAutoBaseline(type, count) {
+        adrDSetAutoBaseline(type, count);
+    }
+
     function adrDAutoCounterText(type) {
         try {
             var st = settings();
             var enabled = type === "plot" ? !!st.autoTriggerPlot : !!st.autoTriggerEmotion;
             var label = type === "plot" ? "剧情导演" : "情感导演";
             var count = adrDAssistantRoundCount();
-            var key = type === "plot" ? "lastAutoTriggerPlotCount" : "lastAutoTriggerEmotionCount";
-            var base = Number(st[key]);
             var n = autoTriggerRange(type);
 
             if (!enabled) {
                 return label + "：自动触发未开启｜当前有效角色回复 " + count + " 条";
             }
 
-            if (!Number.isFinite(base) || base < 0) base = count;
             if (!Number.isFinite(n) || n <= 0) {
                 return label + "：自动触发间隔未设置｜当前有效角色回复 " + count + " 条";
+            }
+
+            var state = adrDGetAutoState(type, count);
+            var base = Number(state.base);
+            if (!Number.isFinite(base) || base < 0 || base > count) {
+                base = count;
+                adrDSetAutoBaseline(type, count);
             }
 
             var passed = Math.max(0, count - base);
@@ -2882,9 +2934,11 @@
 
             if (!Number.isFinite(Number(st.lastAutoTriggerEmotionCount)) || Number(st.lastAutoTriggerEmotionCount) < 0) {
                 st.lastAutoTriggerEmotionCount = count;
+                adrDAdvanceAutoBaseline("emotion", count);
             }
             if (!Number.isFinite(Number(st.lastAutoTriggerPlotCount)) || Number(st.lastAutoTriggerPlotCount) < 0) {
                 st.lastAutoTriggerPlotCount = count;
+                adrDAdvanceAutoBaseline("plot", count);
             }
 
             saveNow();
@@ -2918,7 +2972,7 @@
             if (st.lastAutoTriggerChatKey !== key) {
                 var oldKey = String(st.lastAutoTriggerChatKey || "");
 
-                // v1.0.5.6.4：刷新页面/初始加载时，chat key 可能短暂不稳定。
+                // v1.0.5.6.5：刷新页面/初始加载时，chat key 可能短暂不稳定。
                 // 这种情况只更新显示，不重置基线，避免“已新增”每次刷新归零。
                 if (adrDIsUnstableChatKey(key)) {
                     adrDUpdateAutoCounters();
@@ -2935,7 +2989,9 @@
                 // 如果只是页面刷新后重新识别到同一聊天，保留原基线。
                 if (oldWasStable && oldKey !== key) {
                     st.lastAutoTriggerEmotionCount = count;
+                adrDAdvanceAutoBaseline("emotion", count);
                     st.lastAutoTriggerPlotCount = count;
+                adrDAdvanceAutoBaseline("plot", count);
                     console.log("[Arrebol D] real chat changed, reset auto trigger baseline", oldKey, "=>", key, count);
                 } else {
                     if (emotionBad) st.lastAutoTriggerEmotionCount = count;
@@ -2951,9 +3007,11 @@
 
             if (!Number.isFinite(Number(st.lastAutoTriggerEmotionCount)) || Number(st.lastAutoTriggerEmotionCount) < 0) {
                 st.lastAutoTriggerEmotionCount = count;
+                adrDAdvanceAutoBaseline("emotion", count);
             }
             if (!Number.isFinite(Number(st.lastAutoTriggerPlotCount)) || Number(st.lastAutoTriggerPlotCount) < 0) {
                 st.lastAutoTriggerPlotCount = count;
+                adrDAdvanceAutoBaseline("plot", count);
             }
 
             var toRun = [];
@@ -2961,11 +3019,13 @@
             if (st.autoTriggerEmotion && nEmotion > 0 && count - Number(st.lastAutoTriggerEmotionCount) >= nEmotion) {
                 toRun.push({ type: "emotion", n: nEmotion });
                 st.lastAutoTriggerEmotionCount = count;
+                adrDAdvanceAutoBaseline("emotion", count);
             }
 
             if (st.autoTriggerPlot && nPlot > 0 && count - Number(st.lastAutoTriggerPlotCount) >= nPlot) {
                 toRun.push({ type: "plot", n: nPlot });
                 st.lastAutoTriggerPlotCount = count;
+                adrDAdvanceAutoBaseline("plot", count);
             }
 
             saveNow();
@@ -3024,7 +3084,7 @@
             }
         } catch (e2) {}
 
-        // v1.0.5.6.4：页面刷新/插件重新挂载时不主动重置自动触发基线。
+        // v1.0.5.6.5：页面刷新/插件重新挂载时不主动重置自动触发基线。
         // 基线只在开关/间隔改变或真正切换聊天时重置。
         setTimeout(adrDUpdateAutoCounters, 1200);
     }
