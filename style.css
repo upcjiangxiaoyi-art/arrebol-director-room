@@ -510,44 +510,33 @@
 }
 
 
-/* v1.0.5.6 prompt template library */
-.adr044-template-box {
-  margin: 10px 0 12px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 170, 195, 0.32);
-  background: rgba(255, 238, 246, 0.08);
+/* v1.0.5.6.1 compact prompt template selector */
+.adr044-template-compact {
+  margin: 8px 0 10px;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 170, 195, 0.26);
+  background: rgba(255, 238, 246, 0.06);
 }
-.adr044-template-title {
-  font-weight: 700;
-  margin-bottom: 7px;
-  color: #d989a1;
-}
-.adr044-template-box select,
-.adr044-template-box input {
+.adr044-template-compact select,
+.adr044-template-compact input {
   width: 100%;
-  margin: 5px 0;
+  margin: 4px 0;
   box-sizing: border-box;
 }
-.adr044-template-actions {
+.adr044-template-mini-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 5px;
 }
-.adr044-template-actions button {
-  min-height: 32px;
+.adr044-template-mini-actions button {
+  min-height: 30px;
   font-size: 12px;
-  white-space: nowrap;
 }
 .adr044-template-status {
-  min-height: 16px;
-  margin-top: 6px;
+  min-height: 15px;
+  margin-top: 5px;
   font-size: 12px;
   color: #d989a1;
-}
-@media (max-width: 520px) {
-  .adr044-template-actions {
-    grid-template-columns: 1fr;
-  }
 }

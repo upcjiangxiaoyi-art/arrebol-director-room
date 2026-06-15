@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.1
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1050,7 +1050,7 @@
 
             chat[idx].mes = mes.trimEnd() + add;
 
-            // v1.0.5.6：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
+            // v1.0.5.6.1：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
             adrDSaveThenRedrawAfterInject();
             return true;
         } catch (e) {
@@ -1435,7 +1435,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.6.2】\n";
+        out += "【红霞探针 v1.0.5.6.1.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1546,19 +1546,16 @@
             + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">自动触发计数：打开面板后刷新</div>'
             + '</details>'
 
-            + '<div class="adr044-template-box">'
-            + '<div class="adr044-template-title">模板库</div>'
-            + '<select id="adr044-template-select-' + type + '">' + adrDTemplateSelectOptions(type) + '</select>'
-            + '<input id="adr044-template-name-' + type + '" placeholder="模板名，比如：慢热克制 / 陆星河专用">'
-            + '<div class="adr044-template-actions">'
-            + '<button type="button" id="adr044-template-apply-' + type + '">应用模板</button>'
-            + '<button type="button" id="adr044-template-save-' + type + '">保存为模板</button>'
+            + '<details><summary>' + title + '预设</summary>'
+            + '<div class="adr044-template-compact">'
+            + '<select id="adr044-template-select-' + type + '">' + adrDTemplateOptions(type) + '</select>'
+            + '<input id="adr044-template-name-' + type + '" placeholder="新模板名 / 当前模板名">'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-template-save-' + type + '">保存当前为模板</button>'
             + '<button type="button" id="adr044-template-delete-' + type + '">删除模板</button>'
             + '</div>'
             + '<div class="adr044-template-status" id="adr044-template-status-' + type + '"></div>'
             + '</div>'
-
-            + '<details><summary>' + title + '预设</summary>'
             + '<textarea id="adr044-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
             + '</details>'
 
@@ -1577,7 +1574,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.1</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1720,7 +1717,9 @@
         try {
             var st = settings();
             return String(type === "plot" ? (st.plotPreset || "") : (st.emotionPreset || ""));
-        } catch (e) { return ""; }
+        } catch (e) {
+            return "";
+        }
     }
 
     function adrDDefaultTemplates() {
@@ -1737,6 +1736,7 @@
     function adrDNormalizeTemplates(raw) {
         var def = adrDDefaultTemplates();
         var out = { emotion: [], plot: [] };
+
         ["emotion", "plot"].forEach(function (type) {
             var arr = raw && Array.isArray(raw[type]) ? raw[type] : [];
             arr.forEach(function (it) {
@@ -1747,6 +1747,7 @@
             });
             if (!out[type].length) out[type] = def[type];
         });
+
         return out;
     }
 
@@ -1754,13 +1755,16 @@
         try {
             var rw = rootWin();
             if (rw.__adrDPromptTemplatesCache) return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
+
             var s = "";
             try { s = rw.localStorage.getItem(ADR_D_TEMPLATE_KEY) || ""; } catch (e1) {}
+
             if (!s) {
                 rw.__adrDPromptTemplatesCache = adrDDefaultTemplates();
                 adrDSaveTemplates(rw.__adrDPromptTemplatesCache);
                 return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
             }
+
             rw.__adrDPromptTemplatesCache = adrDNormalizeTemplates(JSON.parse(s));
             return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
         } catch (e) {
@@ -1781,7 +1785,7 @@
         }
     }
 
-    function adrDTemplateSelectOptions(type) {
+    function adrDTemplateOptions(type) {
         var data = adrDLoadTemplates();
         var arr = data[type] || [];
         return arr.map(function (it, idx) {
@@ -1789,14 +1793,22 @@
         }).join("");
     }
 
-    function adrDRefreshTemplateSelects(type) {
+    function adrDRefreshTemplateSelects(type, selectedName) {
         try {
-            var html = adrDTemplateSelectOptions(type);
+            var html = adrDTemplateOptions(type);
             Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-select-" + type)).forEach(function (sel) {
-                var old = sel.value;
                 sel.innerHTML = html;
-                if (old && Number(old) < sel.options.length) sel.value = old;
-                else sel.value = "0";
+                var matched = false;
+                if (selectedName) {
+                    for (var i = 0; i < sel.options.length; i++) {
+                        if (sel.options[i].textContent === selectedName) {
+                            sel.value = String(i);
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+                if (!matched) sel.value = "0";
             });
         } catch (e) {}
     }
@@ -1811,112 +1823,127 @@
     }
 
     function adrDGetPresetBox(type) { return qForm("adr044-" + type + "-preset"); }
-    function adrDGetTemplateNameBox(type) { return qForm("adr044-template-name-" + type); }
     function adrDGetTemplateSelect(type) { return qForm("adr044-template-select-" + type); }
+    function adrDGetTemplateName(type) { return qForm("adr044-template-name-" + type); }
 
     function adrDApplyTemplate(type) {
         var data = adrDLoadTemplates();
         var sel = adrDGetTemplateSelect(type);
         var idx = sel ? Number(sel.value) : 0;
         var item = data[type] && data[type][idx];
+
         if (!item) {
-            adrDTemplateStatus(type, "没有找到这个模板", "#e28a9c");
+            adrDTemplateStatus(type, "没有找到模板", "#e28a9c");
             return;
         }
+
         var preset = adrDGetPresetBox(type);
         if (preset) {
             preset.value = String(item.text || "");
             try { preset.dispatchEvent(new Event("input", { bubbles: true })); } catch (e) {}
         }
-        var name = adrDGetTemplateNameBox(type);
+
+        var name = adrDGetTemplateName(type);
         if (name) name.value = String(item.name || "");
+
         try {
             syncType(type);
             adrDSaveLocalBackup(settings());
         } catch (e2) {}
-        adrDTemplateStatus(type, "已应用模板：" + item.name, "#8ed99d");
+
+        adrDTemplateStatus(type, "已切换：" + item.name, "#8ed99d");
     }
 
-    function adrDSaveCurrentAsTemplate(type) {
-        var nameBox = adrDGetTemplateNameBox(type);
+    function adrDSaveCurrentTemplate(type) {
+        var nameBox = adrDGetTemplateName(type);
         var preset = adrDGetPresetBox(type);
         var name = nameBox ? String(nameBox.value || "").trim() : "";
         var text = preset ? String(preset.value || "") : "";
+
         if (!name) {
-            adrDTemplateStatus(type, "请先填写模板名", "#e28a9c");
+            adrDTemplateStatus(type, "请先写模板名", "#e28a9c");
             return;
         }
+
         var data = adrDLoadTemplates();
         var arr = data[type] || [];
-        var existing = -1;
+        var found = -1;
+
         arr.forEach(function (it, idx) {
-            if (String(it.name || "") === name) existing = idx;
+            if (String(it.name || "") === name) found = idx;
         });
-        if (existing >= 0) arr[existing] = { name: name, text: text };
+
+        if (found >= 0) arr[found] = { name: name, text: text };
         else arr.push({ name: name, text: text });
+
         data[type] = arr;
         adrDSaveTemplates(data);
-        adrDRefreshTemplateSelects(type);
-        Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-select-" + type)).forEach(function (sel) {
-            for (var i = 0; i < sel.options.length; i++) {
-                if (sel.options[i].textContent === name) sel.value = String(i);
-            }
-        });
-        adrDTemplateStatus(type, existing >= 0 ? "已更新模板：" + name : "已新增模板：" + name, "#8ed99d");
+        adrDRefreshTemplateSelects(type, name);
+        adrDTemplateStatus(type, found >= 0 ? "已更新：" + name : "已新增：" + name, "#8ed99d");
     }
 
-    function adrDDeleteTemplate(type) {
+    function adrDDeleteCurrentTemplate(type) {
         var data = adrDLoadTemplates();
         var sel = adrDGetTemplateSelect(type);
         var idx = sel ? Number(sel.value) : -1;
         var arr = data[type] || [];
+
         if (!arr[idx]) {
             adrDTemplateStatus(type, "没有选中的模板", "#e28a9c");
             return;
         }
+
         if (arr.length <= 1) {
             adrDTemplateStatus(type, "至少保留一个模板", "#e28a9c");
             return;
         }
+
         var name = arr[idx].name;
         arr.splice(idx, 1);
         data[type] = arr;
         adrDSaveTemplates(data);
         adrDRefreshTemplateSelects(type);
-        adrDTemplateStatus(type, "已删除模板：" + name, "#f0b36a");
+        adrDTemplateStatus(type, "已删除：" + name, "#f0b36a");
     }
 
-    function adrDBindTemplateButtons() {
+    function adrDBindCompactTemplateControls() {
         try {
             ["emotion", "plot"].forEach(function (type) {
-                var ids = {};
-                ids["adr044-template-apply-" + type] = function () { adrDApplyTemplate(type); };
-                ids["adr044-template-save-" + type] = function () { adrDSaveCurrentAsTemplate(type); };
-                ids["adr044-template-delete-" + type] = function () { adrDDeleteTemplate(type); };
-                Object.keys(ids).forEach(function (id) {
-                    Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id)).forEach(function (el) {
-                        if (!el || el.__adrDTemplateBound) return;
-                        el.__adrDTemplateBound = true;
-                        el.addEventListener("click", function (ev) {
-                            ev.preventDefault();
-                            ev.stopPropagation();
-                            ids[id]();
-                        }, true);
-                        el.addEventListener("touchend", function (ev) {
-                            ev.preventDefault();
-                            ev.stopPropagation();
-                            ids[id]();
-                        }, true);
-                    });
-                });
                 Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-select-" + type)).forEach(function (sel) {
                     if (!sel || sel.__adrDTemplateSelectBound) return;
                     sel.__adrDTemplateSelectBound = true;
                     sel.addEventListener("change", function () {
-                        var data = adrDLoadTemplates();
-                        var item = data[type] && data[type][Number(sel.value)];
-                        var name = adrDGetTemplateNameBox(type);
-                        if (name && item) name.value = item.name || "";
+                        adrDApplyTemplate(type);
+                    }, true);
+                });
+
+                Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-save-" + type)).forEach(function (btn) {
+                    if (!btn || btn.__adrDTemplateSaveBound) return;
+                    btn.__adrDTemplateSaveBound = true;
+                    btn.addEventListener("click", function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        adrDSaveCurrentTemplate(type);
+                    }, true);
+                    btn.addEventListener("touchend", function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        adrDSaveCurrentTemplate(type);
+                    }, true);
+                });
+
+                Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-delete-" + type)).forEach(function (btn) {
+                    if (!btn || btn.__adrDTemplateDeleteBound) return;
+                    btn.__adrDTemplateDeleteBound = true;
+                    btn.addEventListener("click", function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        adrDDeleteCurrentTemplate(type);
+                    }, true);
+                    btn.addEventListener("touchend", function (ev) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        adrDDeleteCurrentTemplate(type);
                     }, true);
                 });
             });
@@ -2130,7 +2157,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.6.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.6.1.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2243,6 +2270,15 @@
             + '</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '预设</div>'
+            + '<div class="adr044-template-compact">'
+            + '<select id="adr044-template-select-' + type + '">' + adrDTemplateOptions(type) + '</select>'
+            + '<input id="adr044-template-name-' + type + '" placeholder="新模板名 / 当前模板名">'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-template-save-' + type + '">保存当前为模板</button>'
+            + '<button type="button" id="adr044-template-delete-' + type + '">删除模板</button>'
+            + '</div>'
+            + '<div class="adr044-template-status" id="adr044-template-status-' + type + '"></div>'
+            + '</div>'
             + '<textarea id="adr044-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
             + '</div>'
 
@@ -2338,7 +2374,7 @@
             } catch (e0) {}
 
             adr048CreatePopupPanel();
-            setTimeout(adrDBindTemplateButtons, 120);
+            setTimeout(adrDBindCompactTemplateControls, 120);
             adrDRefreshAllFieldsFromSettings();
 
             var p = d.querySelector("#adr048-popup-panel");
@@ -2651,7 +2687,7 @@
 
     function adr048EnsureFabLater() {
         adr048CreatePopupPanel();
-            setTimeout(adrDBindTemplateButtons, 120);
+            setTimeout(adrDBindCompactTemplateControls, 120);
         if (!adr048ShouldShowFab()) {
             adr048RemoveFab();
             return;
@@ -3057,18 +3093,18 @@
             installProbeGlobals();
             installProbeDelegation();
             bindDirect();
-            adrDBindTemplateButtons();
+            adrDBindCompactTemplateControls();
             adrDInstallTabFallbackOnly();
             adrDInstallAllButtonFallback();
             switchTab(settings().activeTab || "emotion");
             adr048CreatePopupPanel();
-            setTimeout(adrDBindTemplateButtons, 120);
+            setTimeout(adrDBindCompactTemplateControls, 120);
             adr048EnsureFabLater();
             adrDInstallAutoTriggerWatchers();
             adrDUpdateAutoCounters();
             setTimeout(adrDUpdateAutoCounters, 800);
             setTimeout(bindDirect, 500);
-            setTimeout(adrDBindTemplateButtons, 650);
+            setTimeout(adrDBindCompactTemplateControls, 650);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);
             console.log("[ADR044] dual drawer loaded");
