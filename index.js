@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.1.3.2.1 探针直连
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.3.3.2.1 探针直连
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-d-final-v101-no-summary";
+    var EXT = "arrebol-d-final-v103-independent-auto";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -23,6 +23,15 @@
         autoInjectPlot: true,
         injectMode: "visible",
         showFloatingWindow: true,
+        autoTriggerEmotion: false,
+        autoTriggerPlot: false,
+        autoTriggerEmotionRange: "20",
+        autoTriggerPlotRange: "10",
+        autoTriggerEmotionCustomRange: 0,
+        autoTriggerPlotCustomRange: 0,
+        lastAutoTriggerChatKey: "",
+        lastAutoTriggerEmotionCount: -1,
+        lastAutoTriggerPlotCount: -1,
 
         range: "30",
         customRange: 0,
@@ -171,11 +180,28 @@
         return r > 0 ? r : 30;
     }
 
+    function autoTriggerRange(type) {
+        var st = settings();
+        var key = type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange";
+        var customKey = type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange";
+        var val = String(st[key] || (type === "plot" ? "10" : "20"));
+
+        if (val === "off") return 0;
+        if (val === "custom") {
+            var n = Number(st[customKey] || 0);
+            return n > 0 ? n : 10;
+        }
+
+        var r = Number(val || 0);
+        return r > 0 ? r : 10;
+    }
+
     function cleanMessage(text) {
         text = String(text || "").trim();
         text = text.replace(/image###[\s\S]*?###/g, "").trim();
         text = text.replace(/<!--ARREBOL_DIRECTOR_START-->[\s\S]*?<!--ARREBOL_DIRECTOR_END-->/g, "").trim();
-        text = text.replace(/<details[^>]*class=["']arrebol-d-injection["'][^>]*>[\s\S]*?<\/details>/g, "").trim();
+        text = text.replace(/<!--\s*ARREBOL_D_START:(?:emotion|plot)\s*-->[\s\S]*?<!--\s*ARREBOL_D_END:(?:emotion|plot)\s*-->/g, "").trim();
+        text = text.replace(/<details[^>]*class=["']arrebol-d-(?:injection|card)["'][^>]*>[\s\S]*?<\/details>/g, "").trim();
         return text;
     }
 
@@ -244,6 +270,15 @@
         if (model) save(p + "Model", model.value || "");
         if (preset) save(p + "Preset", preset.value || "");
         if (preview) save(p + "Preview", preview.value || "");
+
+        var autoTrigger = qForm("adr044-auto-trigger-" + type);
+        if (autoTrigger) save(type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion", !!autoTrigger.checked);
+
+        var autoRange = qForm("adr044-auto-trigger-range-" + type);
+        if (autoRange) save(type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange", autoRange.value || (type === "plot" ? "10" : "20"));
+
+        var autoCustom = qForm("adr044-auto-trigger-custom-" + type);
+        if (autoCustom) save(type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange", Number(autoCustom.value || 0));
 
         saveNow();
     }
@@ -709,14 +744,21 @@
         var body = String(text || "").trim();
 
         if (mode === "hidden") {
-            return "\n\n<!--ARREBOL_DIRECTOR_START-->\n【暗河红霞 Arrebol D｜" + title + "】\n" + body + "\n<!--ARREBOL_DIRECTOR_END-->";
+            return "\n\n<!-- ARREBOL_D_START:" + type + " -->\n【暗河红霞 Arrebol D｜" + title + "】\n" + body + "\n<!-- ARREBOL_D_END:" + type + " -->";
         }
 
         if (mode === "folded") {
-            return "\n\n<details class=\"arrebol-d-injection\" data-title=\"暗河红霞 Arrebol D｜" + title + "\">\n\n【暗河红霞 Arrebol D｜" + title + "】\n\n" + escapeHtmlForDetails(body) + "\n\n</details>";
+            return "\n\n<!-- ARREBOL_D_START:" + type + " -->\n"
+                + "<details class=\"arrebol-d-card\" data-arrebol-d-type=\"" + type + "\">\n"
+                + "<summary class=\"arrebol-d-title\">🎬 暗河红霞 Arrebol D｜" + title + "</summary>\n\n"
+                + "<div class=\"arrebol-d-body\">\n\n"
+                + escapeHtmlForDetails(body)
+                + "\n\n</div>\n"
+                + "</details>\n"
+                + "<!-- ARREBOL_D_END:" + type + " -->";
         }
 
-        return "\n\n【暗河红霞 Arrebol D｜" + title + "】\n" + body;
+        return "\n\n<!-- ARREBOL_D_START:" + type + " -->\n【暗河红霞 Arrebol D｜" + title + "】\n" + body + "\n<!-- ARREBOL_D_END:" + type + " -->";
     }
 
     function findLastMessageIndex(chat) {
@@ -791,20 +833,30 @@
 
             var add = injectionText(type, text);
 
-            // 避免同类型重复注入太多：先移除最后消息里旧的同类型红霞块。
+            // 移除同类型旧注入，避免最后一条消息越堆越多。
             var mes = String(chat[idx].mes || "");
-            var visibleName = type === "plot" ? "剧情导演" : "情感导演";
-            var reVisible = new RegExp("\\n\\n【暗河红霞 Arrebol D｜" + visibleName + "】[\\s\\S]*$", "m");
-            mes = mes.replace(reVisible, "");
+            var startMark = "<!-- ARREBOL_D_START:" + type + " -->";
+            var endMark = "<!-- ARREBOL_D_END:" + type + " -->";
 
-            // hidden 模式旧块不区分类型，保守不全删，避免误伤另一个导演。
-            chat[idx].mes = mes + add;
+            var startAt = mes.indexOf(startMark);
+            while (startAt >= 0) {
+                var endAt = mes.indexOf(endMark, startAt);
+                if (endAt < 0) break;
+                mes = mes.slice(0, startAt).trimEnd() + mes.slice(endAt + endMark.length);
+                startAt = mes.indexOf(startMark);
+            }
+
+            var visibleName = type === "plot" ? "剧情导演" : "情感导演";
+            var reOldVisible = new RegExp("\\n\\n【(?:红霞导演室|暗河红霞 Arrebol D)(?:｜|\\|)" + visibleName + "】[\\s\\S]*$", "m");
+            mes = mes.replace(reOldVisible, "");
+
+            chat[idx].mes = mes.trimEnd() + add;
 
             saveChatSafe();
             refreshMessageDom(idx);
             return true;
         } catch (e) {
-            console.error("[ADR044] inject failed", e);
+            console.error("[Arrebol D] inject failed", e);
             return false;
         }
     }
@@ -1185,7 +1237,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.1.3.2】\n";
+        out += "【红霞探针 v1.0.3.3.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1283,6 +1335,16 @@
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
             + '<div class="adr044-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> 启用自动触发</label>'
+            + '<label>自动触发间隔</label>'
+            + '<select id="adr044-auto-trigger-range-' + type + '">'
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "10", "每 10 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "20", "每 20 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "30", "每 30 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "50", "每 50 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
+            + '</select>'
+            + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
             + '</details>'
 
             + '<details><summary>' + title + '预设</summary>'
@@ -1304,10 +1366,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 暗河红霞 Arrebol D v1.0.1.3.2.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 暗河红霞 Arrebol D v1.0.3.3.2.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">定稿版：双导演、双 API、精准读取、浮窗面板与无 summary 折叠注入已合并。</div>'
+            + '<div class="adr044-note">定稿版：双导演、双 API、精准读取、浮窗面板、规范 summary 折叠注入与情感/剧情独立自动触发已合并。</div>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1324,7 +1386,7 @@
             + '<div class="adr044-actions"><button id="adr044-preview-precise" type="button">预览精准读取</button></div>'
             + '<label>注入方式</label><select id="adr044-inject-mode">'
             + opt(st.injectMode, "visible", "可见文本注入（直接显示）")
-            + opt(st.injectMode, "folded", "折叠标签注入（无 summary）")
+            + opt(st.injectMode, "folded", "折叠标签注入（规范 summary）")
             + opt(st.injectMode, "hidden", "HTML 注释隐藏注入")
             + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
@@ -1479,7 +1541,7 @@
         }
 
         ["emotion", "plot"].forEach(function (type) {
-            var modelSelect = q("#adr044-" + type + "-model-select");
+            var modelSelect = qForm("adr044-" + type + "-model-select");
             if (modelSelect && !modelSelect.__adr044Bound) {
                 modelSelect.__adr044Bound = true;
                 modelSelect.addEventListener("change", function () {
@@ -1491,12 +1553,49 @@
                 });
             }
 
-            var auto = q("#adr044-auto-inject-" + type);
+            var auto = qForm("adr044-auto-inject-" + type);
             if (auto && !auto.__adr044Bound) {
                 auto.__adr044Bound = true;
                 auto.addEventListener("change", function () {
                     save(type === "plot" ? "autoInjectPlot" : "autoInjectEmotion", !!auto.checked);
                     saveNow();
+                });
+            }
+
+            var autoTrigger = qForm("adr044-auto-trigger-" + type);
+            if (autoTrigger && !autoTrigger.__adr044Bound) {
+                autoTrigger.__adr044Bound = true;
+                autoTrigger.addEventListener("change", function () {
+                    save(type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion", !!autoTrigger.checked);
+                    saveNow();
+                    adrDResetAutoTriggerBaseline("toggle-" + type);
+                    adrDScheduleAutoTriggerCheck("toggle-" + type);
+                });
+            }
+
+            var autoRange = qForm("adr044-auto-trigger-range-" + type);
+            if (autoRange && !autoRange.__adr044Bound) {
+                autoRange.__adr044Bound = true;
+                autoRange.addEventListener("change", function () {
+                    save(type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange", autoRange.value || (type === "plot" ? "10" : "20"));
+                    var custom = qForm("adr044-auto-trigger-custom-" + type);
+                    if (custom) custom.style.display = autoRange.value === "custom" ? "block" : "none";
+                    saveNow();
+                    adrDResetAutoTriggerBaseline("range-" + type);
+                    adrDScheduleAutoTriggerCheck("range-" + type);
+                });
+            }
+
+            var autoCustom = qForm("adr044-auto-trigger-custom-" + type);
+            if (autoCustom && !autoCustom.__adr044Bound) {
+                autoCustom.__adr044Bound = true;
+                autoCustom.addEventListener("input", function () {
+                    save(type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange", Number(autoCustom.value || 0));
+                    saveNow();
+                });
+                autoCustom.addEventListener("change", function () {
+                    adrDResetAutoTriggerBaseline("custom-" + type);
+                    adrDScheduleAutoTriggerCheck("custom-" + type);
                 });
             }
         });
@@ -1515,7 +1614,7 @@
         });
 
         Object.keys(map).forEach(function (id) {
-            var el = q("#" + id);
+            var el = qForm(id);
             if (!el || el.__adr044InputBound) return;
             el.__adr044InputBound = true;
             el.addEventListener("input", function () {
@@ -1528,7 +1627,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.1.3.2】\n";
+        out += "【红霞精准读取预览 v1.0.3.3.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1627,6 +1726,16 @@
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
             + '<div class="adr048-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> 启用自动触发</label>'
+            + '<label>自动触发间隔</label>'
+            + '<select id="adr044-auto-trigger-range-' + type + '">'
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "10", "每 10 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "20", "每 20 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "30", "每 30 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "50", "每 50 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
+            + '</select>'
+            + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
             + '</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '预设</div>'
@@ -1654,7 +1763,7 @@
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。抽屉版仍保留为兜底。</div>'
+            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔，也可以任意一边关闭只手动使用。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1671,7 +1780,7 @@
             + '<div class="adr048-actions"><button id="adr044-preview-precise" type="button">预览精准读取</button></div>'
             + '<label>注入方式</label><select id="adr044-inject-mode">'
             + opt(st.injectMode, "visible", "可见文本注入（直接显示）")
-            + opt(st.injectMode, "folded", "折叠标签注入（无 summary）")
+            + opt(st.injectMode, "folded", "折叠标签注入（规范 summary）")
             + opt(st.injectMode, "hidden", "HTML 注释隐藏注入")
             + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
@@ -2046,6 +2155,166 @@
     }
 
 
+
+    var adrDAutoTriggerTimer = null;
+    var adrDLastChatLengthSeen = -1;
+    var adrDAutoTriggerRunning = false;
+
+    function adrDChatKey() {
+        try {
+            var c = ctx();
+            if (typeof c.getCurrentChatId === "function") {
+                var x = c.getCurrentChatId();
+                if (x) return String(x);
+            }
+            if (c.chatId) return String(c.chatId);
+            return String(c.characterId || "char") + "::" + String(c.name1 || "chat");
+        } catch (e) {
+            return "unknown-chat";
+        }
+    }
+
+    function adrDAssistantRoundCount() {
+        var chat;
+        try { chat = ctx().chat; } catch (e) { return 0; }
+        if (!chat || !chat.length) return 0;
+
+        var n = 0;
+        for (var i = 0; i < chat.length; i++) {
+            var m = chat[i];
+            if (!m || m.is_system || m.is_user) continue;
+            var text = cleanMessage(m.mes || "");
+            if (!text.trim()) continue;
+            n++;
+        }
+        return n;
+    }
+
+    function adrDResetAutoTriggerBaseline(reason) {
+        try {
+            var st = settings();
+            var key = adrDChatKey();
+            var count = adrDAssistantRoundCount();
+
+            st.lastAutoTriggerChatKey = key;
+
+            if (!Number.isFinite(Number(st.lastAutoTriggerEmotionCount)) || Number(st.lastAutoTriggerEmotionCount) < 0) {
+                st.lastAutoTriggerEmotionCount = count;
+            }
+            if (!Number.isFinite(Number(st.lastAutoTriggerPlotCount)) || Number(st.lastAutoTriggerPlotCount) < 0) {
+                st.lastAutoTriggerPlotCount = count;
+            }
+
+            saveNow();
+            console.log("[Arrebol D] auto trigger baseline", reason, key, count);
+        } catch (e) {}
+    }
+
+    function adrDScheduleAutoTriggerCheck(reason) {
+        try {
+            if (adrDAutoTriggerTimer) clearTimeout(adrDAutoTriggerTimer);
+            adrDAutoTriggerTimer = setTimeout(function () {
+                adrDCheckAutoTrigger(reason || "scheduled");
+            }, 4200);
+        } catch (e) {}
+    }
+
+    async function adrDCheckAutoTrigger(reason) {
+        if (adrDAutoTriggerRunning || processing) return;
+
+        try {
+            var st = settings();
+            if (!st.autoTriggerEmotion && !st.autoTriggerPlot) return;
+
+            var key = adrDChatKey();
+            var count = adrDAssistantRoundCount();
+            var nEmotion = autoTriggerRange("emotion");
+            var nPlot = autoTriggerRange("plot");
+
+            if (st.lastAutoTriggerChatKey !== key) {
+                st.lastAutoTriggerChatKey = key;
+                st.lastAutoTriggerEmotionCount = count;
+                st.lastAutoTriggerPlotCount = count;
+                saveNow();
+                console.log("[Arrebol D] chat changed, reset auto trigger baseline", key, count);
+                return;
+            }
+
+            if (!Number.isFinite(Number(st.lastAutoTriggerEmotionCount)) || Number(st.lastAutoTriggerEmotionCount) < 0) {
+                st.lastAutoTriggerEmotionCount = count;
+            }
+            if (!Number.isFinite(Number(st.lastAutoTriggerPlotCount)) || Number(st.lastAutoTriggerPlotCount) < 0) {
+                st.lastAutoTriggerPlotCount = count;
+            }
+
+            var toRun = [];
+
+            if (st.autoTriggerEmotion && nEmotion > 0 && count - Number(st.lastAutoTriggerEmotionCount) >= nEmotion) {
+                toRun.push({ type: "emotion", n: nEmotion });
+                st.lastAutoTriggerEmotionCount = count;
+            }
+
+            if (st.autoTriggerPlot && nPlot > 0 && count - Number(st.lastAutoTriggerPlotCount) >= nPlot) {
+                toRun.push({ type: "plot", n: nPlot });
+                st.lastAutoTriggerPlotCount = count;
+            }
+
+            saveNow();
+
+            if (!toRun.length) return;
+
+            adrDAutoTriggerRunning = true;
+            for (var i = 0; i < toRun.length; i++) {
+                var item = toRun[i];
+                var type = item.type;
+                var n = item.n;
+                var extra = "自动触发：已新增约 " + n + " 个助手正文轮次。请基于当前精准读取上下文输出下一阶段方向。";
+                console.log("[Arrebol D] auto triggering", type, "reason=", reason, "count=", count, "N=", n);
+                await run(type, extra);
+            }
+        } catch (e) {
+            console.error("[Arrebol D] auto trigger check failed", e);
+        }
+
+        adrDAutoTriggerRunning = false;
+    }
+
+    function adrDInstallAutoTriggerWatchers() {
+        try {
+            var c = ctx();
+            var es = c.eventSource;
+            var types = c.event_types || c.eventTypes || {};
+
+            function on(name) {
+                try {
+                    var ev = types[name];
+                    if (es && ev && typeof es.on === "function") {
+                        es.on(ev, function () { adrDScheduleAutoTriggerCheck(name); });
+                    }
+                } catch (e) {}
+            }
+
+            ["MESSAGE_RECEIVED", "MESSAGE_SENT", "GENERATION_ENDED", "CHAT_CHANGED", "CHAT_LOADED"].forEach(on);
+        } catch (e) {}
+
+        try {
+            if (!rootWin().__arrebolDAutoTriggerPoll) {
+                rootWin().__arrebolDAutoTriggerPoll = setInterval(function () {
+                    try {
+                        var chat = ctx().chat || [];
+                        var len = chat.length || 0;
+                        if (adrDLastChatLengthSeen >= 0 && len !== adrDLastChatLengthSeen) {
+                            adrDScheduleAutoTriggerCheck("poll-chat-length");
+                        }
+                        adrDLastChatLengthSeen = len;
+                    } catch (e) {}
+                }, 9000);
+            }
+        } catch (e2) {}
+
+        adrDResetAutoTriggerBaseline("install");
+    }
+
     function init() {
         if (initialized) return;
         initialized = true;
@@ -2058,6 +2327,7 @@
             bindDirect();
             adr048CreatePopupPanel();
             adr048EnsureFabLater();
+            adrDInstallAutoTriggerWatchers();
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);

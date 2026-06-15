@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.1",
-    "description": "RP 场外导演室定稿修复版：将折叠注入改为无 summary 标签，避免与酒馆/主题/脚本标签冲突"
+    "version": "1.0.3",
+    "description": "定稿增强版：情感/剧情自动触发间隔独立配置，可分别关闭自动触发并保留手动生成"
 }
