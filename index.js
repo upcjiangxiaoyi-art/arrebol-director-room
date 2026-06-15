@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.7
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.8
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -881,9 +881,6 @@
     }
 
     function refreshMessageDom(index) {
-        // v1.0.4.7 真·最小补丁：
-        // 原 v1.0.4.7 这里会 msg.innerHTML = content，等于重写整条消息，
-        // 会触发/破坏其他美化正则。现在只把最后一段 arrebol_d###...### 安全追加到显示层。
         try {
             var chat = ctx().chat;
             var content = chat && chat[index] ? String(chat[index].mes || "") : "";
@@ -891,7 +888,6 @@
 
             var m = content.match(/arrebol_d###[\s\S]*?###\s*$/);
             if (!m) return false;
-
             var tag = m[0].trim();
 
             var d = rootDoc();
@@ -905,7 +901,6 @@
                 .replace(/>/g, "&gt;");
 
             if (el.innerHTML && el.innerHTML.indexOf(safe) >= 0) return true;
-
             el.innerHTML += "<p class=\"arrebol-d-raw-inject\">" + safe + "</p>";
             return true;
         } catch (e) {
@@ -1345,7 +1340,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.4.7.2】\n";
+        out += "【红霞探针 v1.0.4.8.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1474,7 +1469,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.7</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.8</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1801,7 +1796,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.4.7.2】\n";
+        out += "【红霞精准读取预览 v1.0.4.8.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1937,7 +1932,7 @@
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；纯文本标记注入；真最小补丁：只禁用整条 DOM 重写，设置稳定保存。</div>'
+            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；纯文本标记注入；增加全局按钮兜底代理；设置稳定保存。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -2500,6 +2495,150 @@
         adrDResetAutoTriggerBaseline("install");
     }
 
+
+    function adrDButtonTypeFromId(id) {
+        if (!id) return "";
+        if (id.indexOf("emotion") >= 0) return "emotion";
+        if (id.indexOf("plot") >= 0) return "plot";
+        return settings().activeTab || "emotion";
+    }
+
+    function adrDHandleButtonById(id) {
+        try {
+            if (!id || id.indexOf("adr044-") !== 0) return false;
+
+            var type = adrDButtonTypeFromId(id);
+
+            if (id === "adr044-tab-emotion") {
+                settings().activeTab = "emotion";
+                syncAll();
+                saveNow();
+                renderTabs();
+                return true;
+            }
+
+            if (id === "adr044-tab-plot") {
+                settings().activeTab = "plot";
+                syncAll();
+                saveNow();
+                renderTabs();
+                return true;
+            }
+
+            if (id.indexOf("-save") >= 0) {
+                if (typeof adrDForceSaveSettings === "function") adrDForceSaveSettings(type);
+                else { syncAll(); saveNow(); }
+                status(type, "设置已保存 ✓", "#8ed99d");
+                return true;
+            }
+
+            if (id.indexOf("-copy") >= 0) {
+                syncType(type);
+                var pv = qForm("adr044-" + type + "-preview");
+                var text = pv ? pv.value : "";
+                if (!text) { status(type, "没有内容可复制", "#d4726a"); return true; }
+                copyText(type, text);
+                return true;
+            }
+
+            if (id.indexOf("-inject") >= 0) {
+                syncType(type);
+                var pv2 = qForm("adr044-" + type + "-preview");
+                var text2 = pv2 ? pv2.value : "";
+                if (!text2) { status(type, "没有内容可注入", "#d4726a"); return true; }
+                var ok = injectDirector(type, text2);
+                status(type, ok ? "已注入当前聊天 ✓" : "注入失败", ok ? "#8ed99d" : "#d4726a");
+                return true;
+            }
+
+            if (id.indexOf("-run") >= 0) {
+                syncAll();
+                generateDirector(type, "");
+                return true;
+            }
+
+            if (id.indexOf("-abort") >= 0) {
+                abortRun(type);
+                return true;
+            }
+
+            if (id.indexOf("-models") >= 0) {
+                syncType(type);
+                fetchModels(type);
+                return true;
+            }
+
+            if (id.indexOf("-test") >= 0) {
+                testLocalRead(type);
+                return true;
+            }
+
+            if (id.indexOf("-probe") >= 0) {
+                adrDRunContextProbe(type);
+                return true;
+            }
+
+            if (id.indexOf("-content-test") >= 0) {
+                adrDRunContentExtractTest(type);
+                return true;
+            }
+
+            if (id.indexOf("-precise-preview") >= 0) {
+                adrDPreviewPreciseContext(type);
+                return true;
+            }
+        } catch (e) {
+            console.error("[Arrebol D] global click guard failed", e);
+            try { adrDToast("按钮兜底执行失败：" + (e.message || e)); } catch (e2) {}
+            return true;
+        }
+
+        return false;
+    }
+
+    function adrDInstallGlobalClickGuard() {
+        try {
+            if (rootWin().__adrDGlobalClickGuardInstalled) return;
+            rootWin().__adrDGlobalClickGuardInstalled = true;
+
+            rootDoc().addEventListener("click", function (ev) {
+                try {
+                    var t = ev.target;
+                    while (t && t !== rootDoc()) {
+                        if (t.id && t.id.indexOf("adr044-") === 0) {
+                            var handled = adrDHandleButtonById(t.id);
+                            if (handled) {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                return false;
+                            }
+                        }
+                        t = t.parentNode;
+                    }
+                } catch (e) {}
+            }, true);
+
+            rootDoc().addEventListener("touchend", function (ev) {
+                try {
+                    var t = ev.target;
+                    while (t && t !== rootDoc()) {
+                        if (t.id && t.id.indexOf("adr044-") === 0) {
+                            var handled = adrDHandleButtonById(t.id);
+                            if (handled) {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                return false;
+                            }
+                        }
+                        t = t.parentNode;
+                    }
+                } catch (e) {}
+            }, true);
+        } catch (e2) {
+            console.warn("[Arrebol D] install global click guard failed", e2);
+        }
+    }
+
     function init() {
         if (initialized) return;
         initialized = true;
@@ -2510,6 +2649,7 @@
             installProbeGlobals();
             installProbeDelegation();
             bindDirect();
+            adrDInstallGlobalClickGuard();
             adr048CreatePopupPanel();
             adr048EnsureFabLater();
             adrDInstallAutoTriggerWatchers();

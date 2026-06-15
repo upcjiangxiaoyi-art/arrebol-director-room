@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.4.7",
-    "description": "缺失函数修复版：基于 v1.0.4.6 真最小补丁，补回 adrDRefreshAllFieldsFromSettings，修复打开红霞面板时报错导致按钮失活"
+    "version": "1.0.4.8",
+    "description": "全局兜底按钮代理版：基于 v1.0.4.0，保留稳定保存仓库；补齐字段同步函数；按钮点击增加捕获层代理；安全正文注入"
 }

@@ -477,10 +477,7 @@
 /* v1.0.4.0：设置保存改用稳定 localStorage key：arrebol_d_settings_stable_v1 */
 
 
-/* v1.0.4.6：只追加红霞纯文本块，不重写整条消息。 */
+/* v1.0.4.8：安全追加出来的纯文本节点。 */
 .arrebol-d-raw-inject {
     white-space: pre-wrap !important;
 }
-
-
-/* v1.0.4.7：补回字段刷新函数，修复打开面板失活。 */
