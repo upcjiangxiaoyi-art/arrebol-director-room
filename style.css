@@ -1,35 +1,35 @@
 
-#adr042-drawer .adr042-box {
+#adr043-drawer .adr043-box {
     padding: 6px 0 10px;
     font-family: -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
 }
 
-#adr042-drawer .adr042-note {
+#adr043-drawer .adr043-note {
     font-size: 12px;
     color: #888;
     margin: 4px 0 8px;
 }
 
-#adr042-drawer details {
+#adr043-drawer details {
     border-top: 1px solid rgba(0,0,0,.12);
     padding: 7px 0;
 }
 
-#adr042-drawer summary {
+#adr043-drawer summary {
     font-weight: 700;
     cursor: pointer;
     margin-bottom: 6px;
 }
 
-#adr042-drawer label {
+#adr043-drawer label {
     display: block;
     font-size: 12px;
     margin-top: 6px;
 }
 
-#adr042-drawer input,
-#adr042-drawer select,
-#adr042-drawer textarea {
+#adr043-drawer input,
+#adr043-drawer select,
+#adr043-drawer textarea {
     width: 100%;
     box-sizing: border-box;
     font-size: 16px;
@@ -37,28 +37,52 @@
     margin-top: 3px;
 }
 
-#adr042-status {
+#adr043-drawer textarea {
+    resize: vertical;
+}
+
+.adr043-tabs {
+    display: flex;
+    gap: 6px;
+    margin: 10px 0 8px;
+}
+
+.adr043-tabs button {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(214,122,106,.32);
+    background: rgba(214,122,106,.10);
+}
+
+.adr043-tabs button.active {
+    background: rgba(214,122,106,.32);
+    font-weight: 700;
+}
+
+#adr043-emotion-status,
+#adr043-plot-status {
     font-size: 12px;
     color: #666;
     margin-bottom: 5px;
 }
 
-.adr042-actions {
+.adr043-actions {
     display: flex;
     gap: 6px;
     margin-top: 6px;
 }
 
-.adr042-actions button {
+.adr043-actions button {
     flex: 1;
 }
 
-
-#adr042-model-select {
-    margin-top: 5px;
+.adr043-check {
+    display: flex !important;
+    align-items: center;
+    gap: 6px;
 }
 
-#adr042-load-models,
-#adr042-save {
-    min-height: 34px;
+.adr043-check input {
+    width: auto !important;
 }

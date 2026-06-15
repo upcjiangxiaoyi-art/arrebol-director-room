@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.2 拉取模型",
-    "loading_order": 21,
+    "display_name": "红霞导演室 v0.4.3 双导演注入",
+    "loading_order": 22,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.2",
-    "description": "抽屉内嵌稳定版：新增 /models 拉取与模型下拉选择"
+    "version": "0.4.3",
+    "description": "抽屉内嵌稳定版：情感/剧情双导演、独立API模型、自动注入当前聊天"
 }
