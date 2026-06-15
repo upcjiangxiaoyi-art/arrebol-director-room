@@ -92,3 +92,9 @@
 #adr044-probe-content {
     min-height: 34px;
 }
+
+
+#adr044-preview-precise {
+    min-height: 34px;
+    font-weight: 700;
+}

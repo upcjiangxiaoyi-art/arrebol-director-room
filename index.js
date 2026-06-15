@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.4.1.1 探针直连
+ * Arrebol Director Room 红霞导演室 v0.4.5.1 探针直连
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v0441-probe-direct";
+    var EXT = "arrebol-director-room-v045-precise-reader";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -249,16 +249,268 @@
         syncType("plot");
     }
 
-    function buildPrompt(type, extra) {
+    function getCurrentCharacterObject() {
+        var c;
+        try { c = ctx(); } catch (e) { return null; }
+
+        var id = null;
+        try {
+            if (c.characterId !== undefined && c.characterId !== null) id = c.characterId;
+            else if (c.this_chid !== undefined && c.this_chid !== null) id = c.this_chid;
+            else if (c.chid !== undefined && c.chid !== null) id = c.chid;
+        } catch (e1) {}
+
+        try {
+            if (c.characters && id !== null && id !== undefined && c.characters[id]) return c.characters[id];
+        } catch (e2) {}
+
+        try {
+            if (c.character) return c.character;
+        } catch (e3) {}
+
+        try {
+            if (c.characters && Array.isArray(c.characters) && c.name1) {
+                for (var i = 0; i < c.characters.length; i++) {
+                    if (c.characters[i] && c.characters[i].name === c.name1) return c.characters[i];
+                }
+            }
+        } catch (e4) {}
+
+        return null;
+    }
+
+    function asCleanText(v, max) {
+        if (v === undefined || v === null) return "";
+        var s = "";
+        if (typeof v === "string") s = v;
+        else {
+            try { s = JSON.stringify(v, null, 2); }
+            catch (e) { s = String(v); }
+        }
+        s = s.replace(/\r/g, "").trim();
+        if (!s) return "";
+        if (max && s.length > max) s = s.slice(0, max) + "…";
+        return s;
+    }
+
+    function getNested(obj, path) {
+        try {
+            var cur = obj;
+            for (var i = 0; i < path.length; i++) {
+                if (!cur) return undefined;
+                cur = cur[path[i]];
+            }
+            return cur;
+        } catch (e) { return undefined; }
+    }
+
+    function extractCharacterCardText() {
+        var ch = getCurrentCharacterObject();
+        if (!ch) return "";
+
+        var parts = [];
+        var seen = {};
+
+        function add(label, value, max) {
+            var s = asCleanText(value, max || 6000);
+            if (!s) return;
+            var key = label + "::" + s.slice(0, 80);
+            if (seen[key]) return;
+            seen[key] = true;
+            parts.push("【" + label + "】\n" + s);
+        }
+
+        add("角色名称", ch.name || getNested(ch, ["data", "name"]), 500);
+        add("角色描述", ch.description || getNested(ch, ["data", "description"]), 9000);
+        add("角色性格", ch.personality || getNested(ch, ["data", "personality"]), 5000);
+        add("场景设定", ch.scenario || getNested(ch, ["data", "scenario"]), 5000);
+        add("首条消息", ch.first_mes || getNested(ch, ["data", "first_mes"]), 2500);
+        add("示例对话", ch.mes_example || getNested(ch, ["data", "mes_example"]), 5000);
+        add("创作者注释", ch.creatorcomment || ch.creator_notes || getNested(ch, ["data", "creator_notes"]) || getNested(ch, ["data", "creatorcomment"]), 3000);
+        add("系统提示", ch.system_prompt || getNested(ch, ["data", "system_prompt"]), 3000);
+        add("后历史指令", ch.post_history_instructions || getNested(ch, ["data", "post_history_instructions"]), 3000);
+
+        return parts.join("\n\n");
+    }
+
+    function extractCharacterBookText() {
+        var ch = getCurrentCharacterObject();
+        if (!ch) return "";
+
+        var candidates = [];
+
+        function pushCandidate(label, obj) {
+            if (obj !== undefined && obj !== null) candidates.push({ label: label, obj: obj });
+        }
+
+        pushCandidate("data.character_book", getNested(ch, ["data", "character_book"]));
+        pushCandidate("character_book", ch.character_book);
+        pushCandidate("json_data.data.character_book", getNested(ch, ["json_data", "data", "character_book"]));
+        pushCandidate("json_data.character_book", getNested(ch, ["json_data", "character_book"]));
+        pushCandidate("data.extensions.character_book", getNested(ch, ["data", "extensions", "character_book"]));
+        pushCandidate("data.extensions.world", getNested(ch, ["data", "extensions", "world"]));
+        pushCandidate("data.extensions.world_info", getNested(ch, ["data", "extensions", "world_info"]));
+        pushCandidate("data.extensions.lorebook", getNested(ch, ["data", "extensions", "lorebook"]));
+
+        var parts = [];
+
+        function entryText(entry, i) {
+            if (!entry) return "";
+            var keys = entry.keys || entry.key || entry.keywords || entry.primary_keys || [];
+            if (Array.isArray(keys)) keys = keys.join(", ");
+            var comment = entry.comment || entry.name || entry.title || "";
+            var content = entry.content || entry.text || entry.value || entry.entry || "";
+            var enabled = entry.enabled;
+            if (enabled === false || entry.disable === true) return "";
+
+            var s = "";
+            if (comment) s += "条目 " + (i + 1) + "｜" + comment + "\n";
+            else s += "条目 " + (i + 1) + "\n";
+            if (keys) s += "关键词：" + keys + "\n";
+            if (content) s += asCleanText(content, 3000);
+            return s.trim();
+        }
+
+        candidates.forEach(function (cand) {
+            var obj = cand.obj;
+            if (!obj) return;
+
+            var entries = null;
+            if (Array.isArray(obj)) entries = obj;
+            else if (Array.isArray(obj.entries)) entries = obj.entries;
+            else if (obj.entries && typeof obj.entries === "object") {
+                entries = [];
+                Object.keys(obj.entries).forEach(function (k) { entries.push(obj.entries[k]); });
+            }
+
+            if (entries && entries.length) {
+                var texts = [];
+                entries.forEach(function (e, i) {
+                    var t = entryText(e, i);
+                    if (t) texts.push(t);
+                });
+                if (texts.length) {
+                    parts.push("【角色卡世界书：" + cand.label + "】\n" + texts.join("\n\n"));
+                }
+            } else {
+                var raw = asCleanText(obj, 3000);
+                if (raw && raw !== "{}" && raw !== "[]") {
+                    parts.push("【角色卡世界书候选：" + cand.label + "】\n" + raw);
+                }
+            }
+        });
+
+        return parts.join("\n\n");
+    }
+
+    function extractPersonaText() {
+        var c;
+        try { c = ctx(); } catch (e) { return ""; }
+
+        var parts = [];
+
+        function add(label, value) {
+            var s = asCleanText(value, 3000);
+            if (!s) return;
+            // 过滤掉探针里出现的 jQuery 事件对象这类误判。
+            if (s.indexOf("jQuery") >= 0 && s.indexOf("events") >= 0) return;
+            if (s === "{}" || s === "[]") return;
+            parts.push("【" + label + "】\n" + s);
+        }
+
+        add("用户名称", c.name2);
+
+        try {
+            var p = c.powerUserSettings || {};
+            add("powerUserSettings.persona_description", p.persona_description);
+            add("powerUserSettings.personaDescription", p.personaDescription);
+            add("powerUserSettings.user_description", p.user_description);
+            add("powerUserSettings.userDescription", p.userDescription);
+        } catch (e1) {}
+
+        try {
+            var rw = rootWin();
+            if (typeof rw.persona_description === "string") add("window.persona_description", rw.persona_description);
+            if (typeof rw.user_description === "string") add("window.user_description", rw.user_description);
+            if (rw.power_user) {
+                add("window.power_user.persona_description", rw.power_user.persona_description);
+                add("window.power_user.user_description", rw.power_user.user_description);
+            }
+        } catch (e2) {}
+
+        return parts.join("\n\n");
+    }
+
+    function recentContentBlocks(rounds) {
+        var chat;
+        try { chat = ctx().chat; } catch (e) { return ""; }
+        if (!chat || !chat.length) return "";
+
+        var limit = rounds * 2;
+        var arr = [];
+        var count = 0;
+
+        for (var i = chat.length - 1; i >= 0 && count < limit; i--) {
+            var m = chat[i];
+            if (!m || m.is_system) continue;
+
+            var role = m.is_user ? "用户" : (m.name || "角色");
+            var text = String(m.mes || "");
+            text = cleanMessage(text);
+
+            var blocks = [];
+            var re = /<content\b[^>]*>([\s\S]*?)<\/content>/gi;
+            var match;
+            while ((match = re.exec(text)) !== null) {
+                var v = (match[1] || "").trim();
+                if (v) blocks.push(v);
+            }
+
+            // 用户消息通常没有 <content>，保留用户原文作为必要上下文，但限制长度。
+            if (!blocks.length && m.is_user) {
+                var u = text.trim();
+                if (u) blocks.push(u.length > 1200 ? u.slice(0, 1200) + "…" : u);
+            }
+
+            if (blocks.length) {
+                arr.unshift("[" + role + "]\n" + blocks.join("\n\n"));
+            }
+
+            count++;
+        }
+
+        return arr.join("\n\n---\n\n");
+    }
+
+    function buildPreciseContext() {
+        var parts = [];
+        var charText = extractCharacterCardText();
+        var bookText = extractCharacterBookText();
+        var personaText = extractPersonaText();
         var st = settings();
+
+        if (charText) parts.push("【当前角色卡】\n" + charText);
+        if (bookText) parts.push("【角色卡世界书 / Lorebook】\n" + bookText);
+        if (personaText) parts.push("【User 人设 / Persona】\n" + personaText);
+        if (st.supplementMemory && st.supplementMemory.trim()) {
+            parts.push("【手动补充】\n" + st.supplementMemory.trim());
+        }
+
+        return parts.join("\n\n");
+    }
+
+
+    function buildPrompt(type, extra) {
         var r = activeRange();
         var out = "";
 
-        if (st.supplementMemory && st.supplementMemory.trim()) {
-            out += "【角色卡要点 / 世界书 / 当前担心】\n" + st.supplementMemory.trim() + "\n\n";
+        var contextText = buildPreciseContext();
+        if (contextText) {
+            out += contextText + "\n\n";
         }
 
-        out += "【最近 " + r + " 轮 RP】\n" + (recentChat(r) || "（未读取到聊天内容）") + "\n\n";
+        var recent = recentContentBlocks(r);
+        out += "【最近 " + r + " 轮正文｜精准读取】\n" + (recent || "（未提取到 <content> 正文；用户消息会作为上下文保留）") + "\n\n";
 
         if (extra && extra.trim()) {
             out += "【本次额外指令】\n" + extra.trim() + "\n\n";
@@ -915,7 +1167,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v0.4.4.1】\n";
+        out += "【红霞探针 v0.4.5】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1034,7 +1286,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.4.1.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.5.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">探针版：新增检测上下文与 <content> 提取，用来定位角色卡、世界书、user 人设字段。</div>'
@@ -1051,6 +1303,7 @@
             + '<label>角色卡要点 / 世界书 / 当前担心</label>'
             + '<textarea id="adr044-memory" rows="5" placeholder="这里会同时发给情感导演和剧情导演">' + esc(st.supplementMemory || "") + '</textarea>'
             + '<div class="adr044-actions"><button id="adr044-probe-context" type="button" onclick="window.ADR044_probeContext&&window.ADR044_probeContext();return false;">检测上下文</button><button id="adr044-probe-content" type="button" onclick="window.ADR044_probeContent&&window.ADR044_probeContent();return false;">测试 &lt;content&gt; 提取</button></div>'
+            + '<div class="adr044-actions"><button id="adr044-preview-precise" type="button">预览精准读取</button></div>'
             + '<label>注入方式</label><select id="adr044-inject-mode">'
             + opt(st.injectMode, "visible", "可见文本注入（推荐测试）")
             + opt(st.injectMode, "hidden", "HTML 注释隐藏注入")
@@ -1113,6 +1366,7 @@
         ids["adr044-tab-plot"] = function () { switchTab("plot"); };
         ids["adr044-probe-context"] = function () { runContextProbe(); };
         ids["adr044-probe-content"] = function () { runContentProbe(); };
+        ids["adr044-preview-precise"] = function () { runPrecisePreview(); };
 
         ["emotion", "plot"].forEach(function (type) {
             ids["adr044-" + type + "-local"] = function () { localTest(type); };
@@ -1219,6 +1473,20 @@
         });
     }
 
+    function runPrecisePreview() {
+        syncAll();
+        var out = "";
+        out += "【红霞精准读取预览 v0.4.5】\n";
+        out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
+        out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
+        out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
+        out += recentContentBlocks(activeRange()) || "（未提取到正文）";
+        setPreview(currentType(), out);
+        status(currentType(), "精准读取预览完成 ✓", "#8ed99d");
+        setButtons(currentType());
+    }
+
+
     function installProbeGlobals() {
         try {
             var w = rootWin();
@@ -1227,6 +1495,7 @@
                     try { alert("检测上下文失败：" + (e.message || String(e))); } catch (_) {}
                 }
             };
+            w.ADR044_previewPrecise = function () { try { runPrecisePreview(); } catch (e) { try { alert("预览精准读取失败：" + (e.message || String(e))); } catch (_) {} } };
             w.ADR044_probeContent = function () {
                 try { runContentProbe(); } catch (e) {
                     try { alert("测试 content 失败：" + (e.message || String(e))); } catch (_) {}

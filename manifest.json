@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.4.1 探针直连",
+    "display_name": "红霞导演室 v0.4.5 精准读取",
     "loading_order": 22,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.4.1",
-    "description": "探针直连版：检测上下文和 <content> 提取按钮增加 inline onclick / 事件委托双保险"
+    "version": "0.4.5",
+    "description": "精准读取版：角色卡、角色卡世界书候选、User人设候选、最近N轮<content>正文作为双导演上下文"
 }
