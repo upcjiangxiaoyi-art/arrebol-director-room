@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.2
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.3.3
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1050,7 +1050,7 @@
 
             chat[idx].mes = mes.trimEnd() + add;
 
-            // v1.0.5.6.2：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
+            // v1.0.5.6.3.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
             adrDSaveThenRedrawAfterInject();
             return true;
         } catch (e) {
@@ -1435,7 +1435,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.6.2.2】\n";
+        out += "【红霞探针 v1.0.5.6.3.3.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1574,7 +1574,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.3.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -2201,7 +2201,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.6.2.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.6.3.3.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2835,6 +2835,32 @@
         } catch (e) {}
     }
 
+
+    function adrDPersistAutoBaselineFields(source) {
+        try {
+            var st = source || settings();
+            var backup = {};
+            try { backup = adrDLoadLocalBackup ? (adrDLoadLocalBackup() || {}) : {}; } catch (e0) { backup = {}; }
+
+            [
+                "lastAutoTriggerChatKey",
+                "lastAutoTriggerEmotionCount",
+                "lastAutoTriggerPlotCount",
+                "lastAutoTriggerAt",
+                "lastAutoTriggerEmotionAt",
+                "lastAutoTriggerPlotAt"
+            ].forEach(function (k) {
+                if (Object.prototype.hasOwnProperty.call(st, k)) backup[k] = st[k];
+            });
+
+            adrDSaveLocalBackup(backup);
+            return true;
+        } catch (e) {
+            try { adrDSaveLocalBackup(settings()); } catch (e2) {}
+            return false;
+        }
+    }
+
     function adrDResetAutoTriggerBaseline(reason) {
         try {
             var st = settings();
@@ -2851,6 +2877,7 @@
             }
 
             saveNow();
+            adrDPersistAutoBaselineFields(st);
             adrDUpdateAutoCounters();
             console.log("[Arrebol D] auto trigger baseline", reason, key, count);
         } catch (e) {}
@@ -2906,6 +2933,7 @@
             }
 
             saveNow();
+            adrDPersistAutoBaselineFields(st);
             adrDUpdateAutoCounters();
 
             if (!toRun.length) return;
