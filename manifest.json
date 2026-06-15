@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.3.3",
-    "description": "小修版：修复小红霞移动端点击不开；轻点打开面板，拖动超过阈值则只移动不打开"
+    "version": "1.0.3.4",
+    "description": "小修版：折叠注入正文改用 pre 容器，保留原始换行、空行和段落格式"
 }
