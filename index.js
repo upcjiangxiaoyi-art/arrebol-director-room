@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.8.1 探针直连
+ * Arrebol Director Room 红霞导演室 v0.4.8.1.1 探针直连
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v048-ipe-popup-panel";
+    var EXT = "arrebol-director-room-v0481-ipe-anchor";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -1167,7 +1167,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v0.4.8】\n";
+        out += "【红霞探针 v0.4.8.1】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1286,10 +1286,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.8.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.8.1.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">浮窗面板版：抽屉保留兜底，点击右侧红霞浮窗可在主页弹出完整导演室面板。</div>'
+            + '<div class="adr044-note">IPE锚点版：抽屉保留兜底，红霞浮窗优先贴着已成功显示的 IPE 按钮生成。</div>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1489,7 +1489,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v0.4.8】\n";
+        out += "【红霞精准读取预览 v0.4.8.1】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1578,7 +1578,7 @@
 
         // 把外层抽屉壳换成浮窗面板壳，但内部保留 adr044 ids，便于复用核心逻辑。
         html = html.replace('id="adr044-drawer"', 'id="adr048-popup-inner"');
-        html = html.replace('🎬 红霞导演室 v0.4.8', '🎬 红霞导演室');
+        html = html.replace('🎬 红霞导演室 v0.4.8.1', '🎬 红霞导演室');
         html = html.replace('class="inline-drawer-toggle inline-drawer-header"', 'class="adr048-popup-header"');
         html = html.replace('<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>', '<button type="button" id="adr048-popup-close">×</button>');
         html = html.replace('class="inline-drawer-content"', 'class="adr048-popup-content"');
@@ -1668,118 +1668,180 @@
         catch(e) { try { el.style[key] = value; } catch(_) {} }
     }
 
+
     function adr048CreateFab() {
         try {
             var d = rootDoc();
             if (!d) return;
 
-            var existing = d.querySelector("#adr048-fab");
-            if (existing) return;
+            var btn = d.querySelector("#adr048-fab");
+            if (!btn) {
+                btn = d.createElement("button");
+                btn.id = "adr048-fab";
+                btn.type = "button";
+                btn.textContent = "🎬 红霞";
+                btn.title = "红霞导演室";
 
-            var btn = d.createElement("button");
-            btn.id = "adr048-fab";
-            btn.type = "button";
-            btn.textContent = "🎬 红霞";
-            btn.title = "红霞导演室";
+                var dragging = false;
+                var moved = false;
+                var sx = 0, sy = 0, sl = 0, st = 0;
 
-            adr048SetImportant(btn, "position", "fixed");
-            adr048SetImportant(btn, "right", "12px");
-            adr048SetImportant(btn, "bottom", "148px");
-            adr048SetImportant(btn, "z-index", "2147483647");
-            adr048SetImportant(btn, "display", "inline-flex");
-            adr048SetImportant(btn, "align-items", "center");
-            adr048SetImportant(btn, "justify-content", "center");
-            adr048SetImportant(btn, "height", "42px");
-            adr048SetImportant(btn, "min-width", "88px");
-            adr048SetImportant(btn, "padding", "0 13px");
-            adr048SetImportant(btn, "border-radius", "999px");
-            adr048SetImportant(btn, "border", "1px solid rgba(255,255,255,.28)");
-            adr048SetImportant(btn, "background", "linear-gradient(135deg,#d67a6a,#a65472)");
-            adr048SetImportant(btn, "color", "#fff");
-            adr048SetImportant(btn, "font-size", "14px");
-            adr048SetImportant(btn, "font-weight", "800");
-            adr048SetImportant(btn, "box-shadow", "0 8px 22px rgba(0,0,0,.35)");
-            adr048SetImportant(btn, "cursor", "grab");
-            adr048SetImportant(btn, "pointer-events", "auto");
-            adr048SetImportant(btn, "touch-action", "none");
-            adr048SetImportant(btn, "user-select", "none");
-            adr048SetImportant(btn, "-webkit-user-select", "none");
-            adr048SetImportant(btn, "visibility", "visible");
-            adr048SetImportant(btn, "opacity", "1");
+                function point(ev) {
+                    if (ev.touches && ev.touches.length) return { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
+                    if (ev.changedTouches && ev.changedTouches.length) return { x: ev.changedTouches[0].clientX, y: ev.changedTouches[0].clientY };
+                    return { x: ev.clientX || 0, y: ev.clientY || 0 };
+                }
 
-            var dragging = false;
-            var moved = false;
-            var sx = 0, sy = 0, sl = 0, st = 0;
+                function imp(k, v) {
+                    try { btn.style.setProperty(k, v, "important"); }
+                    catch(e) { try { btn.style[k] = v; } catch(_) {} }
+                }
 
-            function point(ev) {
-                if (ev.touches && ev.touches.length) return { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
-                if (ev.changedTouches && ev.changedTouches.length) return { x: ev.changedTouches[0].clientX, y: ev.changedTouches[0].clientY };
-                return { x: ev.clientX || 0, y: ev.clientY || 0 };
+                function clamp(l, t) {
+                    var win = d.defaultView || window;
+                    var rect = btn.getBoundingClientRect();
+                    var w = rect.width || 88;
+                    var h = rect.height || 42;
+                    return {
+                        left: Math.max(4, Math.min((win.innerWidth || 360) - w - 4, l)),
+                        top: Math.max(4, Math.min((win.innerHeight || 640) - h - 4, t))
+                    };
+                }
+
+                function startDrag(ev) {
+                    var p = point(ev);
+                    var r = btn.getBoundingClientRect();
+                    dragging = true;
+                    moved = false;
+                    sx = p.x; sy = p.y; sl = r.left; st = r.top;
+                    imp("cursor", "grabbing");
+                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+                }
+
+                function moveDrag(ev) {
+                    if (!dragging) return;
+                    var p = point(ev);
+                    var dx = p.x - sx;
+                    var dy = p.y - sy;
+                    if (Math.abs(dx) + Math.abs(dy) > 5) moved = true;
+                    var pos = clamp(sl + dx, st + dy);
+                    imp("left", pos.left + "px");
+                    imp("top", pos.top + "px");
+                    imp("right", "auto");
+                    imp("bottom", "auto");
+                    btn.setAttribute("data-user-moved", "1");
+                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+                }
+
+                function endDrag(ev) {
+                    if (!dragging) return;
+                    dragging = false;
+                    imp("cursor", "grab");
+                    if (!moved) adr048OpenPopupPanel();
+                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+                }
+
+                btn.addEventListener("mousedown", startDrag, { passive: false });
+                btn.addEventListener("touchstart", startDrag, { passive: false });
+                d.addEventListener("mousemove", moveDrag, { passive: false });
+                d.addEventListener("mouseup", endDrag, { passive: false });
+                d.addEventListener("touchmove", moveDrag, { passive: false });
+                d.addEventListener("touchend", endDrag, { passive: false });
+                d.addEventListener("touchcancel", endDrag, { passive: false });
+
+                (d.body || d.documentElement).appendChild(btn);
             }
 
-            function clamp(l, t) {
-                var win = d.defaultView || window;
-                var rect = btn.getBoundingClientRect();
-                var w = rect.width || 88;
-                var h = rect.height || 42;
-                return {
-                    left: Math.max(4, Math.min((win.innerWidth || 360) - w - 4, l)),
-                    top: Math.max(4, Math.min((win.innerHeight || 640) - h - 4, t))
-                };
+            function setImp(k, v) {
+                try { btn.style.setProperty(k, v, "important"); }
+                catch(e) { try { btn.style[k] = v; } catch(_) {} }
             }
 
-            function start(ev) {
-                var p = point(ev);
-                var r = btn.getBoundingClientRect();
-                dragging = true;
-                moved = false;
-                sx = p.x; sy = p.y; sl = r.left; st = r.top;
-                adr048SetImportant(btn, "cursor", "grabbing");
-                try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+            // 关键：优先贴着已经成功显示的 IPE 浮窗。
+            var ipe = null;
+            try { ipe = d.querySelector("#ipe-chat-quick-entry"); } catch (e0) {}
+
+            setImp("position", "fixed");
+            setImp("z-index", "2147483647");
+            setImp("display", "inline-flex");
+            setImp("align-items", "center");
+            setImp("justify-content", "center");
+            setImp("height", "34px");
+            setImp("min-height", "34px");
+            setImp("min-width", "88px");
+            setImp("padding", "0 11px");
+            setImp("border-radius", "999px");
+            setImp("border", "1px solid rgba(255,255,255,.32)");
+            setImp("background", "linear-gradient(135deg, rgba(214,122,106,.98), rgba(166,84,114,.98))");
+            setImp("color", "#ffffff");
+            setImp("font-size", "13px");
+            setImp("font-weight", "800");
+            setImp("line-height", "1");
+            setImp("box-shadow", "0 8px 22px rgba(0,0,0,.35)");
+            setImp("cursor", "grab");
+            setImp("pointer-events", "auto");
+            setImp("user-select", "none");
+            setImp("-webkit-user-select", "none");
+            setImp("touch-action", "none");
+            setImp("white-space", "nowrap");
+            setImp("visibility", "visible");
+            setImp("opacity", "1");
+            setImp("transform", "translateZ(0)");
+
+            if (ipe && btn.getAttribute("data-user-moved") !== "1") {
+                try {
+                    var r = ipe.getBoundingClientRect();
+                    var win = d.defaultView || window;
+                    var left = Math.max(4, Math.min((win.innerWidth || 360) - 96, r.left));
+                    var top = r.bottom + 8;
+
+                    // 如果 IPE 下方空间不够，就贴到它上方。
+                    if (top > (win.innerHeight || 640) - 48) top = Math.max(4, r.top - 44);
+
+                    setImp("left", Math.round(left) + "px");
+                    setImp("top", Math.round(top) + "px");
+                    setImp("right", "auto");
+                    setImp("bottom", "auto");
+                    btn.setAttribute("data-anchor", "ipe");
+                } catch(e1) {}
+            } else if (btn.getAttribute("data-user-moved") !== "1") {
+                setImp("right", "12px");
+                setImp("bottom", "148px");
+                setImp("left", "auto");
+                setImp("top", "auto");
+                btn.setAttribute("data-anchor", "fallback");
             }
 
-            function move(ev) {
-                if (!dragging) return;
-                var p = point(ev);
-                var dx = p.x - sx;
-                var dy = p.y - sy;
-                if (Math.abs(dx) + Math.abs(dy) > 5) moved = true;
-                var pos = clamp(sl + dx, st + dy);
-                adr048SetImportant(btn, "left", pos.left + "px");
-                adr048SetImportant(btn, "top", pos.top + "px");
-                adr048SetImportant(btn, "right", "auto");
-                adr048SetImportant(btn, "bottom", "auto");
-                try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+            // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
+            if (!btn.__adr048ClickBound) {
+                btn.__adr048ClickBound = true;
+                btn.addEventListener("click", function(ev) {
+                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+                    adr048OpenPopupPanel();
+                }, true);
             }
-
-            function end(ev) {
-                if (!dragging) return;
-                dragging = false;
-                adr048SetImportant(btn, "cursor", "grab");
-                if (!moved) adr048OpenPopupPanel();
-                try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
-            }
-
-            btn.addEventListener("mousedown", start, { passive: false });
-            btn.addEventListener("touchstart", start, { passive: false });
-            d.addEventListener("mousemove", move, { passive: false });
-            d.addEventListener("mouseup", end, { passive: false });
-            d.addEventListener("touchmove", move, { passive: false });
-            d.addEventListener("touchend", end, { passive: false });
-            d.addEventListener("touchcancel", end, { passive: false });
-
-            (d.body || d.documentElement).appendChild(btn);
         } catch (e2) {
-            console.error("[ADR048] create fab failed", e2);
+            console.error("[ADR0481] create anchored fab failed", e2);
         }
     }
 
     function adr048EnsureFabLater() {
         adr048CreatePopupPanel();
         adr048CreateFab();
-        setTimeout(adr048CreateFab, 700);
+        setTimeout(adr048CreateFab, 400);
+        setTimeout(adr048CreateFab, 900);
         setTimeout(adr048CreateFab, 1600);
-        setTimeout(adr048CreateFab, 3200);
+        setTimeout(adr048CreateFab, 2600);
+        setTimeout(adr048CreateFab, 4200);
+
+        try {
+            var w = rootWin();
+            if (!w.__adr0481AnchorTimer) {
+                w.__adr0481AnchorTimer = setInterval(function () {
+                    try { adr048CreateFab(); } catch (e) {}
+                }, 2500);
+            }
+        } catch (e2) {}
     }
 
 
