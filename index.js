@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.4 探针
+ * Arrebol Director Room 红霞导演室 v0.4.4.1.1 探针直连
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v044-probe";
+    var EXT = "arrebol-director-room-v0441-probe-direct";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -915,7 +915,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v0.4.4】\n";
+        out += "【红霞探针 v0.4.4.1】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1034,7 +1034,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.4 探针</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.4.1.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">探针版：新增检测上下文与 <content> 提取，用来定位角色卡、世界书、user 人设字段。</div>'
@@ -1050,7 +1050,7 @@
             + '<input type="number" id="adr044-custom" placeholder="自定义轮数" value="' + esc(st.customRange || "") + '" style="display:' + (String(st.range) === "custom" ? "block" : "none") + '">'
             + '<label>角色卡要点 / 世界书 / 当前担心</label>'
             + '<textarea id="adr044-memory" rows="5" placeholder="这里会同时发给情感导演和剧情导演">' + esc(st.supplementMemory || "") + '</textarea>'
-            + '<div class="adr044-actions"><button id="adr044-probe-context" type="button">检测上下文</button><button id="adr044-probe-content" type="button">测试 &lt;content&gt; 提取</button></div>'
+            + '<div class="adr044-actions"><button id="adr044-probe-context" type="button" onclick="window.ADR044_probeContext&&window.ADR044_probeContext();return false;">检测上下文</button><button id="adr044-probe-content" type="button" onclick="window.ADR044_probeContent&&window.ADR044_probeContent();return false;">测试 &lt;content&gt; 提取</button></div>'
             + '<label>注入方式</label><select id="adr044-inject-mode">'
             + opt(st.injectMode, "visible", "可见文本注入（推荐测试）")
             + opt(st.injectMode, "hidden", "HTML 注释隐藏注入")
@@ -1219,6 +1219,51 @@
         });
     }
 
+    function installProbeGlobals() {
+        try {
+            var w = rootWin();
+            w.ADR044_probeContext = function () {
+                try { runContextProbe(); } catch (e) {
+                    try { alert("检测上下文失败：" + (e.message || String(e))); } catch (_) {}
+                }
+            };
+            w.ADR044_probeContent = function () {
+                try { runContentProbe(); } catch (e) {
+                    try { alert("测试 content 失败：" + (e.message || String(e))); } catch (_) {}
+                }
+            };
+        } catch (e) {}
+    }
+
+    function installProbeDelegation() {
+        try {
+            var d = rootDoc();
+            if (d.__adr044ProbeDelegated) return;
+            d.__adr044ProbeDelegated = true;
+
+            function handle(ev) {
+                var t = ev.target;
+                if (!t) return;
+
+                var hit = null;
+                try { hit = t.closest("#adr044-probe-context,#adr044-probe-content"); }
+                catch (e) { hit = null; }
+
+                if (!hit) return;
+
+                try { ev.preventDefault(); ev.stopPropagation(); } catch (_) {}
+
+                if (hit.id === "adr044-probe-context") runContextProbe();
+                if (hit.id === "adr044-probe-content") runContentProbe();
+            }
+
+            d.addEventListener("click", handle, true);
+            d.addEventListener("touchend", handle, true);
+            d.addEventListener("pointerup", handle, true);
+        } catch (e) {}
+    }
+
+
     function init() {
         if (initialized) return;
         initialized = true;
@@ -1226,6 +1271,8 @@
         try {
             settings();
             mountDrawer();
+            installProbeGlobals();
+            installProbeDelegation();
             bindDirect();
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);
