@@ -481,3 +481,6 @@
 .arrebol-d-raw-inject {
     white-space: pre-wrap !important;
 }
+
+
+/* v1.0.4.7：补回字段刷新函数，修复打开面板失活。 */

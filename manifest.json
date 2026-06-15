@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.4.6",
-    "description": "真最小补丁版：完全基于 v1.0.4.0 稳定保存仓库，不改内部 EXT/初始化/按钮绑定；只改 refreshMessageDom，避免整条消息 innerHTML 重写"
+    "version": "1.0.4.7",
+    "description": "缺失函数修复版：基于 v1.0.4.6 真最小补丁，补回 adrDRefreshAllFieldsFromSettings，修复打开红霞面板时报错导致按钮失活"
 }

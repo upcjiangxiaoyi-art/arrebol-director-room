@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.6
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.7
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -881,8 +881,8 @@
     }
 
     function refreshMessageDom(index) {
-        // v1.0.4.6 真·最小补丁：
-        // 原 v1.0.4.0 这里会 msg.innerHTML = content，等于重写整条消息，
+        // v1.0.4.7 真·最小补丁：
+        // 原 v1.0.4.7 这里会 msg.innerHTML = content，等于重写整条消息，
         // 会触发/破坏其他美化正则。现在只把最后一段 arrebol_d###...### 安全追加到显示层。
         try {
             var chat = ctx().chat;
@@ -1345,7 +1345,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.4.6.2】\n";
+        out += "【红霞探针 v1.0.4.7.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1474,7 +1474,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.6</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.7</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1555,6 +1555,45 @@
 
         if (eb) eb.classList.toggle("active", type === "emotion");
         if (pb) pb.classList.toggle("active", type === "plot");
+    }
+
+
+    function adrDSetAllById(id, value, checked) {
+        try {
+            var nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id));
+            nodes.forEach(function (el) {
+                if (!el) return;
+                if (el.type === "checkbox") el.checked = !!checked;
+                else el.value = value == null ? "" : value;
+            });
+        } catch (e) {}
+    }
+
+    function adrDRefreshAllFieldsFromSettings() {
+        try {
+            var st = settings();
+
+            adrDSetAllById("adr044-range", st.range || "30");
+            adrDSetAllById("adr044-custom", st.customRange || "");
+            adrDSetAllById("adr044-memory", st.supplementMemory || "");
+            adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
+            adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
+
+            ["emotion", "plot"].forEach(function (type) {
+                var p = prefixOf(type);
+                adrDSetAllById("adr044-" + type + "-endpoint", st[p + "ApiEndpoint"] || "");
+                adrDSetAllById("adr044-" + type + "-key", st[p + "ApiKey"] || "");
+                adrDSetAllById("adr044-" + type + "-model", st[p + "Model"] || "");
+                adrDSetAllById("adr044-" + type + "-preset", st[p + "Preset"] || "");
+                adrDSetAllById("adr044-" + type + "-preview", st[p + "Preview"] || "");
+                adrDSetAllById("adr044-auto-inject-" + type, "", type === "plot" ? st.autoInjectPlot : st.autoInjectEmotion);
+                adrDSetAllById("adr044-auto-trigger-" + type, "", type === "plot" ? st.autoTriggerPlot : st.autoTriggerEmotion);
+                adrDSetAllById("adr044-auto-trigger-range-" + type, st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"] || (type === "plot" ? "10" : "20"));
+                adrDSetAllById("adr044-auto-trigger-custom-" + type, st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "");
+            });
+        } catch (e) {
+            console.warn("[Arrebol D] refresh all fields failed", e);
+        }
     }
 
     function bindDirect() {
@@ -1762,7 +1801,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.4.6.2】\n";
+        out += "【红霞精准读取预览 v1.0.4.7.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
