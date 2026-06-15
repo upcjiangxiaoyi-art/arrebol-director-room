@@ -1,35 +1,35 @@
 
-#adr041-drawer .adr041-box {
+#adr042-drawer .adr042-box {
     padding: 6px 0 10px;
     font-family: -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
 }
 
-#adr041-drawer .adr041-note {
+#adr042-drawer .adr042-note {
     font-size: 12px;
     color: #888;
     margin: 4px 0 8px;
 }
 
-#adr041-drawer details {
+#adr042-drawer details {
     border-top: 1px solid rgba(0,0,0,.12);
     padding: 7px 0;
 }
 
-#adr041-drawer summary {
+#adr042-drawer summary {
     font-weight: 700;
     cursor: pointer;
     margin-bottom: 6px;
 }
 
-#adr041-drawer label {
+#adr042-drawer label {
     display: block;
     font-size: 12px;
     margin-top: 6px;
 }
 
-#adr041-drawer input,
-#adr041-drawer select,
-#adr041-drawer textarea {
+#adr042-drawer input,
+#adr042-drawer select,
+#adr042-drawer textarea {
     width: 100%;
     box-sizing: border-box;
     font-size: 16px;
@@ -37,18 +37,28 @@
     margin-top: 3px;
 }
 
-#adr041-status {
+#adr042-status {
     font-size: 12px;
     color: #666;
     margin-bottom: 5px;
 }
 
-.adr041-actions {
+.adr042-actions {
     display: flex;
     gap: 6px;
     margin-top: 6px;
 }
 
-.adr041-actions button {
+.adr042-actions button {
     flex: 1;
+}
+
+
+#adr042-model-select {
+    margin-top: 5px;
+}
+
+#adr042-load-models,
+#adr042-save {
+    min-height: 34px;
 }

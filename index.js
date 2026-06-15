@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.1
+ * Arrebol Director Room 红霞导演室 v0.4.2
  * 抽屉内嵌硬跑通版：
  * - 不创建 floating entry
  * - 不创建 fixed panel
@@ -12,7 +12,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v041-drawer-inline";
+    var EXT = "arrebol-director-room-v042-models";
     var DEFAULT_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
 
     var DEFAULTS = {
@@ -93,7 +93,7 @@
     }
 
     function status(text, color) {
-        var el = q("#adr041-status");
+        var el = q("#adr042-status");
         if (el) {
             el.textContent = text;
             if (color) el.style.color = color;
@@ -101,21 +101,21 @@
     }
 
     function setPreview(text) {
-        var pv = q("#adr041-preview");
+        var pv = q("#adr042-preview");
         if (pv) pv.value = text || "";
         save("previewText", text || "");
     }
 
     function sync() {
         var pairs = [
-            ["adr041-endpoint", "apiEndpoint"],
-            ["adr041-key", "apiKey"],
-            ["adr041-model", "model"],
-            ["adr041-range", "range"],
-            ["adr041-custom", "customRange"],
-            ["adr041-memory", "supplementMemory"],
-            ["adr041-preset", "directorPreset"],
-            ["adr041-preview", "previewText"]
+            ["adr042-endpoint", "apiEndpoint"],
+            ["adr042-key", "apiKey"],
+            ["adr042-model", "model"],
+            ["adr042-range", "range"],
+            ["adr042-custom", "customRange"],
+            ["adr042-memory", "supplementMemory"],
+            ["adr042-preset", "directorPreset"],
+            ["adr042-preview", "previewText"]
         ];
         pairs.forEach(function (pair) {
             var el = q("#" + pair[0]);
@@ -274,16 +274,146 @@
         return out;
     }
 
+    function modelsUrl(base) {
+        var b = normalizeBase(base);
+        return b ? b + "/models" : "";
+    }
+
+    function pushModel(list, m) {
+        if (!m) return;
+        if (typeof m === "string") {
+            list.push(m);
+            return;
+        }
+        if (m.id) list.push(m.id);
+        else if (m.name) list.push(m.name);
+        else if (m.model) list.push(m.model);
+        else if (m.slug) list.push(m.slug);
+    }
+
+    function extractModels(data) {
+        var list = [];
+
+        if (!data) return list;
+
+        if (Array.isArray(data)) {
+            data.forEach(function (m) { pushModel(list, m); });
+        } else if (Array.isArray(data.data)) {
+            data.data.forEach(function (m) { pushModel(list, m); });
+        } else if (Array.isArray(data.models)) {
+            data.models.forEach(function (m) { pushModel(list, m); });
+        } else if (data.object && data.id) {
+            pushModel(list, data);
+        }
+
+        var seen = {};
+        var out = [];
+        list.forEach(function (x) {
+            x = String(x || "").trim();
+            if (!x) return;
+            if (seen[x]) return;
+            seen[x] = true;
+            out.push(x);
+        });
+
+        out.sort();
+        return out;
+    }
+
+    function fillModelSelect(models) {
+        var sel = q("#adr042-model-select");
+        var input = q("#adr042-model");
+        if (!sel) return;
+
+        var current = (input && input.value) || settings().model || "";
+        var html = "";
+
+        if (current) {
+            html += '<option value="' + esc(current) + '">' + esc(current) + '（当前）</option>';
+        } else {
+            html += '<option value="">请选择模型</option>';
+        }
+
+        models.forEach(function (m) {
+            if (m === current) return;
+            html += '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+        });
+
+        sel.innerHTML = html;
+        if (current) sel.value = current;
+    }
+
+    async function loadModels() {
+        sync();
+
+        var st = settings();
+        if (!st.apiEndpoint) {
+            status("请先填写 API 地址", "#d4726a");
+            return;
+        }
+
+        var url = modelsUrl(st.apiEndpoint);
+        if (!url) {
+            status("API 地址无效", "#d4726a");
+            return;
+        }
+
+        var btn = q("#adr042-load-models");
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "加载中…";
+        }
+
+        status("正在拉取模型列表…", "#8ed99d");
+
+        try {
+            var headers = {};
+            if (st.apiKey) headers.Authorization = "Bearer " + st.apiKey;
+
+            var res = await fetch(url, {
+                method: "GET",
+                headers: headers
+            });
+
+            var raw = await res.text();
+
+            if (!res.ok) {
+                throw new Error("模型接口 " + res.status + "：" + raw.slice(0, 220));
+            }
+
+            var data;
+            try { data = JSON.parse(raw); }
+            catch (e) { throw new Error("模型接口返回非 JSON：" + raw.slice(0, 180)); }
+
+            var models = extractModels(data);
+
+            if (!models.length) {
+                throw new Error("没有解析到模型名");
+            }
+
+            fillModelSelect(models);
+            status("已加载 " + models.length + " 个模型 ✓", "#8ed99d");
+        } catch (e) {
+            status("加载模型失败：" + (e.message || String(e)), "#d4726a");
+        }
+
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = "加载模型";
+        }
+    }
+
+
     function setButtons() {
-        var g = q("#adr041-generate");
-        var r = q("#adr041-reroll");
-        var s = q("#adr041-stop");
-        var c = q("#adr041-copy");
+        var g = q("#adr042-generate");
+        var r = q("#adr042-reroll");
+        var s = q("#adr042-stop");
+        var c = q("#adr042-copy");
 
         if (g) g.disabled = processing;
         if (r) r.disabled = processing;
         if (s) s.disabled = !processing;
-        if (c) c.disabled = !(q("#adr041-preview") && q("#adr041-preview").value);
+        if (c) c.disabled = !(q("#adr042-preview") && q("#adr042-preview").value);
     }
 
     async function run(extra) {
@@ -321,7 +451,7 @@
     }
 
     function copyPreview() {
-        var pv = q("#adr041-preview");
+        var pv = q("#adr042-preview");
         var text = pv ? pv.value : "";
         if (!text) {
             status("没有内容可复制", "#d4726a");
@@ -357,40 +487,42 @@
     function drawerHTML() {
         var st = settings();
 
-        return '<div id="adr041-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.1</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+        return '<div id="adr042-drawer"><div class="inline-drawer">'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
-            + '<div class="adr041-box">'
-            + '<div class="adr041-note">抽屉内嵌硬跑通版：不使用浮窗/面板。先确认真实功能链路能跑。</div>'
+            + '<div class="adr042-box">'
+            + '<div class="adr042-note">抽屉内嵌稳定版：新增加载模型。先填 API 地址/密钥，再点“加载模型”。</div>'
 
             + '<details open><summary>配置</summary>'
-            + '<label>复盘范围</label><select id="adr041-range">'
+            + '<label>复盘范围</label><select id="adr042-range">'
             + opt(st.range, "10", "最近 10 轮")
             + opt(st.range, "20", "最近 20 轮")
             + opt(st.range, "30", "最近 30 轮")
             + opt(st.range, "50", "最近 50 轮")
             + opt(st.range, "custom", "自定义")
             + '</select>'
-            + '<input type="number" id="adr041-custom" placeholder="自定义轮数" value="' + esc(st.customRange || "") + '" style="display:' + (String(st.range) === "custom" ? "block" : "none") + '">'
-            + '<label>API 地址</label><input type="text" id="adr041-endpoint" value="' + esc(st.apiEndpoint || "") + '" placeholder="https://openrouter.ai/api/v1">'
-            + '<label>API 密钥</label><input type="password" id="adr041-key" value="' + esc(st.apiKey || "") + '" placeholder="sk-...">'
-            + '<label>模型</label><input type="text" id="adr041-model" value="' + esc(st.model || "") + '" placeholder="例如：gpt-4o-mini / openrouter model">'
+            + '<input type="number" id="adr042-custom" placeholder="自定义轮数" value="' + esc(st.customRange || "") + '" style="display:' + (String(st.range) === "custom" ? "block" : "none") + '">'
+            + '<label>API 地址</label><input type="text" id="adr042-endpoint" value="' + esc(st.apiEndpoint || "") + '" placeholder="https://openrouter.ai/api/v1">'
+            + '<label>API 密钥</label><input type="password" id="adr042-key" value="' + esc(st.apiKey || "") + '" placeholder="sk-...">'
+            + '<label>模型</label><input type="text" id="adr042-model" value="' + esc(st.model || "") + '" placeholder="可以手填，或先点加载模型">'
+            + '<select id="adr042-model-select"><option value="' + esc(st.model || "") + '">' + (st.model ? esc(st.model) + "（当前）" : "加载后选择模型") + '</option></select>'
+            + '<div class="adr042-actions"><button id="adr042-load-models" type="button">加载模型</button><button id="adr042-save" type="button">保存设置</button></div>'
             + '</details>'
 
             + '<details><summary>手动补充</summary>'
-            + '<textarea id="adr041-memory" rows="5" placeholder="角色卡要点 / 世界书 / 当前担心">' + esc(st.supplementMemory || "") + '</textarea>'
+            + '<textarea id="adr042-memory" rows="5" placeholder="角色卡要点 / 世界书 / 当前担心">' + esc(st.supplementMemory || "") + '</textarea>'
             + '</details>'
 
             + '<details><summary>情感导演预设</summary>'
-            + '<textarea id="adr041-preset" rows="8">' + esc(st.directorPreset || "") + '</textarea>'
+            + '<textarea id="adr042-preset" rows="8">' + esc(st.directorPreset || "") + '</textarea>'
             + '</details>'
 
             + '<details open><summary>导演方向</summary>'
-            + '<div id="adr041-status">抽屉内嵌版已加载。请先点“本地测试”。</div>'
-            + '<textarea id="adr041-preview" rows="8" placeholder="生成结果显示在这里">' + esc(st.previewText || "") + '</textarea>'
-            + '<label>补充指令</label><input type="text" id="adr041-extra" placeholder="例：这段其实是冷战，别往撒娇方向写">'
-            + '<div class="adr041-actions"><button id="adr041-local" type="button">本地测试</button><button id="adr041-generate" type="button">生成方向</button></div>'
-            + '<div class="adr041-actions"><button id="adr041-reroll" type="button">重新分析</button><button id="adr041-stop" type="button" disabled>打断请求</button><button id="adr041-copy" type="button">复制</button></div>'
+            + '<div id="adr042-status">抽屉内嵌版已加载。请先点“本地测试”。</div>'
+            + '<textarea id="adr042-preview" rows="8" placeholder="生成结果显示在这里">' + esc(st.previewText || "") + '</textarea>'
+            + '<label>补充指令</label><input type="text" id="adr042-extra" placeholder="例：这段其实是冷战，别往撒娇方向写">'
+            + '<div class="adr042-actions"><button id="adr042-local" type="button">本地测试</button><button id="adr042-generate" type="button">生成方向</button></div>'
+            + '<div class="adr042-actions"><button id="adr042-reroll" type="button">重新分析</button><button id="adr042-stop" type="button" disabled>打断请求</button><button id="adr042-copy" type="button">复制</button></div>'
             + '</details>'
 
             + '</div>'
@@ -398,7 +530,7 @@
     }
 
     function mountDrawer() {
-        if (q("#adr041-drawer")) return;
+        if (q("#adr042-drawer")) return;
 
         var html = drawerHTML();
 
@@ -424,51 +556,68 @@
 
     function bindDirect() {
         var ids = {
-            "adr041-local": function () { testLocalPreview(); },
-            "adr041-generate": function () { run(""); },
-            "adr041-reroll": function () {
-                var extra = q("#adr041-extra");
+            "adr042-local": function () { testLocalPreview(); },
+            "adr042-generate": function () { run(""); },
+            "adr042-reroll": function () {
+                var extra = q("#adr042-extra");
                 run(extra ? extra.value : "");
             },
-            "adr041-stop": function () { abortRun(); },
-            "adr041-copy": function () { copyPreview(); }
+            "adr042-stop": function () { abortRun(); },
+            "adr042-copy": function () { copyPreview(); },
+            "adr042-load-models": function () { loadModels(); },
+            "adr042-save": function () {
+                sync();
+                status("设置已保存 ✓", "#8ed99d");
+            }
         };
 
         Object.keys(ids).forEach(function (id) {
             var el = q("#" + id);
-            if (!el || el.__adr041Bound) return;
-            el.__adr041Bound = true;
+            if (!el || el.__adr042Bound) return;
+            el.__adr042Bound = true;
             el.addEventListener("click", function (ev) {
                 try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
                 ids[id]();
             });
         });
 
-        var range = q("#adr041-range");
-        if (range && !range.__adr041Bound) {
-            range.__adr041Bound = true;
+        var range = q("#adr042-range");
+        if (range && !range.__adr042Bound) {
+            range.__adr042Bound = true;
             range.addEventListener("change", function () {
                 save("range", range.value);
-                var custom = q("#adr041-custom");
+                var custom = q("#adr042-custom");
                 if (custom) custom.style.display = range.value === "custom" ? "block" : "none";
                 saveNow();
             });
         }
 
+        var modelSelect = q("#adr042-model-select");
+        if (modelSelect && !modelSelect.__adr042Bound) {
+            modelSelect.__adr042Bound = true;
+            modelSelect.addEventListener("change", function () {
+                var modelInput = q("#adr042-model");
+                if (modelInput) modelInput.value = modelSelect.value;
+                save("model", modelSelect.value || "");
+                saveNow();
+                status("已选择模型：" + (modelSelect.value || "空"), "#8ed99d");
+            });
+        }
+
         var map = {
-            "adr041-endpoint": "apiEndpoint",
-            "adr041-key": "apiKey",
-            "adr041-model": "model",
-            "adr041-custom": "customRange",
-            "adr041-memory": "supplementMemory",
-            "adr041-preset": "directorPreset",
-            "adr041-preview": "previewText"
+            "adr042-endpoint": "apiEndpoint",
+            "adr042-key": "apiKey",
+            "adr042-model": "model",
+            "adr042-custom": "customRange",
+            "adr042-memory": "supplementMemory",
+            "adr042-preset": "directorPreset",
+            "adr042-preview": "previewText"
         };
 
         Object.keys(map).forEach(function (id) {
             var el = q("#" + id);
-            if (!el || el.__adr041InputBound) return;
-            el.__adr041InputBound = true;
+            if (!el || el.__adr042InputBound) return;
+            el.__adr042InputBound = true;
             el.addEventListener("input", function () {
                 if (map[id] === "customRange") save(map[id], Number(el.value || 0));
                 else save(map[id], el.value || "");
@@ -478,9 +627,9 @@
 
     function installGlobals() {
         var w = rootWin();
-        w.ADR041_run = function () { run(""); };
-        w.ADR041_local = function () { testLocalPreview(); };
-        w.ADR041_copy = function () { copyPreview(); };
+        w.ADR042_run = function () { run(""); };
+        w.ADR042_local = function () { testLocalPreview(); };
+        w.ADR042_copy = function () { copyPreview(); };
     }
 
     function init() {
@@ -495,9 +644,9 @@
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);
-            console.log("[ADR041] drawer inline loaded");
+            console.log("[ADR042] drawer inline loaded");
         } catch (e) {
-            console.error("[ADR041] init failed", e);
+            console.error("[ADR042] init failed", e);
         }
     }
 

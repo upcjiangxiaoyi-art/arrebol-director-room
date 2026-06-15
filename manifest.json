@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.1 抽屉内嵌",
+    "display_name": "红霞导演室 v0.4.2 拉取模型",
     "loading_order": 21,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.1",
-    "description": "抽屉内嵌硬跑通版：不使用浮窗/面板，所有导演功能直接在扩展抽屉内运行"
+    "version": "0.4.2",
+    "description": "抽屉内嵌稳定版：新增 /models 拉取与模型下拉选择"
 }
