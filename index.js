@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.5.1 探针直连
+ * Arrebol Director Room 红霞导演室 v0.4.6.1 探针直连
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v045-precise-reader";
+    var EXT = "arrebol-director-room-v046-quick-entry";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -1167,7 +1167,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v0.4.5】\n";
+        out += "【红霞探针 v0.4.6】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1286,10 +1286,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.5.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.6.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">探针版：新增检测上下文与 <content> 提取，用来定位角色卡、世界书、user 人设字段。</div>'
+            + '<div class="adr044-note">快捷入口版：核心面板仍在抽屉内，浮窗只负责定位到红霞导演室。</div>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1476,7 +1476,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v0.4.5】\n";
+        out += "【红霞精准读取预览 v0.4.6】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1533,6 +1533,138 @@
     }
 
 
+    function ensureExtensionsPanelOpen() {
+        try {
+            var d = rootDoc();
+
+            // 尽量只做温和点击，不碰红霞核心面板。
+            var selectors = [
+                "#extensions_button",
+                "#extensionsMenuButton",
+                "#extensions_menu_button",
+                "[title='Extensions']",
+                "[title='扩展']",
+                ".drawer-toggle[data-drawer='extensions']",
+                ".drawer-toggle[data-drawer='extensions_settings']"
+            ];
+
+            var drawer = d.querySelector("#extensions_settings2");
+            var visibleEnough = false;
+            if (drawer) {
+                var rect = drawer.getBoundingClientRect();
+                visibleEnough = rect && rect.width > 0 && rect.height > 0;
+            }
+
+            if (visibleEnough) return;
+
+            for (var i = 0; i < selectors.length; i++) {
+                var btn = d.querySelector(selectors[i]);
+                if (btn) {
+                    try { btn.click(); return; } catch (e) {}
+                }
+            }
+        } catch (e2) {}
+    }
+
+    function highlightDrawer() {
+        try {
+            var el = q("#adr044-drawer");
+            if (!el) return;
+
+            el.classList.remove("adr044-highlight");
+            void el.offsetWidth;
+            el.classList.add("adr044-highlight");
+
+            setTimeout(function () {
+                try { el.classList.remove("adr044-highlight"); } catch (e) {}
+            }, 2600);
+        } catch (e2) {}
+    }
+
+    function openDrawerInline() {
+        try {
+            var drawer = q("#adr044-drawer");
+            if (!drawer) {
+                mountDrawer();
+                bindDirect();
+                drawer = q("#adr044-drawer");
+            }
+
+            ensureExtensionsPanelOpen();
+
+            setTimeout(function () {
+                try {
+                    var d = q("#adr044-drawer");
+                    if (!d) return;
+
+                    // 展开红霞自己的 inline drawer，避免只是滚到了折叠标题。
+                    try {
+                        var content = d.querySelector(".inline-drawer-content");
+                        var icon = d.querySelector(".inline-drawer-icon");
+                        if (content) content.style.display = "";
+                        if (icon) {
+                            icon.classList.remove("up");
+                            icon.classList.add("down");
+                        }
+                    } catch (e0) {}
+
+                    try {
+                        d.scrollIntoView({ behavior: "smooth", block: "center" });
+                    } catch (e1) {
+                        try { d.scrollIntoView(); } catch (e2) {}
+                    }
+
+                    highlightDrawer();
+                } catch (e3) {}
+            }, 160);
+        } catch (e4) {}
+    }
+
+    function removeOldQuickEntry() {
+        try {
+            var d = rootDoc();
+            var old = d.querySelectorAll("#adr046-quick-entry");
+            for (var i = 0; i < old.length; i++) old[i].remove();
+        } catch (e) {}
+    }
+
+    function createQuickEntry() {
+        try {
+            var d = rootDoc();
+            if (!d || !d.body) return;
+
+            if (d.querySelector("#adr046-quick-entry")) return;
+
+            var btn = d.createElement("button");
+            btn.id = "adr046-quick-entry";
+            btn.type = "button";
+            btn.textContent = "🎬 红霞";
+            btn.setAttribute("aria-label", "打开红霞导演室");
+
+            btn.addEventListener("click", function (ev) {
+                try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                openDrawerInline();
+            }, true);
+
+            btn.addEventListener("touchend", function (ev) {
+                try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                openDrawerInline();
+            }, true);
+
+            d.body.appendChild(btn);
+        } catch (e2) {
+            console.error("[ADR046] create quick entry failed", e2);
+        }
+    }
+
+    function ensureQuickEntryLater() {
+        createQuickEntry();
+        setTimeout(createQuickEntry, 700);
+        setTimeout(createQuickEntry, 1600);
+        setTimeout(createQuickEntry, 3200);
+    }
+
+
     function init() {
         if (initialized) return;
         initialized = true;
@@ -1543,6 +1675,7 @@
             installProbeGlobals();
             installProbeDelegation();
             bindDirect();
+            ensureQuickEntryLater();
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);
