@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.3.4",
-    "description": "小修版：折叠注入正文改用 pre 容器，保留原始换行、空行和段落格式"
+    "version": "1.0.3.6",
+    "description": "小修版：折叠注入正文不再依赖 pre/CSS 保留换行，改为将换行直接转换为 <br>，修复酒馆渲染后格式混乱"
 }

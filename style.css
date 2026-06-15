@@ -429,3 +429,19 @@
     word-break: break-word !important;
     overflow-wrap: anywhere !important;
 }
+
+
+.arrebol-d-card .arrebol-d-body {
+    display: block !important;
+    margin: 8px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    line-height: 1.65 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+}
