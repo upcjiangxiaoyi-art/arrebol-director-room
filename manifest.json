@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.4.3",
-    "description": "真正 IPE 同款安全注入版：基于 v1.0.4.0，修复 v1.0.4.2 getChatArray 管线错误；保留 arrebol_d###，只追加 escaped DOM 片段，不重写整条消息"
+    "version": "1.0.4.4",
+    "description": "最小手术安全注入版：基于 v1.0.4.0，仅禁用整条消息 DOM 重写，改为追加已转义文本；保留稳定保存仓库和原按钮管线"
 }
