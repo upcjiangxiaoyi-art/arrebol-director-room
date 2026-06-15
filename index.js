@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.3
+ * Arrebol Director Room 红霞导演室 v0.4.4 探针
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v043-dual-inject";
+    var EXT = "arrebol-director-room-v044-probe";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -109,7 +109,7 @@
     }
 
     function status(type, text, color) {
-        var el = q("#adr043-" + type + "-status");
+        var el = q("#adr044-" + type + "-status");
         if (el) {
             el.textContent = text;
             if (color) el.style.color = color;
@@ -135,7 +135,7 @@
     }
 
     function setPreview(type, text) {
-        var pv = q("#adr043-" + type + "-preview");
+        var pv = q("#adr044-" + type + "-preview");
         if (pv) pv.value = text || "";
         save(field(type, "preview"), text || "");
     }
@@ -204,22 +204,22 @@
     function syncShared() {
         var st = settings();
 
-        var range = q("#adr043-range");
+        var range = q("#adr044-range");
         if (range) save("range", range.value || "30");
 
-        var custom = q("#adr043-custom");
+        var custom = q("#adr044-custom");
         if (custom) save("customRange", Number(custom.value || 0));
 
-        var memory = q("#adr043-memory");
+        var memory = q("#adr044-memory");
         if (memory) save("supplementMemory", memory.value || "");
 
-        var mode = q("#adr043-inject-mode");
+        var mode = q("#adr044-inject-mode");
         if (mode) save("injectMode", mode.value || "visible");
 
-        var aiE = q("#adr043-auto-inject-emotion");
+        var aiE = q("#adr044-auto-inject-emotion");
         if (aiE) save("autoInjectEmotion", !!aiE.checked);
 
-        var aiP = q("#adr043-auto-inject-plot");
+        var aiP = q("#adr044-auto-inject-plot");
         if (aiP) save("autoInjectPlot", !!aiP.checked);
 
         saveNow();
@@ -228,11 +228,11 @@
     function syncType(type) {
         var p = prefixOf(type);
 
-        var endpoint = q("#adr043-" + type + "-endpoint");
-        var key = q("#adr043-" + type + "-key");
-        var model = q("#adr043-" + type + "-model");
-        var preset = q("#adr043-" + type + "-preset");
-        var preview = q("#adr043-" + type + "-preview");
+        var endpoint = q("#adr044-" + type + "-endpoint");
+        var key = q("#adr044-" + type + "-key");
+        var model = q("#adr044-" + type + "-model");
+        var preset = q("#adr044-" + type + "-preset");
+        var preview = q("#adr044-" + type + "-preview");
 
         if (endpoint) save(p + "ApiEndpoint", endpoint.value || "");
         if (key) save(p + "ApiKey", key.value || "");
@@ -357,12 +357,12 @@
 
     function setButtons(type) {
         ["emotion", "plot"].forEach(function (t) {
-            var g = q("#adr043-" + t + "-generate");
-            var r = q("#adr043-" + t + "-reroll");
-            var s = q("#adr043-" + t + "-stop");
-            var c = q("#adr043-" + t + "-copy");
-            var inj = q("#adr043-" + t + "-inject");
-            var pv = q("#adr043-" + t + "-preview");
+            var g = q("#adr044-" + t + "-generate");
+            var r = q("#adr044-" + t + "-reroll");
+            var s = q("#adr044-" + t + "-stop");
+            var c = q("#adr044-" + t + "-copy");
+            var inj = q("#adr044-" + t + "-inject");
+            var pv = q("#adr044-" + t + "-preview");
             var has = pv && pv.value;
 
             if (g) g.disabled = processing;
@@ -418,7 +418,7 @@
     }
 
     function copyText(type) {
-        var pv = q("#adr043-" + type + "-preview");
+        var pv = q("#adr044-" + type + "-preview");
         var text = pv ? pv.value : "";
         if (!text) {
             status(type, "没有内容可复制", "#d4726a");
@@ -534,7 +534,7 @@
             refreshMessageDom(idx);
             return true;
         } catch (e) {
-            console.error("[ADR043] inject failed", e);
+            console.error("[ADR044] inject failed", e);
             return false;
         }
     }
@@ -585,7 +585,7 @@
         var modelKey = field(type, "model");
         var current = st[modelKey] || "";
 
-        var sel = q("#adr043-" + type + "-model-select");
+        var sel = q("#adr044-" + type + "-model-select");
         if (!sel) return;
 
         var html = "";
@@ -620,7 +620,7 @@
             return;
         }
 
-        var btn = q("#adr043-" + type + "-load-models");
+        var btn = q("#adr044-" + type + "-load-models");
         if (btn) {
             btn.disabled = true;
             btn.textContent = "加载中…";
@@ -656,6 +656,345 @@
         }
     }
 
+    function safeType(v) {
+        if (v === null) return "null";
+        if (v === undefined) return "undefined";
+        if (Array.isArray(v)) return "array(" + v.length + ")";
+        return typeof v;
+    }
+
+    function shortText(v, max) {
+        max = max || 500;
+        try {
+            var s = typeof v === "string" ? v : JSON.stringify(v, null, 2);
+            if (!s) return "";
+            if (s.length > max) return s.slice(0, max) + "…";
+            return s;
+        } catch (e) {
+            try { return String(v).slice(0, max); } catch (_) { return ""; }
+        }
+    }
+
+    function listKeys(obj, max) {
+        max = max || 80;
+        try {
+            if (!obj) return "（无）";
+            var keys = Object.keys(obj);
+            return keys.slice(0, max).join(", ") + (keys.length > max ? " … 共" + keys.length + "项" : "");
+        } catch (e) {
+            return "（无法读取 keys：" + e.message + "）";
+        }
+    }
+
+    function getCurrentCharacterProbe() {
+        var c;
+        try { c = ctx(); } catch (e) { return { error: e.message }; }
+
+        var info = {
+            chid: null,
+            characterId: null,
+            name1: null,
+            charObj: null,
+            source: ""
+        };
+
+        var ids = ["characterId", "this_chid", "chid", "currentCharacterId"];
+        ids.forEach(function (k) {
+            if (c[k] !== undefined && info[k === "characterId" ? "characterId" : "chid"] === null) {
+                if (k === "characterId") info.characterId = c[k];
+                else info.chid = c[k];
+            }
+        });
+
+        var id = info.characterId;
+        if (id === null || id === undefined) id = info.chid;
+
+        try {
+            if (c.characters && id !== null && id !== undefined && c.characters[id]) {
+                info.charObj = c.characters[id];
+                info.source = "ctx.characters[id]";
+            }
+        } catch (e1) {}
+
+        try {
+            if (!info.charObj && c.character) {
+                info.charObj = c.character;
+                info.source = "ctx.character";
+            }
+        } catch (e2) {}
+
+        try {
+            if (!info.charObj && c.characters && Array.isArray(c.characters) && c.name1) {
+                for (var i = 0; i < c.characters.length; i++) {
+                    if (c.characters[i] && c.characters[i].name === c.name1) {
+                        info.charObj = c.characters[i];
+                        info.source = "ctx.characters by name1";
+                        break;
+                    }
+                }
+            }
+        } catch (e3) {}
+
+        try { info.name1 = c.name1 || (info.charObj && info.charObj.name) || ""; } catch (e4) {}
+
+        return info;
+    }
+
+    function extractCoreCharacterText(ch) {
+        if (!ch) return "";
+        var parts = [];
+        var fields = [
+            ["name", "名称"],
+            ["description", "描述"],
+            ["personality", "性格"],
+            ["scenario", "场景"],
+            ["first_mes", "首条消息"],
+            ["mes_example", "示例对话"],
+            ["creator_notes", "创作者注释"],
+            ["system_prompt", "系统提示"],
+            ["post_history_instructions", "后历史指令"]
+        ];
+
+        fields.forEach(function (pair) {
+            var k = pair[0], label = pair[1];
+            if (ch[k]) parts.push("【" + label + "】\n" + String(ch[k]).trim());
+        });
+
+        try {
+            if (ch.data) {
+                fields.forEach(function (pair) {
+                    var k = pair[0], label = pair[1];
+                    if (ch.data[k] && !ch[k]) parts.push("【data." + label + "】\n" + String(ch.data[k]).trim());
+                });
+            }
+        } catch (e) {}
+
+        return parts.join("\n\n");
+    }
+
+    function findPersonaProbe() {
+        var c;
+        try { c = ctx(); } catch (e) { return { error: e.message }; }
+
+        var candidates = [];
+        var keys = [
+            "persona",
+            "persona_description",
+            "personaDescription",
+            "user_description",
+            "userDescription",
+            "power_user",
+            "name2"
+        ];
+
+        keys.forEach(function (k) {
+            try {
+                if (c[k] !== undefined) candidates.push({ key: "ctx." + k, type: safeType(c[k]), value: shortText(c[k], 600) });
+            } catch (e) {}
+        });
+
+        try {
+            var rw = rootWin();
+            ["persona_description", "power_user", "selected_persona", "name2", "user_avatar"].forEach(function (k) {
+                if (rw[k] !== undefined) candidates.push({ key: "window." + k, type: safeType(rw[k]), value: shortText(rw[k], 600) });
+            });
+        } catch (e2) {}
+
+        return candidates;
+    }
+
+    function findWorldProbe() {
+        var c;
+        try { c = ctx(); } catch (e) { return [{ key: "ctx", error: e.message }]; }
+
+        var out = [];
+        var ctxKeys = [
+            "world_info",
+            "worldInfo",
+            "worldInfos",
+            "world_names",
+            "worldNames",
+            "chat_metadata",
+            "chatMetadata",
+            "characters",
+            "groups",
+            "extensionSettings"
+        ];
+
+        ctxKeys.forEach(function (k) {
+            try {
+                if (c[k] !== undefined) out.push({ key: "ctx." + k, type: safeType(c[k]), keys: listKeys(c[k], 40), value: shortText(c[k], 500) });
+            } catch (e) {}
+        });
+
+        try {
+            var rw = rootWin();
+            [
+                "world_info",
+                "worldInfo",
+                "world_names",
+                "world_names_data",
+                "selected_world_info",
+                "chat_metadata",
+                "getWorldInfoPrompt",
+                "getWorldInfoPromptData",
+                "getWorldInfoSettings",
+                "world_info_data"
+            ].forEach(function (k) {
+                if (rw[k] !== undefined) out.push({ key: "window." + k, type: safeType(rw[k]), keys: listKeys(rw[k], 40), value: shortText(rw[k], 500) });
+            });
+        } catch (e2) {}
+
+        return out;
+    }
+
+    function extractContentBlocksFromText(text) {
+        text = String(text || "");
+        text = cleanMessage(text);
+
+        var blocks = [];
+        var re = /<content\b[^>]*>([\s\S]*?)<\/content>/gi;
+        var m;
+        while ((m = re.exec(text)) !== null) {
+            var v = (m[1] || "").trim();
+            if (v) blocks.push(v);
+        }
+
+        return blocks;
+    }
+
+    function contentBlocksProbe(rounds) {
+        var chat;
+        try { chat = ctx().chat; } catch (e) { return { error: e.message, blocks: [] }; }
+        if (!chat || !chat.length) return { blocks: [], lines: ["（未读取到聊天）"] };
+
+        var limit = rounds * 2;
+        var lines = [];
+        var blocks = [];
+        var count = 0;
+
+        for (var i = chat.length - 1; i >= 0 && count < limit; i--) {
+            var msg = chat[i];
+            if (!msg || msg.is_system) continue;
+
+            var role = msg.is_user ? "用户" : (msg.name || "角色");
+            var found = extractContentBlocksFromText(msg.mes);
+
+            if (found.length) {
+                for (var j = 0; j < found.length; j++) {
+                    blocks.unshift({
+                        index: i,
+                        role: role,
+                        text: found[j]
+                    });
+                }
+                lines.unshift("消息 #" + i + " [" + role + "] 提取到 " + found.length + " 段 <content>");
+            } else {
+                lines.unshift("消息 #" + i + " [" + role + "] 无 <content>");
+            }
+
+            count++;
+        }
+
+        return { blocks: blocks, lines: lines };
+    }
+
+    function runContextProbe() {
+        syncAll();
+
+        var c;
+        try { c = ctx(); } catch (e) {
+            setPreview(currentType(), "读取 ctx 失败：" + e.message);
+            return;
+        }
+
+        var charInfo = getCurrentCharacterProbe();
+        var ch = charInfo.charObj;
+        var persona = findPersonaProbe();
+        var worlds = findWorldProbe();
+        var content = contentBlocksProbe(activeRange());
+
+        var out = "";
+        out += "【红霞探针 v0.4.4】\n";
+        out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
+
+        out += "【Context 顶层 keys】\n";
+        out += listKeys(c, 120) + "\n\n";
+
+        out += "【当前角色定位】\n";
+        out += "characterId: " + shortText(charInfo.characterId, 100) + "\n";
+        out += "chid/this_chid: " + shortText(charInfo.chid, 100) + "\n";
+        out += "name1/角色名: " + shortText(charInfo.name1, 100) + "\n";
+        out += "角色来源: " + (charInfo.source || "未定位") + "\n";
+        out += "角色对象类型: " + safeType(ch) + "\n";
+        out += "角色对象 keys: " + listKeys(ch, 100) + "\n\n";
+
+        out += "【角色卡核心字段预览】\n";
+        var core = extractCoreCharacterText(ch);
+        out += (core ? core.slice(0, 1800) : "（未提取到常见角色卡字段）") + "\n\n";
+
+        out += "【User 人设 / Persona 候选】\n";
+        if (persona.length) {
+            persona.forEach(function (p) {
+                out += "- " + p.key + " | " + p.type + "\n";
+                if (p.value) out += p.value.slice(0, 500) + "\n";
+            });
+        } else {
+            out += "（未找到明显 persona 字段）\n";
+        }
+        out += "\n";
+
+        out += "【世界书 / Lorebook 候选】\n";
+        if (worlds.length) {
+            worlds.forEach(function (w) {
+                out += "- " + w.key + " | " + w.type + "\n";
+                out += "  keys: " + (w.keys || "（无）") + "\n";
+                if (w.value) out += "  preview: " + String(w.value).replace(/\n/g, " ").slice(0, 500) + "\n";
+            });
+        } else {
+            out += "（未找到明显 world/lorebook 字段）\n";
+        }
+        out += "\n";
+
+        out += "【<content> 提取概览】\n";
+        if (content.error) out += "错误：" + content.error + "\n";
+        out += "提取段数: " + (content.blocks ? content.blocks.length : 0) + "\n";
+        if (content.lines) out += content.lines.slice(0, 80).join("\n") + "\n";
+
+        setPreview(currentType(), out);
+        status(currentType(), "上下文探针完成 ✓ 请复制结果给小g", "#8ed99d");
+        setButtons(currentType());
+    }
+
+    function runContentProbe() {
+        syncAll();
+
+        var result = contentBlocksProbe(activeRange());
+        var out = "";
+        out += "【<content> 精准提取测试】\n";
+        out += "范围：最近 " + activeRange() + " 轮，按消息倒序扫描后恢复顺序。\n\n";
+
+        if (result.error) out += "错误：" + result.error + "\n\n";
+
+        out += "【扫描概览】\n";
+        out += (result.lines && result.lines.length ? result.lines.join("\n") : "（无扫描结果）") + "\n\n";
+
+        out += "【提取正文】\n";
+        if (result.blocks && result.blocks.length) {
+            result.blocks.forEach(function (b, i) {
+                out += "\n--- content #" + (i + 1) + " / 消息#" + b.index + " / " + b.role + " ---\n";
+                out += b.text + "\n";
+            });
+        } else {
+            out += "未提取到 <content>...</content>。如果你的正文没有 content 标签，正式版需要 fallback 策略。\n";
+        }
+
+        setPreview(currentType(), out);
+        status(currentType(), "<content> 提取测试完成 ✓", "#8ed99d");
+        setButtons(currentType());
+    }
+
+
     function opt(cur, val, label) {
         return '<option value="' + val + '"' + (String(cur) === String(val) ? " selected" : "") + '>' + label + '</option>';
     }
@@ -666,27 +1005,27 @@
         var title = type === "plot" ? "剧情导演" : "情感导演";
         var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
 
-        return '<div class="adr043-page" id="adr043-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
+        return '<div class="adr044-page" id="adr044-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
             + '<details open><summary>' + title + '配置</summary>'
-            + '<label>API 地址</label><input type="text" id="adr043-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
-            + '<label>API 密钥</label><input type="password" id="adr043-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
-            + '<label>模型</label><input type="text" id="adr043-' + type + '-model" value="' + esc(st[p + "Model"] || "") + '" placeholder="可以手填，或加载模型">'
-            + '<select id="adr043-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
-            + '<div class="adr043-actions"><button id="adr043-' + type + '-load-models" type="button">加载模型</button><button id="adr043-' + type + '-save" type="button">保存设置</button></div>'
-            + '<label class="adr043-check"><input type="checkbox" id="adr043-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
+            + '<label>API 地址</label><input type="text" id="adr044-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
+            + '<label>API 密钥</label><input type="password" id="adr044-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
+            + '<label>模型</label><input type="text" id="adr044-' + type + '-model" value="' + esc(st[p + "Model"] || "") + '" placeholder="可以手填，或加载模型">'
+            + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
+            + '<div class="adr044-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
             + '</details>'
 
             + '<details><summary>' + title + '预设</summary>'
-            + '<textarea id="adr043-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
+            + '<textarea id="adr044-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
             + '</details>'
 
             + '<details open><summary>' + title + '结果</summary>'
-            + '<div id="adr043-' + type + '-status">请先本地测试，或直接生成方向。</div>'
-            + '<textarea id="adr043-' + type + '-preview" rows="8" placeholder="生成结果显示在这里">' + esc(st[p + "Preview"] || "") + '</textarea>'
-            + '<label>补充指令</label><input type="text" id="adr043-' + type + '-extra" placeholder="只影响本次重新分析">'
-            + '<div class="adr043-actions"><button id="adr043-' + type + '-local" type="button">本地测试</button><button id="adr043-' + type + '-generate" type="button">生成方向</button></div>'
-            + '<div class="adr043-actions"><button id="adr043-' + type + '-reroll" type="button">重新分析</button><button id="adr043-' + type + '-stop" type="button" disabled>打断</button><button id="adr043-' + type + '-copy" type="button">复制</button></div>'
-            + '<div class="adr043-actions"><button id="adr043-' + type + '-inject" type="button">手动注入当前聊天</button></div>'
+            + '<div id="adr044-' + type + '-status">请先本地测试，或直接生成方向。</div>'
+            + '<textarea id="adr044-' + type + '-preview" rows="8" placeholder="生成结果显示在这里">' + esc(st[p + "Preview"] || "") + '</textarea>'
+            + '<label>补充指令</label><input type="text" id="adr044-' + type + '-extra" placeholder="只影响本次重新分析">'
+            + '<div class="adr044-actions"><button id="adr044-' + type + '-local" type="button">本地测试</button><button id="adr044-' + type + '-generate" type="button">生成方向</button></div>'
+            + '<div class="adr044-actions"><button id="adr044-' + type + '-reroll" type="button">重新分析</button><button id="adr044-' + type + '-stop" type="button" disabled>打断</button><button id="adr044-' + type + '-copy" type="button">复制</button></div>'
+            + '<div class="adr044-actions"><button id="adr044-' + type + '-inject" type="button">手动注入当前聊天</button></div>'
             + '</details>'
             + '</div>';
     }
@@ -694,32 +1033,33 @@
     function drawerHTML() {
         var st = settings();
 
-        return '<div id="adr043-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+        return '<div id="adr044-drawer"><div class="inline-drawer">'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.4 探针</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
-            + '<div class="adr043-box">'
-            + '<div class="adr043-note">双导演版：情感和剧情各自独立 API / 模型 / 预设。当前仍为抽屉内嵌稳定路线。</div>'
+            + '<div class="adr044-box">'
+            + '<div class="adr044-note">探针版：新增检测上下文与 <content> 提取，用来定位角色卡、世界书、user 人设字段。</div>'
 
             + '<details open><summary>共享设置</summary>'
-            + '<label>复盘范围</label><select id="adr043-range">'
+            + '<label>复盘范围</label><select id="adr044-range">'
             + opt(st.range, "10", "最近 10 轮")
             + opt(st.range, "20", "最近 20 轮")
             + opt(st.range, "30", "最近 30 轮")
             + opt(st.range, "50", "最近 50 轮")
             + opt(st.range, "custom", "自定义")
             + '</select>'
-            + '<input type="number" id="adr043-custom" placeholder="自定义轮数" value="' + esc(st.customRange || "") + '" style="display:' + (String(st.range) === "custom" ? "block" : "none") + '">'
+            + '<input type="number" id="adr044-custom" placeholder="自定义轮数" value="' + esc(st.customRange || "") + '" style="display:' + (String(st.range) === "custom" ? "block" : "none") + '">'
             + '<label>角色卡要点 / 世界书 / 当前担心</label>'
-            + '<textarea id="adr043-memory" rows="5" placeholder="这里会同时发给情感导演和剧情导演">' + esc(st.supplementMemory || "") + '</textarea>'
-            + '<label>注入方式</label><select id="adr043-inject-mode">'
+            + '<textarea id="adr044-memory" rows="5" placeholder="这里会同时发给情感导演和剧情导演">' + esc(st.supplementMemory || "") + '</textarea>'
+            + '<div class="adr044-actions"><button id="adr044-probe-context" type="button">检测上下文</button><button id="adr044-probe-content" type="button">测试 &lt;content&gt; 提取</button></div>'
+            + '<label>注入方式</label><select id="adr044-inject-mode">'
             + opt(st.injectMode, "visible", "可见文本注入（推荐测试）")
             + opt(st.injectMode, "hidden", "HTML 注释隐藏注入")
             + '</select>'
             + '</details>'
 
-            + '<div class="adr043-tabs">'
-            + '<button id="adr043-tab-emotion" type="button" class="' + (st.activeTab === "plot" ? "" : "active") + '">情感导演</button>'
-            + '<button id="adr043-tab-plot" type="button" class="' + (st.activeTab === "plot" ? "active" : "") + '">剧情导演</button>'
+            + '<div class="adr044-tabs">'
+            + '<button id="adr044-tab-emotion" type="button" class="' + (st.activeTab === "plot" ? "" : "active") + '">情感导演</button>'
+            + '<button id="adr044-tab-plot" type="button" class="' + (st.activeTab === "plot" ? "active" : "") + '">剧情导演</button>'
             + '</div>'
 
             + pageHTML("emotion")
@@ -729,7 +1069,7 @@
     }
 
     function mountDrawer() {
-        if (q("#adr043-drawer")) return;
+        if (q("#adr044-drawer")) return;
 
         var html = drawerHTML();
 
@@ -755,10 +1095,10 @@
 
     function switchTab(type) {
         save("activeTab", type);
-        var ep = q("#adr043-page-emotion");
-        var pp = q("#adr043-page-plot");
-        var eb = q("#adr043-tab-emotion");
-        var pb = q("#adr043-tab-plot");
+        var ep = q("#adr044-page-emotion");
+        var pp = q("#adr044-page-plot");
+        var eb = q("#adr044-tab-emotion");
+        var pb = q("#adr044-tab-plot");
 
         if (ep) ep.style.display = type === "emotion" ? "" : "none";
         if (pp) pp.style.display = type === "plot" ? "" : "none";
@@ -769,27 +1109,29 @@
     function bindDirect() {
         var ids = {};
 
-        ids["adr043-tab-emotion"] = function () { switchTab("emotion"); };
-        ids["adr043-tab-plot"] = function () { switchTab("plot"); };
+        ids["adr044-tab-emotion"] = function () { switchTab("emotion"); };
+        ids["adr044-tab-plot"] = function () { switchTab("plot"); };
+        ids["adr044-probe-context"] = function () { runContextProbe(); };
+        ids["adr044-probe-content"] = function () { runContentProbe(); };
 
         ["emotion", "plot"].forEach(function (type) {
-            ids["adr043-" + type + "-local"] = function () { localTest(type); };
-            ids["adr043-" + type + "-generate"] = function () { run(type, ""); };
-            ids["adr043-" + type + "-reroll"] = function () {
-                var extra = q("#adr043-" + type + "-extra");
+            ids["adr044-" + type + "-local"] = function () { localTest(type); };
+            ids["adr044-" + type + "-generate"] = function () { run(type, ""); };
+            ids["adr044-" + type + "-reroll"] = function () {
+                var extra = q("#adr044-" + type + "-extra");
                 run(type, extra ? extra.value : "");
             };
-            ids["adr043-" + type + "-stop"] = function () { abortRun(type); };
-            ids["adr043-" + type + "-copy"] = function () { copyText(type); };
-            ids["adr043-" + type + "-load-models"] = function () { loadModels(type); };
-            ids["adr043-" + type + "-save"] = function () {
+            ids["adr044-" + type + "-stop"] = function () { abortRun(type); };
+            ids["adr044-" + type + "-copy"] = function () { copyText(type); };
+            ids["adr044-" + type + "-load-models"] = function () { loadModels(type); };
+            ids["adr044-" + type + "-save"] = function () {
                 syncShared();
                 syncType(type);
                 status(type, "设置已保存 ✓", "#8ed99d");
             };
-            ids["adr043-" + type + "-inject"] = function () {
+            ids["adr044-" + type + "-inject"] = function () {
                 syncType(type);
-                var pv = q("#adr043-" + type + "-preview");
+                var pv = q("#adr044-" + type + "-preview");
                 var text = pv ? pv.value : "";
                 if (!text) {
                     status(type, "没有内容可注入", "#d4726a");
@@ -802,28 +1144,28 @@
 
         Object.keys(ids).forEach(function (id) {
             var el = q("#" + id);
-            if (!el || el.__adr043Bound) return;
-            el.__adr043Bound = true;
+            if (!el || el.__adr044Bound) return;
+            el.__adr044Bound = true;
             el.addEventListener("click", function (ev) {
                 try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
                 ids[id]();
             });
         });
 
-        var range = q("#adr043-range");
-        if (range && !range.__adr043Bound) {
-            range.__adr043Bound = true;
+        var range = q("#adr044-range");
+        if (range && !range.__adr044Bound) {
+            range.__adr044Bound = true;
             range.addEventListener("change", function () {
                 save("range", range.value);
-                var custom = q("#adr043-custom");
+                var custom = q("#adr044-custom");
                 if (custom) custom.style.display = range.value === "custom" ? "block" : "none";
                 saveNow();
             });
         }
 
-        var mode = q("#adr043-inject-mode");
-        if (mode && !mode.__adr043Bound) {
-            mode.__adr043Bound = true;
+        var mode = q("#adr044-inject-mode");
+        if (mode && !mode.__adr044Bound) {
+            mode.__adr044Bound = true;
             mode.addEventListener("change", function () {
                 save("injectMode", mode.value || "visible");
                 saveNow();
@@ -831,11 +1173,11 @@
         }
 
         ["emotion", "plot"].forEach(function (type) {
-            var modelSelect = q("#adr043-" + type + "-model-select");
-            if (modelSelect && !modelSelect.__adr043Bound) {
-                modelSelect.__adr043Bound = true;
+            var modelSelect = q("#adr044-" + type + "-model-select");
+            if (modelSelect && !modelSelect.__adr044Bound) {
+                modelSelect.__adr044Bound = true;
                 modelSelect.addEventListener("change", function () {
-                    var modelInput = q("#adr043-" + type + "-model");
+                    var modelInput = q("#adr044-" + type + "-model");
                     if (modelInput) modelInput.value = modelSelect.value;
                     save(field(type, "model"), modelSelect.value || "");
                     saveNow();
@@ -843,9 +1185,9 @@
                 });
             }
 
-            var auto = q("#adr043-auto-inject-" + type);
-            if (auto && !auto.__adr043Bound) {
-                auto.__adr043Bound = true;
+            var auto = q("#adr044-auto-inject-" + type);
+            if (auto && !auto.__adr044Bound) {
+                auto.__adr044Bound = true;
                 auto.addEventListener("change", function () {
                     save(type === "plot" ? "autoInjectPlot" : "autoInjectEmotion", !!auto.checked);
                     saveNow();
@@ -854,22 +1196,22 @@
         });
 
         var map = {
-            "adr043-custom": "customRange",
-            "adr043-memory": "supplementMemory"
+            "adr044-custom": "customRange",
+            "adr044-memory": "supplementMemory"
         };
 
         ["emotion", "plot"].forEach(function (type) {
-            map["adr043-" + type + "-endpoint"] = field(type, "apiEndpoint");
-            map["adr043-" + type + "-key"] = field(type, "apiKey");
-            map["adr043-" + type + "-model"] = field(type, "model");
-            map["adr043-" + type + "-preset"] = field(type, "preset");
-            map["adr043-" + type + "-preview"] = field(type, "preview");
+            map["adr044-" + type + "-endpoint"] = field(type, "apiEndpoint");
+            map["adr044-" + type + "-key"] = field(type, "apiKey");
+            map["adr044-" + type + "-model"] = field(type, "model");
+            map["adr044-" + type + "-preset"] = field(type, "preset");
+            map["adr044-" + type + "-preview"] = field(type, "preview");
         });
 
         Object.keys(map).forEach(function (id) {
             var el = q("#" + id);
-            if (!el || el.__adr043InputBound) return;
-            el.__adr043InputBound = true;
+            if (!el || el.__adr044InputBound) return;
+            el.__adr044InputBound = true;
             el.addEventListener("input", function () {
                 if (map[id] === "customRange") save(map[id], Number(el.value || 0));
                 else save(map[id], el.value || "");
@@ -888,9 +1230,9 @@
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);
-            console.log("[ADR043] dual drawer loaded");
+            console.log("[ADR044] dual drawer loaded");
         } catch (e) {
-            console.error("[ADR043] init failed", e);
+            console.error("[ADR044] init failed", e);
         }
     }
 

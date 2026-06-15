@@ -1,35 +1,35 @@
 
-#adr043-drawer .adr043-box {
+#adr044-drawer .adr044-box {
     padding: 6px 0 10px;
     font-family: -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
 }
 
-#adr043-drawer .adr043-note {
+#adr044-drawer .adr044-note {
     font-size: 12px;
     color: #888;
     margin: 4px 0 8px;
 }
 
-#adr043-drawer details {
+#adr044-drawer details {
     border-top: 1px solid rgba(0,0,0,.12);
     padding: 7px 0;
 }
 
-#adr043-drawer summary {
+#adr044-drawer summary {
     font-weight: 700;
     cursor: pointer;
     margin-bottom: 6px;
 }
 
-#adr043-drawer label {
+#adr044-drawer label {
     display: block;
     font-size: 12px;
     margin-top: 6px;
 }
 
-#adr043-drawer input,
-#adr043-drawer select,
-#adr043-drawer textarea {
+#adr044-drawer input,
+#adr044-drawer select,
+#adr044-drawer textarea {
     width: 100%;
     box-sizing: border-box;
     font-size: 16px;
@@ -37,17 +37,17 @@
     margin-top: 3px;
 }
 
-#adr043-drawer textarea {
+#adr044-drawer textarea {
     resize: vertical;
 }
 
-.adr043-tabs {
+.adr044-tabs {
     display: flex;
     gap: 6px;
     margin: 10px 0 8px;
 }
 
-.adr043-tabs button {
+.adr044-tabs button {
     flex: 1;
     padding: 8px 10px;
     border-radius: 8px;
@@ -55,34 +55,40 @@
     background: rgba(214,122,106,.10);
 }
 
-.adr043-tabs button.active {
+.adr044-tabs button.active {
     background: rgba(214,122,106,.32);
     font-weight: 700;
 }
 
-#adr043-emotion-status,
-#adr043-plot-status {
+#adr044-emotion-status,
+#adr044-plot-status {
     font-size: 12px;
     color: #666;
     margin-bottom: 5px;
 }
 
-.adr043-actions {
+.adr044-actions {
     display: flex;
     gap: 6px;
     margin-top: 6px;
 }
 
-.adr043-actions button {
+.adr044-actions button {
     flex: 1;
 }
 
-.adr043-check {
+.adr044-check {
     display: flex !important;
     align-items: center;
     gap: 6px;
 }
 
-.adr043-check input {
+.adr044-check input {
     width: auto !important;
+}
+
+
+#adr044-probe-context,
+#adr044-probe-content {
+    min-height: 34px;
 }

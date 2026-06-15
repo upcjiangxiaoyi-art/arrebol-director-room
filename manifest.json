@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.3 双导演注入",
+    "display_name": "红霞导演室 v0.4.4 探针",
     "loading_order": 22,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.3",
-    "description": "抽屉内嵌稳定版：情感/剧情双导演、独立API模型、自动注入当前聊天"
+    "version": "0.4.4",
+    "description": "探针版：检测角色卡、世界书、user人设字段，并测试最近N轮 <content> 精准提取"
 }
