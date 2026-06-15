@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.3.1",
-    "description": "灵魂共鸣者Arrebol在线检测；双导演、双API、精准读取与独立自动触发"
+    "version": "1.0.3.2",
+    "description": "小修版：小红霞可自由拖动，拖动松手不再误打开面板，只有点击才弹出导演系统"
 }

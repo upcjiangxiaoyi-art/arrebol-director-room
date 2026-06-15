@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.3.1
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.3.2
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-d-final-v103-independent-auto";
+    var EXT = "arrebol-d-final-v1032-drag-click-fix";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -1366,7 +1366,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.3.1</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.3.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1763,7 +1763,7 @@
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔，也可以任意一边关闭只手动使用。</div>'
+            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；小红霞支持自由拖动，只有点击才打开面板。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -2033,7 +2033,15 @@
                     if (!dragging) return;
                     dragging = false;
                     imp("cursor", "grab");
-                    if (!moved) adr048OpenPopupPanel();
+
+                    if (moved) {
+                        btn.__adr048JustDragged = true;
+                        setTimeout(function () {
+                            try { btn.__adr048JustDragged = false; } catch (e) {}
+                        }, 650);
+                    }
+
+                    // 拖动结束绝不打开面板；只允许真正 click 打开。
                     try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
                 }
 
@@ -2114,17 +2122,23 @@
 
                 function hardOpen(ev) {
                     try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+
+                    // 刚刚发生过拖动，就吞掉这次 click / touchend / pointerup，避免误弹。
+                    if (btn.__adr048JustDragged) {
+                        return false;
+                    }
+
                     setTimeout(function () {
-                        try { adr048OpenPopupPanel(); } catch (e2) { console.error(e2); }
+                        try {
+                            if (!btn.__adr048JustDragged) adr048OpenPopupPanel();
+                        } catch (e2) { console.error(e2); }
                     }, 20);
                     return false;
                 }
 
                 btn.onclick = hardOpen;
                 btn.addEventListener("click", hardOpen, true);
-                btn.addEventListener("pointerup", hardOpen, true);
-                // touchend 已被拖拽逻辑使用，这里也补一层延迟硬开。
-                btn.addEventListener("touchend", hardOpen, true);
+                // 不再用 pointerup / touchend 打开，避免拖动松手误触。
             }
         } catch (e2) {
             console.error("[ADR0481] create anchored fab failed", e2);
