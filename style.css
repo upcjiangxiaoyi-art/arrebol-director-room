@@ -1,7 +1,106 @@
 
-/* 红霞导演室 v0.3.5 隔离接线版 */
-#drs-entry{-webkit-tap-highlight-color:transparent}#drs-entry:active{transform:scale(.97)}#drs-entry.processing{animation:drs-pulse 1.25s ease-in-out infinite}@keyframes drs-pulse{0%,100%{box-shadow:0 0 0 0 rgba(214,122,106,.52)}50%{box-shadow:0 0 0 12px rgba(214,122,106,0)}}
-#drs-panel .drs-head{display:flex;justify-content:space-between;align-items:center;padding:13px 16px 10px;border-bottom:1px solid rgba(214,122,106,.22);flex-shrink:0}#drs-panel .drs-head b{color:#f0e6e3;font-size:14px}#drs-close{width:34px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#eee;font-size:18px;cursor:pointer;flex:none}
-#drs-panel .drs-body{padding:10px 14px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}#drs-panel details{border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:8px}#drs-panel summary{cursor:pointer;color:#e6c1bb;font-weight:700;padding:5px 0}#drs-panel label{color:#bfa8a2;font-size:12px;margin-top:6px;display:block}
-#drs-panel input,#drs-panel select,#drs-panel textarea{width:100%;box-sizing:border-box;padding:9px;border-radius:8px;border:1px solid rgba(214,122,106,.25);background:rgba(255,255,255,.06);color:#eee;font-size:16px;line-height:1.5;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;margin-top:4px}#drs-panel textarea{resize:vertical}#drs-panel input:focus,#drs-panel select:focus,#drs-panel textarea:focus{border-color:rgba(214,122,106,.5);outline:none}
-#drs-status{font-size:12px;color:#cfc5c2;padding:4px 0}.drs-hint{color:#94807a;font-size:11.5px;margin:4px 0 6px}.drs-actions{display:flex;gap:8px;margin-top:8px}.drs-actions button,#drs-panel button{padding:8px 12px;background:rgba(214,122,106,.22);border:1px solid rgba(214,122,106,.38);color:#f3cbc4;border-radius:8px;flex:1;cursor:pointer;font-family:inherit}.drs-actions button:disabled{opacity:.42;cursor:not-allowed}
+#adr040-entry {
+    -webkit-tap-highlight-color: transparent;
+}
+
+#adr040-entry:active {
+    transform: scale(.97);
+}
+
+#adr040-panel .adr040-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 13px 16px 10px;
+    border-bottom: 1px solid rgba(214,122,106,.22);
+    flex-shrink: 0;
+}
+
+#adr040-panel #adr040-close {
+    width: 34px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.08);
+    color: #eee;
+    font-size: 18px;
+}
+
+#adr040-panel .adr040-body {
+    padding: 10px 14px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+}
+
+#adr040-panel details {
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    padding-bottom: 8px;
+}
+
+#adr040-panel summary {
+    cursor: pointer;
+    color: #e6c1bb;
+    font-weight: 700;
+    padding: 5px 0;
+}
+
+#adr040-panel label {
+    color: #bfa8a2;
+    font-size: 12px;
+    margin-top: 6px;
+    display: block;
+}
+
+#adr040-panel input,
+#adr040-panel select,
+#adr040-panel textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px;
+    border-radius: 8px;
+    border: 1px solid rgba(214,122,106,.25);
+    background: rgba(255,255,255,.06);
+    color: #eee;
+    font-size: 16px;
+    line-height: 1.5;
+    font-family: -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+    margin-top: 4px;
+}
+
+#adr040-panel textarea {
+    resize: vertical;
+}
+
+#adr040-status {
+    font-size: 12px;
+    color: #cfc5c2;
+    padding: 4px 0;
+}
+
+.adr040-hint {
+    color: #94807a;
+    font-size: 11.5px;
+    margin: 4px 0 6px;
+}
+
+.adr040-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.adr040-actions button,
+#adr040-panel button {
+    padding: 8px 12px;
+    background: rgba(214,122,106,.22);
+    border: 1px solid rgba(214,122,106,.38);
+    color: #f3cbc4;
+    border-radius: 8px;
+    flex: 1;
+}
+
+.adr040-actions button:disabled {
+    opacity: .42;
+}
