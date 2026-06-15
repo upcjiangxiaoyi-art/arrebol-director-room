@@ -1,11 +1,11 @@
 {
-    "display_name": "暗河红霞 Arrebol D",
+    "display_name": "Arrebol D 暗河红霞导演系统",
     "loading_order": 22,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.3",
-    "description": "定稿增强版：情感/剧情自动触发间隔独立配置，可分别关闭自动触发并保留手动生成"
+    "version": "1.0.3.1",
+    "description": "灵魂共鸣者Arrebol在线检测；双导演、双API、精准读取与独立自动触发"
 }

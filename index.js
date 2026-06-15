@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.3.3.2.1 探针直连
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.3.1
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1366,10 +1366,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 暗河红霞 Arrebol D v1.0.3.3.2.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.3.1</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">定稿版：双导演、双 API、精准读取、浮窗面板、规范 summary 折叠注入与情感/剧情独立自动触发已合并。</div>'
+            + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1759,7 +1759,7 @@
         return '<div id="adr048-popup-panel" data-open="0">'
             + '<div id="adr048-popup-shell">'
             + '<div id="adr048-popup-head">'
-            + '<div><b>🎬 暗河红霞 Arrebol D</b><div id="adr048-popup-sub">场外导演室 · 定稿版</div></div>'
+            + '<div><b>🎬 Arrebol D 暗河红霞导演系统</b><div id="adr048-popup-sub">灵魂共鸣者Arrebol在线检测</div></div>'
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
@@ -1976,7 +1976,7 @@
                 btn.id = "adr048-fab";
                 btn.type = "button";
                 btn.textContent = "🎬 红霞";
-                btn.title = "暗河红霞 Arrebol D";
+                btn.title = "Arrebol D 暗河红霞导演系统";
 
                 var dragging = false;
                 var moved = false;
