@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.3.6
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.3.7
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-d-final-v1036-fold-br-fix";
+    var EXT = "arrebol-d-final-v1037-mystery-sync-fix";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -126,6 +126,44 @@
             }
         } catch (e) {}
         try { console.log("[Arrebol D]", msg); } catch (e2) {}
+    }
+
+    function adrDSetAllById(id, value, checked) {
+        try {
+            var nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id));
+            nodes.forEach(function (el) {
+                if (!el) return;
+                if (el.type === "checkbox") el.checked = !!checked;
+                else el.value = value == null ? "" : value;
+            });
+        } catch (e) {}
+    }
+
+    function adrDRefreshAllFieldsFromSettings() {
+        try {
+            var st = settings();
+
+            adrDSetAllById("adr044-range", st.range || "30");
+            adrDSetAllById("adr044-custom", st.customRange || "");
+            adrDSetAllById("adr044-memory", st.supplementMemory || "");
+            adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
+            adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
+
+            ["emotion", "plot"].forEach(function (type) {
+                var p = prefixOf(type);
+                adrDSetAllById("adr044-" + type + "-endpoint", st[p + "ApiEndpoint"] || "");
+                adrDSetAllById("adr044-" + type + "-key", st[p + "ApiKey"] || "");
+                adrDSetAllById("adr044-" + type + "-model", st[p + "Model"] || "");
+                adrDSetAllById("adr044-" + type + "-preset", st[p + "Preset"] || "");
+                adrDSetAllById("adr044-" + type + "-preview", st[p + "Preview"] || "");
+                adrDSetAllById("adr044-auto-inject-" + type, "", type === "plot" ? st.autoInjectPlot : st.autoInjectEmotion);
+                adrDSetAllById("adr044-auto-trigger-" + type, "", type === "plot" ? st.autoTriggerPlot : st.autoTriggerEmotion);
+                adrDSetAllById("adr044-auto-trigger-range-" + type, st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"] || (type === "plot" ? "10" : "20"));
+                adrDSetAllById("adr044-auto-trigger-custom-" + type, st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "");
+            });
+        } catch (e) {
+            console.error("[Arrebol D] refresh fields failed", e);
+        }
     }
 
     function settings() {
@@ -364,6 +402,7 @@
 
             adrDSaveLocalBackup(settings());
             saveNow();
+            adrDRefreshAllFieldsFromSettings();
             adrDToast("暗河红霞设置已保存");
             return true;
         } catch (e) {
@@ -821,11 +860,9 @@
             .replace(/>/g, "&gt;");
     }
 
-    function formatHtmlForFoldedBody(s) {
-        return escapeHtmlForDetails(s)
-            .replace(/\r\n/g, "\n")
-            .replace(/\r/g, "\n")
-            .replace(/\n/g, "<br>");
+    function safeCommentPayload(s) {
+        // 避免内容里出现 --> 提前截断 HTML 注释。
+        return String(s || "").replace(/-->/g, "--＞");
     }
 
     function injectionText(type, text) {
@@ -834,17 +871,20 @@
         var body = String(text || "").trim();
 
         if (mode === "hidden") {
-            return "\n\n<!-- ARREBOL_D_START:" + type + " -->\n【暗河红霞 Arrebol D｜" + title + "】\n" + body + "\n<!-- ARREBOL_D_END:" + type + " -->";
+            return "\n\n<!-- ARREBOL_D_START:" + type + " -->\n【暗河红霞 Arrebol D｜" + title + "】\n" + safeCommentPayload(body) + "\n<!-- ARREBOL_D_END:" + type + " -->";
         }
 
         if (mode === "folded") {
+            // 神秘折叠：可见区域只显示标题，真实内容藏在注释块里。
+            // 这样不受酒馆 details 内部 HTML/Markdown 渲染影响，不会把正文格式打乱。
             return "\n\n<!-- ARREBOL_D_START:" + type + " -->\n"
                 + "<details class=\"arrebol-d-card\" data-arrebol-d-type=\"" + type + "\">\n"
-                + "<summary class=\"arrebol-d-title\">🎬 暗河红霞 Arrebol D｜" + title + "</summary>\n\n"
-                + "<div class=\"arrebol-d-body\">"
-                + formatHtmlForFoldedBody(body)
-                + "</div>\n"
+                + "<summary class=\"arrebol-d-title\">🎬 暗河红霞 Arrebol D｜" + title + "｜已注入</summary>\n"
                 + "</details>\n"
+                + "<!-- ARREBOL_D_PAYLOAD:" + type + "\n"
+                + "【暗河红霞 Arrebol D｜" + title + "】\n"
+                + safeCommentPayload(body)
+                + "\nARREBOL_D_PAYLOAD_END -->\n"
                 + "<!-- ARREBOL_D_END:" + type + " -->";
         }
 
@@ -1327,7 +1367,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.3.6.2】\n";
+        out += "【红霞探针 v1.0.3.7.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1456,7 +1496,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.3.6</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.3.7</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1718,7 +1758,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.3.6.2】\n";
+        out += "【红霞精准读取预览 v1.0.3.7.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1854,7 +1894,7 @@
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；API/预设支持确认保存；折叠注入用 br 强制保留换行格式。</div>'
+            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；折叠模式改为神秘注入：可见标题不显示正文，真实内容写入注释块；浮窗/抽屉字段同步。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1916,9 +1956,14 @@
         try {
             var d = rootDoc();
 
-            if (!d.querySelector("#adr048-popup-panel")) {
-                adr048CreatePopupPanel();
-            }
+            // 每次打开浮窗前重建面板，避免抽屉/浮窗两套 DOM 不同步。
+            try {
+                var oldPanel = d.querySelector("#adr048-popup-panel");
+                if (oldPanel && oldPanel.parentNode) oldPanel.parentNode.removeChild(oldPanel);
+            } catch (e0) {}
+
+            adr048CreatePopupPanel();
+            adrDRefreshAllFieldsFromSettings();
 
             var p = d.querySelector("#adr048-popup-panel");
             var shell = d.querySelector("#adr048-popup-shell");

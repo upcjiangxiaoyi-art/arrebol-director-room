@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.3.6",
-    "description": "小修版：折叠注入正文不再依赖 pre/CSS 保留换行，改为将换行直接转换为 <br>，修复酒馆渲染后格式混乱"
+    "version": "1.0.3.7",
+    "description": "小修版：折叠模式改为神秘注入，页面只显示标题，真实导演内容写入 ARREBOL_D 注释块；修复浮窗和抽屉字段不同步"
 }

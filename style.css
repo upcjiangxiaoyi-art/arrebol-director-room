@@ -445,3 +445,22 @@
     word-break: break-word !important;
     overflow-wrap: anywhere !important;
 }
+
+
+.arrebol-d-card {
+    margin: 8px 0 !important;
+    padding: 6px 8px !important;
+    border-left: 3px solid rgba(214,122,106,.72) !important;
+    border-radius: 8px !important;
+    background: rgba(214,122,106,.08) !important;
+}
+
+.arrebol-d-card[open] {
+    padding-bottom: 6px !important;
+}
+
+.arrebol-d-title {
+    cursor: pointer !important;
+    font-weight: 700 !important;
+    color: rgba(214,122,106,.95) !important;
+}
