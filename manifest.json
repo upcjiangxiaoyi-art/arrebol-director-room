@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.5.3",
-    "description": "保存后重绘版：基于 v1.0.5.1 按钮兜底版，注入后等待 saveChat 完成或延迟 1200ms，再触发酒馆原生重绘，避免重绘后注入消失"
+    "version": "1.0.5.4",
+    "description": "失焦函数补丁版：基于 v1.0.5.3 保存后重绘稳定版，补齐 adrDBlurActiveElement，修复部分设备/版本按钮执行失败"
 }
