@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.6 快捷入口",
+    "display_name": "红霞导演室 v0.4.6.2 IPE入口",
     "loading_order": 22,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.6",
-    "description": "快捷入口版：保留抽屉核心面板，新增浮窗门铃，点击定位到红霞导演室"
+    "version": "0.4.6.2",
+    "description": "IPE入口版：核心面板不改，快捷入口使用 IPE 同款 root document + button + drag/click 逻辑"
 }
