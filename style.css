@@ -464,3 +464,7 @@
     font-weight: 700 !important;
     color: rgba(214,122,106,.95) !important;
 }
+
+
+/* v1.0.3.8 起，神秘注入不再向聊天正文写入 details/summary。
+   以下样式仅兼容旧消息，不再主动使用。 */
