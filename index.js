@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.9
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.0
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1341,7 +1341,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.4.9.2】\n";
+        out += "【红霞探针 v1.0.4.0.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1470,7 +1470,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.9</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.0</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1554,8 +1554,6 @@
     }
 
     function bindDirect() {
-        try { adrDDiag("bindDirect enter"); } catch (eDiagBind) {}
-
         try {
             if (!rootWin().adrDStableAutoSaveBound) {
                 rootWin().adrDStableAutoSaveBound = true;
@@ -1760,7 +1758,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.4.9.2】\n";
+        out += "【红霞精准读取预览 v1.0.4.0.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1955,8 +1953,6 @@
 
 
     function adr048OpenPopupPanel() {
-        try { adrDDiag("open popup called"); } catch (eDiagOpen) {}
-
         try {
             var d = rootDoc();
 
@@ -2453,25 +2449,7 @@
                             adrDScheduleAutoTriggerCheck("poll-chat-length");
                         }
                         adrDLastChatLengthSeen = len;
-                   
-    function adrDDiagButtonFallbackInstall() {
-        try {
-            if (rootWin().__adrDDiagButtonFallbackInstalled) return;
-            rootWin().__adrDDiagButtonFallbackInstalled = true;
-            rootDoc().addEventListener("click", function (ev) {
-                var t = ev.target;
-                while (t && t !== rootDoc()) {
-                    if (t.id && t.id.indexOf("adr044-") === 0) {
-                        adrDDiag("adr044 button caught in fallback: " + t.id);
-                        break;
-                    }
-                    t = t.parentNode;
-                }
-            }, true);
-        } catch (e) {}
-    }
-
- } catch (e) {}
+                    } catch (e) {}
                 }, 9000);
             }
         } catch (e2) {}
@@ -2479,89 +2457,18 @@
         adrDResetAutoTriggerBaseline("install");
     }
 
-
-    function adrDDiag(msg) {
-        try {
-            var d = rootDoc();
-            var box = d.querySelector("#adr-d-diag-box");
-            if (!box) {
-                box = d.createElement("div");
-                box.id = "adr-d-diag-box";
-                box.style.cssText = "position:fixed;left:10px;right:10px;bottom:10px;z-index:2147483647;background:rgba(40,20,20,.92);color:#fff;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.45;white-space:pre-wrap;max-height:34vh;overflow:auto;";
-                (d.body || d.documentElement).appendChild(box);
-            }
-            var t = new Date();
-            var stamp = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0") + ":" + String(t.getSeconds()).padStart(2, "0");
-            box.textContent = "[" + stamp + "] " + msg + "\n" + (box.textContent || "").slice(0, 1200);
-        } catch (e) {}
-        try { console.log("[ArrebolD DIAG]", msg); } catch (e2) {}
-    }
-
-    function adrDInstallDiagListeners() {
-        try {
-            if (rootWin().__adrDDiagInstalled) return;
-            rootWin().__adrDDiagInstalled = true;
-
-            adrDDiag("diagnostic listeners installed");
-
-            rootDoc().addEventListener("click", function (ev) {
-                try {
-                    var t = ev.target;
-                    var path = [];
-                    var cur = t;
-                    while (cur && path.length < 5) {
-                        path.push((cur.tagName || "node") + (cur.id ? "#" + cur.id : "") + (cur.className ? "." + String(cur.className).slice(0, 40).replace(/\s+/g, ".") : ""));
-                        cur = cur.parentNode;
-                    }
-                    adrDDiag("click target: " + path.join(" > "));
-                } catch (e) {
-                    adrDDiag("click diag error: " + (e.message || e));
-                }
-            }, true);
-
-            rootDoc().addEventListener("touchend", function (ev) {
-                try {
-                    var t = ev.target;
-                    adrDDiag("touchend target: " + (t && t.tagName) + "#" + (t && t.id));
-                } catch (e) {}
-            }, true);
-
-            rootWin().adrDForceDiag = function () {
-                try {
-                    var d = rootDoc();
-                    adrDDiag("manual diag | drawer=" + !!d.querySelector("#adr044-drawer")
-                        + " popup=" + !!d.querySelector("#adr048-popup-panel")
-                        + " fab=" + !!d.querySelector("#adr048-ipe-anchor-entry")
-                        + " buttons=" + d.querySelectorAll("[id^='adr044-']").length);
-                } catch (e) {
-                    adrDDiag("manual diag failed: " + (e.message || e));
-                }
-            };
-        } catch (e2) {
-            try { alert("diag install failed: " + (e2.message || e2)); } catch (e3) {}
-        }
-    }
-
     function init() {
         if (initialized) return;
         initialized = true;
 
         try {
-            adrDInstallDiagListeners();
-            adrDDiagButtonFallbackInstall();
-            adrDDiag("init start");
             settings();
-            adrDDiag("settings ok");
             mountDrawer();
-            adrDDiag("drawer mounted");
             installProbeGlobals();
             installProbeDelegation();
             bindDirect();
-            adrDDiag("bindDirect called");
             adr048CreatePopupPanel();
-            adrDDiag("popup panel created");
             adr048EnsureFabLater();
-            adrDDiag("fab ensure called");
             adrDInstallAutoTriggerWatchers();
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);

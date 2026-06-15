@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.4.9",
-    "description": "诊断版：基于 v1.0.4.0，保持原功能不动，新增页面点击/触摸/初始化状态诊断浮层，用于定位按钮失活原因"
+    "version": "1.0.4.0",
+    "description": "稳定保存版：API/模型/预设改用固定 localStorage 仓库 arrebol_d_settings_stable_v1，更新插件后继续读取；保留纯文本标记注入"
 }
