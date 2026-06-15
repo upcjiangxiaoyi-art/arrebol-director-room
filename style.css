@@ -1,106 +1,54 @@
 
-#adr040-entry {
-    -webkit-tap-highlight-color: transparent;
+#adr041-drawer .adr041-box {
+    padding: 6px 0 10px;
+    font-family: -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
 }
 
-#adr040-entry:active {
-    transform: scale(.97);
+#adr041-drawer .adr041-note {
+    font-size: 12px;
+    color: #888;
+    margin: 4px 0 8px;
 }
 
-#adr040-panel .adr040-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 13px 16px 10px;
-    border-bottom: 1px solid rgba(214,122,106,.22);
-    flex-shrink: 0;
+#adr041-drawer details {
+    border-top: 1px solid rgba(0,0,0,.12);
+    padding: 7px 0;
 }
 
-#adr040-panel #adr040-close {
-    width: 34px;
-    height: 30px;
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,.16);
-    background: rgba(255,255,255,.08);
-    color: #eee;
-    font-size: 18px;
-}
-
-#adr040-panel .adr040-body {
-    padding: 10px 14px 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    overflow-y: auto;
-}
-
-#adr040-panel details {
-    border-bottom: 1px solid rgba(255,255,255,.06);
-    padding-bottom: 8px;
-}
-
-#adr040-panel summary {
-    cursor: pointer;
-    color: #e6c1bb;
+#adr041-drawer summary {
     font-weight: 700;
-    padding: 5px 0;
+    cursor: pointer;
+    margin-bottom: 6px;
 }
 
-#adr040-panel label {
-    color: #bfa8a2;
+#adr041-drawer label {
+    display: block;
     font-size: 12px;
     margin-top: 6px;
-    display: block;
 }
 
-#adr040-panel input,
-#adr040-panel select,
-#adr040-panel textarea {
+#adr041-drawer input,
+#adr041-drawer select,
+#adr041-drawer textarea {
     width: 100%;
     box-sizing: border-box;
-    padding: 9px;
-    border-radius: 8px;
-    border: 1px solid rgba(214,122,106,.25);
-    background: rgba(255,255,255,.06);
-    color: #eee;
     font-size: 16px;
-    line-height: 1.5;
-    font-family: -apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
-    margin-top: 4px;
+    padding: 7px;
+    margin-top: 3px;
 }
 
-#adr040-panel textarea {
-    resize: vertical;
-}
-
-#adr040-status {
+#adr041-status {
     font-size: 12px;
-    color: #cfc5c2;
-    padding: 4px 0;
+    color: #666;
+    margin-bottom: 5px;
 }
 
-.adr040-hint {
-    color: #94807a;
-    font-size: 11.5px;
-    margin: 4px 0 6px;
-}
-
-.adr040-actions {
+.adr041-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 8px;
+    gap: 6px;
+    margin-top: 6px;
 }
 
-.adr040-actions button,
-#adr040-panel button {
-    padding: 8px 12px;
-    background: rgba(214,122,106,.22);
-    border: 1px solid rgba(214,122,106,.38);
-    color: #f3cbc4;
-    border-radius: 8px;
+.adr041-actions button {
     flex: 1;
-}
-
-.adr040-actions button:disabled {
-    opacity: .42;
 }

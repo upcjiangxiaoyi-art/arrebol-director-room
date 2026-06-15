@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.0 硬跑通",
-    "loading_order": 20,
+    "display_name": "红霞导演室 v0.4.1 抽屉内嵌",
+    "loading_order": 21,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.0",
-    "description": "硬跑通版：无拖拽、自动打开面板、事件委托、OpenAI兼容副API导演方向"
+    "version": "0.4.1",
+    "description": "抽屉内嵌硬跑通版：不使用浮窗/面板，所有导演功能直接在扩展抽屉内运行"
 }
