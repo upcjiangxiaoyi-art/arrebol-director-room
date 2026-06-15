@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.0
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.1
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1341,7 +1341,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.0.2】\n";
+        out += "【红霞探针 v1.0.5.1.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1470,7 +1470,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.0</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.1</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1810,7 +1810,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.0.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.1.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2539,6 +2539,142 @@
         }
     }
 
+
+    function adrDTypeFromButtonId(id) {
+        if (!id) return settings().activeTab || "emotion";
+        if (id.indexOf("adr044-plot-") === 0 || id.indexOf("-plot") >= 0) return "plot";
+        if (id.indexOf("adr044-emotion-") === 0 || id.indexOf("-emotion") >= 0) return "emotion";
+        return settings().activeTab || "emotion";
+    }
+
+    function adrDHandleAnyButtonId(id) {
+        try {
+            if (!id || id.indexOf("adr044-") !== 0) return false;
+
+            // tab 已由 tab fallback 处理，这里也兜底一次。
+            if (id === "adr044-tab-emotion") {
+                switchTab("emotion");
+                return true;
+            }
+            if (id === "adr044-tab-plot") {
+                switchTab("plot");
+                return true;
+            }
+
+            if (id === "adr044-probe-context") {
+                runContextProbe();
+                return true;
+            }
+            if (id === "adr044-probe-content") {
+                runContentProbe();
+                return true;
+            }
+            if (id === "adr044-preview-precise") {
+                runPrecisePreview();
+                return true;
+            }
+
+            var type = adrDTypeFromButtonId(id);
+
+            if (id === "adr044-" + type + "-local") {
+                localTest(type);
+                return true;
+            }
+
+            if (id === "adr044-" + type + "-generate") {
+                syncAll();
+                run(type, "");
+                return true;
+            }
+
+            if (id === "adr044-" + type + "-reroll") {
+                syncType(type);
+                var extra = qForm("adr044-" + type + "-extra");
+                run(type, extra ? extra.value : "");
+                return true;
+            }
+
+            if (id === "adr044-" + type + "-stop") {
+                abortRun(type);
+                return true;
+            }
+
+            if (id === "adr044-" + type + "-copy") {
+                copyText(type);
+                return true;
+            }
+
+            if (id === "adr044-" + type + "-load-models") {
+                syncType(type);
+                loadModels(type);
+                return true;
+            }
+
+            if (id === "adr044-" + type + "-save") {
+                adrDForceSaveSettings(type);
+                status(type, "设置已保存 ✓", "#8ed99d");
+                return true;
+            }
+
+            if (id === "adr044-" + type + "-inject") {
+                syncType(type);
+                var pv = qForm("adr044-" + type + "-preview");
+                var text = pv ? pv.value : "";
+                if (!text) {
+                    status(type, "没有内容可注入", "#d4726a");
+                    return true;
+                }
+                var ok = injectDirector(type, text);
+                status(type, ok ? "已注入当前聊天 ✓" : "注入失败", ok ? "#8ed99d" : "#d4726a");
+                return true;
+            }
+        } catch (e) {
+            console.error("[Arrebol D] all-button fallback failed", e);
+            try {
+                var t2 = id && id.indexOf("plot") >= 0 ? "plot" : "emotion";
+                status(t2, "按钮执行失败：" + (e.message || e), "#d4726a");
+            } catch (e2) {}
+            return true;
+        }
+
+        return false;
+    }
+
+    function adrDInstallAllButtonFallback() {
+        try {
+            if (rootWin().__adrDAllButtonFallbackInstalled) return;
+            rootWin().__adrDAllButtonFallbackInstalled = true;
+
+            function handle(ev) {
+                try {
+                    var t = ev.target;
+                    while (t && t !== rootDoc()) {
+                        if (t.id && t.id.indexOf("adr044-") === 0) {
+                            var tag = String(t.tagName || "").toLowerCase();
+                            // 输入框/选择框不拦截，否则会影响输入。
+                            if (tag === "input" || tag === "textarea" || tag === "select" || tag === "option") return;
+
+                            var ok = adrDHandleAnyButtonId(t.id);
+                            if (ok) {
+                                ev.preventDefault();
+                                ev.stopPropagation();
+                                return false;
+                            }
+                        }
+                        t = t.parentNode;
+                    }
+                } catch (e) {
+                    console.warn("[Arrebol D] all-button fallback listener failed", e);
+                }
+            }
+
+            rootDoc().addEventListener("click", handle, true);
+            rootDoc().addEventListener("touchend", handle, true);
+        } catch (e2) {
+            console.warn("[Arrebol D] install all-button fallback failed", e2);
+        }
+    }
+
     function init() {
         if (initialized) return;
         initialized = true;
@@ -2550,6 +2686,7 @@
             installProbeDelegation();
             bindDirect();
             adrDInstallTabFallbackOnly();
+            adrDInstallAllButtonFallback();
             switchTab(settings().activeTab || "emotion");
             adr048CreatePopupPanel();
             adr048EnsureFabLater();
