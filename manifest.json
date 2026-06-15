@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.5.4",
-    "description": "失焦函数补丁版：基于 v1.0.5.3 保存后重绘稳定版，补齐 adrDBlurActiveElement，修复部分设备/版本按钮执行失败"
+    "version": "1.0.5.5",
+    "description": "计数显示版：在自动触发设置下方实时显示"已积累N条/还差N条"，方便确认自动触发是否在数楼层"
 }

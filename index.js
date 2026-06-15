@@ -1543,9 +1543,8 @@
             + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
+            + '<div class="adr044-counter" id="adr044-counter-' + type + '" style="font-size:12px;color:#c98;margin-top:6px;">自动触发计数：等待刷新…</div>'
             + '</details>'
-
-            + '<details><summary>' + title + '预设</summary>'
             + '<textarea id="adr044-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
             + '</details>'
 
@@ -1668,6 +1667,39 @@
                 } else {
                     el.value = value == null ? "" : value;
                 }
+            });
+        } catch (e) {}
+    }
+
+    function adrDRefreshCounters() {
+        try {
+            var st = settings();
+            var count = adrDAssistantRoundCount();
+
+            ["emotion", "plot"].forEach(function (type) {
+                var nodes;
+                try { nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-counter-" + type)); }
+                catch (e) { nodes = []; }
+                if (!nodes.length) return;
+
+                var enabled = type === "plot" ? st.autoTriggerPlot : st.autoTriggerEmotion;
+                var n = autoTriggerRange(type);
+                var lastKey = type === "plot" ? "lastAutoTriggerPlotCount" : "lastAutoTriggerEmotionCount";
+                var last = Number(st[lastKey]);
+
+                var text;
+                if (!enabled) {
+                    text = "自动触发：未启用（当前角色正文 " + count + " 条）";
+                } else if (!Number.isFinite(last) || last < 0) {
+                    text = "自动触发：基线初始化中（当前 " + count + " 条，每 " + n + " 条触发一次）";
+                } else {
+                    var since = count - last;
+                    var remain = n - since;
+                    if (remain < 0) remain = 0;
+                    text = "自动触发：已积累 " + since + "/" + n + " 条，还差 " + remain + " 条 · " + labelOf(type);
+                }
+
+                nodes.forEach(function (el) { if (el) el.textContent = text; });
             });
         } catch (e) {}
     }
@@ -2013,6 +2045,7 @@
             + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
+            + '<div class="adr048-counter" id="adr044-counter-' + type + '" style="font-size:12px;color:#e0b0a5;margin-top:6px;">自动触发计数：等待刷新…</div>'
             + '</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '预设</div>'
@@ -2173,6 +2206,7 @@
 
             adr048BindPopupPanel();
             bindDirect();
+            try { adrDRefreshCounters(); } catch (e2b) {}
 
             try { if (body) body.scrollTop = 0; } catch (e1) {}
         } catch (e) {
@@ -2567,6 +2601,7 @@
         }
 
         adrDAutoTriggerRunning = false;
+        try { adrDRefreshCounters(); } catch (e) {}
     }
 
     function adrDInstallAutoTriggerWatchers() {
@@ -2600,9 +2635,17 @@
                     } catch (e) {}
                 }, 9000);
             }
+
+            // 计数显示：每 5 秒刷新一次面板里的"还差几条"提示
+            if (!rootWin().__arrebolDCounterPoll) {
+                rootWin().__arrebolDCounterPoll = setInterval(function () {
+                    try { adrDRefreshCounters(); } catch (e) {}
+                }, 5000);
+            }
         } catch (e2) {}
 
         adrDResetAutoTriggerBaseline("install");
+        try { adrDRefreshCounters(); } catch (e) {}
     }
 
 
