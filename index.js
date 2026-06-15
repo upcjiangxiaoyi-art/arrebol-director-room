@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.1
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.2
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -911,6 +911,50 @@
         } catch (e) {}
     }
 
+
+    function adrDNativeRedrawAfterInject() {
+        try {
+            var rw = rootWin();
+            var c = ctx();
+
+            // 延迟一点，让 saveChat 先落地。目标：模拟“重新进一下窗口后正常”的原生重绘。
+            setTimeout(function () {
+                try {
+                    if (typeof rw.reloadCurrentChat === "function") {
+                        rw.reloadCurrentChat();
+                        return;
+                    }
+                } catch (e1) {}
+
+                try {
+                    if (typeof c.reloadCurrentChat === "function") {
+                        c.reloadCurrentChat();
+                        return;
+                    }
+                } catch (e2) {}
+
+                try {
+                    if (typeof rw.eventSource !== "undefined" && rw.event_types && rw.event_types.CHAT_CHANGED) {
+                        rw.eventSource.emit(rw.event_types.CHAT_CHANGED);
+                        return;
+                    }
+                } catch (e3) {}
+
+                try {
+                    if (c.eventSource && c.event_types && c.event_types.CHAT_CHANGED) {
+                        c.eventSource.emit(c.event_types.CHAT_CHANGED);
+                        return;
+                    }
+                } catch (e4) {}
+
+                // 兜底：如果没有原生重绘函数，就不做破坏性 DOM 重写。
+                console.warn("[Arrebol D] no native redraw function found");
+            }, 220);
+        } catch (e) {
+            console.warn("[Arrebol D] schedule native redraw failed", e);
+        }
+    }
+
     function injectDirector(type, text) {
         if (!text || !text.trim()) return false;
 
@@ -958,6 +1002,9 @@
 
             saveChatSafe();
             refreshMessageDom(idx);
+
+            // v1.0.5.2 实验：注入后让酒馆自己重绘当前聊天，验证“重新进窗口就正常”的假设。
+            adrDNativeRedrawAfterInject();
             return true;
         } catch (e) {
             console.error("[Arrebol D] inject failed", e);
@@ -1341,7 +1388,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.1.2】\n";
+        out += "【红霞探针 v1.0.5.2.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1470,7 +1517,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.1</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1810,7 +1857,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.1.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.2.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";

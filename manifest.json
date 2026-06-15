@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.5.1",
-    "description": "按钮兜底版：基于 v1.0.5.0 UI 修复版，新增所有白色按钮的全局 click/touchend 兜底代理；不改注入/API/保存"
+    "version": "1.0.5.2",
+    "description": "注入后重绘实验版：基于 v1.0.5.1 按钮兜底版，只在注入成功后延迟触发酒馆原生当前聊天重绘，验证重新进窗口后格式恢复的假设"
 }
