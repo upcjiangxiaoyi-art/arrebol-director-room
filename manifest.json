@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.2.0",
-    "description": "RP 场外导演：v0.2 小浮窗专测版，副 API 读最近 N 轮剧情，输出情感/剧情方向"
+    "version": "0.2.1",
+    "description": "RP 场外导演：v0.2.1 小浮窗/面板强制显示测试版"
 }

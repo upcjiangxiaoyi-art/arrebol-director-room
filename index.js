@@ -1,8 +1,8 @@
 /*
- *  Arrebol Director Room 红霞导演室  v0.2
+ *  Arrebol Director Room 红霞导演室  v0.2.1
  *  SillyTavern RP 场外导演插件
  *
- *  v0.2 范围：小浮窗专测版 + 单导演手动台（情感导演）
+ *  v0.2.1 范围：单导演手动台（情感导演）
  *  - 选择最近 N 轮 RP
  *  - 手动补充框 + 导演预设框
  *  - 调副 API（OpenAI 兼容 / OpenRouter）
@@ -394,11 +394,129 @@ function onCopy() {
    UI 构建
    ════════════════════════════════════════ */
 
+
+/* ── v0.2.1 强制显示补丁：先确保小浮窗和面板能露头 ── */
+function drForceCreateQuickEntry() {
+    try {
+        var d = drRootDocument();
+        var old = q("#dr-chat-quick-entry");
+        if (old && old.parentNode) {
+            try { old.parentNode.removeChild(old); } catch(e) {}
+        }
+
+        var btn = d.createElement("div");
+        btn.id = "dr-chat-quick-entry";
+        btn.className = "dr-quick-entry dr-force-entry";
+        btn.title = "红霞导演室";
+        btn.textContent = "🎬";
+
+        var c = cfg();
+        if (c.quickEntryLeft) btn.style.left = c.quickEntryLeft;
+        else btn.style.right = "18px";
+        if (c.quickEntryTop) btn.style.top = c.quickEntryTop;
+        else btn.style.bottom = "116px";
+
+        btn.style.position = "fixed";
+        btn.style.zIndex = "2147483647";
+        btn.style.display = "flex";
+        btn.style.pointerEvents = "auto";
+
+        var dragging = false, moved = false, startX=0, startY=0, origX=0, origY=0;
+
+        function startDrag(e) {
+            dragging = true; moved = false;
+            var p = e.touches ? e.touches[0] : e;
+            startX = p.clientX; startY = p.clientY;
+            var rect = btn.getBoundingClientRect();
+            origX = rect.left; origY = rect.top;
+            d.addEventListener("mousemove", onMove, {passive:false});
+            d.addEventListener("touchmove", onMove, {passive:false});
+            d.addEventListener("mouseup", endDrag);
+            d.addEventListener("touchend", endDrag);
+            if (e.cancelable) e.preventDefault();
+        }
+        function onMove(e) {
+            if (!dragging) return;
+            var p = e.touches ? e.touches[0] : e;
+            var dx = p.clientX - startX, dy = p.clientY - startY;
+            if (Math.abs(dx)>4 || Math.abs(dy)>4) moved = true;
+            var nx = origX + dx, ny = origY + dy;
+            btn.style.left = nx + "px";
+            btn.style.top = ny + "px";
+            btn.style.right = "auto";
+            btn.style.bottom = "auto";
+            if (e.cancelable) e.preventDefault();
+        }
+        function endDrag() {
+            dragging = false;
+            d.removeEventListener("mousemove", onMove);
+            d.removeEventListener("touchmove", onMove);
+            d.removeEventListener("mouseup", endDrag);
+            d.removeEventListener("touchend", endDrag);
+            if (moved) {
+                save("quickEntryLeft", btn.style.left);
+                save("quickEntryTop", btn.style.top);
+            }
+        }
+
+        btn.addEventListener("mousedown", startDrag);
+        btn.addEventListener("touchstart", startDrag, {passive:false});
+        btn.addEventListener("click", function(e){
+            if (moved) { e.preventDefault(); e.stopPropagation(); return; }
+            drForceOpenPanel();
+        });
+
+        (d.body || d.documentElement).appendChild(btn);
+        console.log("[DR] v0.2.1 强制小浮窗已创建");
+    } catch(e) {
+        console.error("[DR] 强制创建小浮窗失败:", e);
+    }
+}
+
+function drForceOpenPanel() {
+    try {
+        var d = drRootDocument();
+        var p = q("#dr-panel");
+        if (!p) {
+            createPanel();
+            p = q("#dr-panel");
+        }
+        if (!p) return;
+
+        if (p.ownerDocument !== d) {
+            try { (d.body || d.documentElement).appendChild(p); } catch(e) {}
+        }
+
+        p.setAttribute("data-dr-open", "1");
+        p.classList.add("visible");
+        function imp(k,v){ try{ p.style.setProperty(k,v,"important"); }catch(e){ p.style[k]=v; } }
+        imp("display","flex");
+        imp("visibility","visible");
+        imp("opacity","1");
+        imp("position","fixed");
+        imp("z-index","2147483646");
+        imp("left","8px");
+        imp("right","8px");
+        imp("bottom","78px");
+        imp("width","auto");
+        imp("max-height","74vh");
+        imp("overflow","hidden");
+        imp("pointer-events","auto");
+        imp("transform","translateZ(0)");
+        console.log("[DR] v0.2.1 强制面板已打开");
+    } catch(e) {
+        console.error("[DR] 强制打开面板失败:", e);
+    }
+}
+
+
 function createUI() {
     createChatQuickButton();
     createPanel();
     createDrawer();
     bindAll();
+    setTimeout(function(){ try { drForceCreateQuickEntry(); } catch(e){} }, 300);
+    setTimeout(function(){ try { drForceCreateQuickEntry(); } catch(e){} }, 1500);
 }
 
 function buildPanelInner() {
@@ -509,29 +627,9 @@ function drFindQuickMount() {
     return d.body || d.documentElement;
 }
 
-
-function drRemoveQuickButton() {
-    var old = q("#dr-chat-quick-entry");
-    if (old && old.parentNode) {
-        try { old.parentNode.removeChild(old); } catch(e) {}
-    }
-}
-
-function drApplyQuickEntryVisibility() {
-    var btn = q("#dr-chat-quick-entry");
-    if (!btn) return;
-    btn.style.display = cfg().showQuickEntry ? "flex" : "none";
-}
-
 function createChatQuickButton() {
-    if (!cfg().showQuickEntry) {
-        drRemoveQuickButton();
-        return;
-    }
-    if (q("#dr-chat-quick-entry")) {
-        drApplyQuickEntryVisibility();
-        return;
-    }
+    if (!cfg().showQuickEntry) return;
+    if (q("#dr-chat-quick-entry")) return;
     var d = drRootDocument();
     var btn = d.createElement("div");
     btn.id = "dr-chat-quick-entry";
@@ -589,20 +687,13 @@ function createChatQuickButton() {
         drTogglePanel();
     });
 
-    try {
-        (d.body || d.documentElement).appendChild(btn);
-    } catch(e) {
-        var mount = drFindQuickMount();
-        mount.appendChild(btn);
-    }
-    drApplyQuickEntryVisibility();
+    var mount = drFindQuickMount();
+    mount.appendChild(btn);
 }
 
 function drEnsureQuickButtonLater() {
-    setTimeout(function(){ try { createChatQuickButton(); } catch(e){} }, 300);
-    setTimeout(function(){ try { createChatQuickButton(); } catch(e){} }, 1200);
-    setTimeout(function(){ try { createChatQuickButton(); } catch(e){} }, 3000);
-    setTimeout(function(){ try { createChatQuickButton(); } catch(e){} }, 6000);
+    setTimeout(function(){ try { createChatQuickButton(); } catch(e){} }, 1500);
+    setTimeout(function(){ try { createChatQuickButton(); } catch(e){} }, 4000);
 }
 
 /* ── 面板开关 ── */
@@ -696,19 +787,26 @@ function bindAll() {
     var bi = q("#dr-btn-inject"); if (bi) bi.addEventListener("click", onInject);
 
     // 抽屉按钮
-    var op = q("#dr-open-panel"); if (op) op.addEventListener("click", drOpenPanel);
+    var op = q("#dr-open-panel"); if (op) op.addEventListener("click", function(){
+        drForceCreateQuickEntry();
+        drForceOpenPanel();
+    });
     var re = q("#dr-reset-entry");
     if (re) re.addEventListener("click", function(){
         save("quickEntryLeft",""); save("quickEntryTop","");
-        drRemoveQuickButton();
-        createChatQuickButton();
+        var old = q("#dr-chat-quick-entry");
+        if (old && old.parentNode) { try { old.parentNode.removeChild(old); } catch(e){} }
+        drForceCreateQuickEntry();
         setStatus("已重置快捷入口位置", "#6ec577");
     });
     var se = q("#dr-show-entry");
     if (se) se.addEventListener("change", function(){
         save("showQuickEntry", se.checked);
-        if (se.checked) createChatQuickButton();
-        else drRemoveQuickButton();
+        if (se.checked) drForceCreateQuickEntry();
+        else {
+            var old = q("#dr-chat-quick-entry");
+            if (old && old.parentNode) { try { old.parentNode.removeChild(old); } catch(e){} }
+        }
     });
 
     // 保活：聊天区重绘后补回快捷入口
@@ -732,6 +830,8 @@ function init() {
         loadSettings();
         createUI();
         drEnsureQuickButtonLater();
+        setTimeout(function(){ try { drForceCreateQuickEntry(); } catch(e){} }, 800);
+        setTimeout(function(){ try { drForceCreateQuickEntry(); } catch(e){} }, 2500);
         initialized = true;
         console.log("[DR] ✓ 红霞导演室已加载");
     } catch(e) { console.error("[DR] 初始化失败:", e); }

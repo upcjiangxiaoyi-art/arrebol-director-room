@@ -252,10 +252,27 @@
 }
 
 
-/* ---------- v0.2 小浮窗稳定补强 ---------- */
+/* ---------- v0.2.1 强制浮窗 / 面板显示补丁 ---------- */
+#dr-chat-quick-entry.dr-force-entry,
 #dr-chat-quick-entry.dr-quick-entry {
     position: fixed !important;
-    z-index: 2147483645 !important;
-    display: flex;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 999px !important;
+    background: rgba(214, 122, 106, 0.92) !important;
+    color: #fff !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 22px !important;
+    z-index: 2147483647 !important;
+    pointer-events: auto !important;
+    touch-action: none !important;
+}
+
+#dr-panel.dr-panel.visible {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     pointer-events: auto !important;
 }
