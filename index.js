@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.5
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1050,7 +1050,7 @@
 
             chat[idx].mes = mes.trimEnd() + add;
 
-            // v1.0.5.5：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
+            // v1.0.5.6：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
             adrDSaveThenRedrawAfterInject();
             return true;
         } catch (e) {
@@ -1435,7 +1435,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.5.2】\n";
+        out += "【红霞探针 v1.0.5.6.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1546,6 +1546,18 @@
             + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">自动触发计数：打开面板后刷新</div>'
             + '</details>'
 
+            + '<div class="adr044-template-box">'
+            + '<div class="adr044-template-title">模板库</div>'
+            + '<select id="adr044-template-select-' + type + '">' + adrDTemplateSelectOptions(type) + '</select>'
+            + '<input id="adr044-template-name-' + type + '" placeholder="模板名，比如：慢热克制 / 陆星河专用">'
+            + '<div class="adr044-template-actions">'
+            + '<button type="button" id="adr044-template-apply-' + type + '">应用模板</button>'
+            + '<button type="button" id="adr044-template-save-' + type + '">保存为模板</button>'
+            + '<button type="button" id="adr044-template-delete-' + type + '">删除模板</button>'
+            + '</div>'
+            + '<div class="adr044-template-status" id="adr044-template-status-' + type + '"></div>'
+            + '</div>'
+
             + '<details><summary>' + title + '预设</summary>'
             + '<textarea id="adr044-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
             + '</details>'
@@ -1565,7 +1577,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.5</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1699,6 +1711,216 @@
         } catch (e) {
             console.warn("[Arrebol D] refresh fields failed", e);
         }
+    }
+
+
+    var ADR_D_TEMPLATE_KEY = "arrebol_d_prompt_templates_v1";
+
+    function adrDDefaultTemplateText(type) {
+        try {
+            var st = settings();
+            return String(type === "plot" ? (st.plotPreset || "") : (st.emotionPreset || ""));
+        } catch (e) { return ""; }
+    }
+
+    function adrDDefaultTemplates() {
+        return {
+            emotion: [
+                { name: "默认情感导演", text: adrDDefaultTemplateText("emotion") || "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人写正文。" }
+            ],
+            plot: [
+                { name: "默认剧情导演", text: adrDDefaultTemplateText("plot") || "你是 RP 编剧顾问。请阅读角色卡、世界书、记忆与最近聊天内容，分析剧情节奏、事件张力、伏笔管理与场景调度，给出下一阶段的剧情推进方向。你不写正文，只做剧情导航。" }
+            ]
+        };
+    }
+
+    function adrDNormalizeTemplates(raw) {
+        var def = adrDDefaultTemplates();
+        var out = { emotion: [], plot: [] };
+        ["emotion", "plot"].forEach(function (type) {
+            var arr = raw && Array.isArray(raw[type]) ? raw[type] : [];
+            arr.forEach(function (it) {
+                if (!it) return;
+                var name = String(it.name || "").trim();
+                var text = String(it.text || "");
+                if (name) out[type].push({ name: name, text: text });
+            });
+            if (!out[type].length) out[type] = def[type];
+        });
+        return out;
+    }
+
+    function adrDLoadTemplates() {
+        try {
+            var rw = rootWin();
+            if (rw.__adrDPromptTemplatesCache) return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
+            var s = "";
+            try { s = rw.localStorage.getItem(ADR_D_TEMPLATE_KEY) || ""; } catch (e1) {}
+            if (!s) {
+                rw.__adrDPromptTemplatesCache = adrDDefaultTemplates();
+                adrDSaveTemplates(rw.__adrDPromptTemplatesCache);
+                return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
+            }
+            rw.__adrDPromptTemplatesCache = adrDNormalizeTemplates(JSON.parse(s));
+            return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
+        } catch (e) {
+            return adrDDefaultTemplates();
+        }
+    }
+
+    function adrDSaveTemplates(obj) {
+        try {
+            var rw = rootWin();
+            var normalized = adrDNormalizeTemplates(obj);
+            rw.__adrDPromptTemplatesCache = normalized;
+            rw.localStorage.setItem(ADR_D_TEMPLATE_KEY, JSON.stringify(normalized));
+            return true;
+        } catch (e) {
+            console.warn("[Arrebol D] save templates failed", e);
+            return false;
+        }
+    }
+
+    function adrDTemplateSelectOptions(type) {
+        var data = adrDLoadTemplates();
+        var arr = data[type] || [];
+        return arr.map(function (it, idx) {
+            return '<option value="' + idx + '">' + esc(it.name || ("模板 " + (idx + 1))) + '</option>';
+        }).join("");
+    }
+
+    function adrDRefreshTemplateSelects(type) {
+        try {
+            var html = adrDTemplateSelectOptions(type);
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-select-" + type)).forEach(function (sel) {
+                var old = sel.value;
+                sel.innerHTML = html;
+                if (old && Number(old) < sel.options.length) sel.value = old;
+                else sel.value = "0";
+            });
+        } catch (e) {}
+    }
+
+    function adrDTemplateStatus(type, text, color) {
+        try {
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-status-" + type)).forEach(function (el) {
+                el.textContent = text || "";
+                if (color) el.style.color = color;
+            });
+        } catch (e) {}
+    }
+
+    function adrDGetPresetBox(type) { return qForm("adr044-" + type + "-preset"); }
+    function adrDGetTemplateNameBox(type) { return qForm("adr044-template-name-" + type); }
+    function adrDGetTemplateSelect(type) { return qForm("adr044-template-select-" + type); }
+
+    function adrDApplyTemplate(type) {
+        var data = adrDLoadTemplates();
+        var sel = adrDGetTemplateSelect(type);
+        var idx = sel ? Number(sel.value) : 0;
+        var item = data[type] && data[type][idx];
+        if (!item) {
+            adrDTemplateStatus(type, "没有找到这个模板", "#e28a9c");
+            return;
+        }
+        var preset = adrDGetPresetBox(type);
+        if (preset) {
+            preset.value = String(item.text || "");
+            try { preset.dispatchEvent(new Event("input", { bubbles: true })); } catch (e) {}
+        }
+        var name = adrDGetTemplateNameBox(type);
+        if (name) name.value = String(item.name || "");
+        try {
+            syncType(type);
+            adrDSaveLocalBackup(settings());
+        } catch (e2) {}
+        adrDTemplateStatus(type, "已应用模板：" + item.name, "#8ed99d");
+    }
+
+    function adrDSaveCurrentAsTemplate(type) {
+        var nameBox = adrDGetTemplateNameBox(type);
+        var preset = adrDGetPresetBox(type);
+        var name = nameBox ? String(nameBox.value || "").trim() : "";
+        var text = preset ? String(preset.value || "") : "";
+        if (!name) {
+            adrDTemplateStatus(type, "请先填写模板名", "#e28a9c");
+            return;
+        }
+        var data = adrDLoadTemplates();
+        var arr = data[type] || [];
+        var existing = -1;
+        arr.forEach(function (it, idx) {
+            if (String(it.name || "") === name) existing = idx;
+        });
+        if (existing >= 0) arr[existing] = { name: name, text: text };
+        else arr.push({ name: name, text: text });
+        data[type] = arr;
+        adrDSaveTemplates(data);
+        adrDRefreshTemplateSelects(type);
+        Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-select-" + type)).forEach(function (sel) {
+            for (var i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].textContent === name) sel.value = String(i);
+            }
+        });
+        adrDTemplateStatus(type, existing >= 0 ? "已更新模板：" + name : "已新增模板：" + name, "#8ed99d");
+    }
+
+    function adrDDeleteTemplate(type) {
+        var data = adrDLoadTemplates();
+        var sel = adrDGetTemplateSelect(type);
+        var idx = sel ? Number(sel.value) : -1;
+        var arr = data[type] || [];
+        if (!arr[idx]) {
+            adrDTemplateStatus(type, "没有选中的模板", "#e28a9c");
+            return;
+        }
+        if (arr.length <= 1) {
+            adrDTemplateStatus(type, "至少保留一个模板", "#e28a9c");
+            return;
+        }
+        var name = arr[idx].name;
+        arr.splice(idx, 1);
+        data[type] = arr;
+        adrDSaveTemplates(data);
+        adrDRefreshTemplateSelects(type);
+        adrDTemplateStatus(type, "已删除模板：" + name, "#f0b36a");
+    }
+
+    function adrDBindTemplateButtons() {
+        try {
+            ["emotion", "plot"].forEach(function (type) {
+                var ids = {};
+                ids["adr044-template-apply-" + type] = function () { adrDApplyTemplate(type); };
+                ids["adr044-template-save-" + type] = function () { adrDSaveCurrentAsTemplate(type); };
+                ids["adr044-template-delete-" + type] = function () { adrDDeleteTemplate(type); };
+                Object.keys(ids).forEach(function (id) {
+                    Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id)).forEach(function (el) {
+                        if (!el || el.__adrDTemplateBound) return;
+                        el.__adrDTemplateBound = true;
+                        el.addEventListener("click", function (ev) {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            ids[id]();
+                        }, true);
+                        el.addEventListener("touchend", function (ev) {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            ids[id]();
+                        }, true);
+                    });
+                });
+                Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-select-" + type)).forEach(function (sel) {
+                    if (!sel || sel.__adrDTemplateSelectBound) return;
+                    sel.__adrDTemplateSelectBound = true;
+                    sel.addEventListener("change", function () {
+                        var data = adrDLoadTemplates();
+                        var item = data[type] && data[type][Number(sel.value)];
+                        var name = adrDGetTemplateNameBox(type);
+                        if (name && item) name.value = item.name || "";
+                    }, true);
+                });
+            });
+        } catch (e) {}
     }
 
     function bindDirect() {
@@ -1908,7 +2130,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.5.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.6.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2116,6 +2338,7 @@
             } catch (e0) {}
 
             adr048CreatePopupPanel();
+            setTimeout(adrDBindTemplateButtons, 120);
             adrDRefreshAllFieldsFromSettings();
 
             var p = d.querySelector("#adr048-popup-panel");
@@ -2428,6 +2651,7 @@
 
     function adr048EnsureFabLater() {
         adr048CreatePopupPanel();
+            setTimeout(adrDBindTemplateButtons, 120);
         if (!adr048ShouldShowFab()) {
             adr048RemoveFab();
             return;
@@ -2833,15 +3057,18 @@
             installProbeGlobals();
             installProbeDelegation();
             bindDirect();
+            adrDBindTemplateButtons();
             adrDInstallTabFallbackOnly();
             adrDInstallAllButtonFallback();
             switchTab(settings().activeTab || "emotion");
             adr048CreatePopupPanel();
+            setTimeout(adrDBindTemplateButtons, 120);
             adr048EnsureFabLater();
             adrDInstallAutoTriggerWatchers();
             adrDUpdateAutoCounters();
             setTimeout(adrDUpdateAutoCounters, 800);
             setTimeout(bindDirect, 500);
+            setTimeout(adrDBindTemplateButtons, 650);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);
             console.log("[ADR044] dual drawer loaded");

@@ -508,3 +508,46 @@
   background: rgba(255, 238, 246, 0.78);
   border-color: rgba(255, 170, 195, 0.45);
 }
+
+
+/* v1.0.5.6 prompt template library */
+.adr044-template-box {
+  margin: 10px 0 12px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 170, 195, 0.32);
+  background: rgba(255, 238, 246, 0.08);
+}
+.adr044-template-title {
+  font-weight: 700;
+  margin-bottom: 7px;
+  color: #d989a1;
+}
+.adr044-template-box select,
+.adr044-template-box input {
+  width: 100%;
+  margin: 5px 0;
+  box-sizing: border-box;
+}
+.adr044-template-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-top: 6px;
+}
+.adr044-template-actions button {
+  min-height: 32px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.adr044-template-status {
+  min-height: 16px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #d989a1;
+}
+@media (max-width: 520px) {
+  .adr044-template-actions {
+    grid-template-columns: 1fr;
+  }
+}
