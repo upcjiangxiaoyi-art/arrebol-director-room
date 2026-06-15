@@ -1,11 +1,11 @@
 {
-    "display_name": "Arrebol Director Room 红霞导演室",
-    "loading_order": 11,
+    "display_name": "红霞壳测试 Shell Test v0.3.2",
+    "loading_order": 12,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.2.1",
-    "description": "RP 场外导演：v0.2.1 小浮窗/面板强制显示测试版"
+    "version": "0.3.2",
+    "description": "全新身份测试包：绕开红霞导演室旧缓存，只测试小浮窗与面板"
 }
