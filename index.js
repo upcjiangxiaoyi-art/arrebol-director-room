@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.4
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.5
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1050,7 +1050,7 @@
 
             chat[idx].mes = mes.trimEnd() + add;
 
-            // v1.0.5.4：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
+            // v1.0.5.5：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
             adrDSaveThenRedrawAfterInject();
             return true;
         } catch (e) {
@@ -1435,7 +1435,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.4.2】\n";
+        out += "【红霞探针 v1.0.5.5.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1543,8 +1543,10 @@
             + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
-            + '<div class="adr044-counter" id="adr044-counter-' + type + '" style="font-size:12px;color:#c98;margin-top:6px;">自动触发计数：等待刷新…</div>'
+            + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">自动触发计数：打开面板后刷新</div>'
             + '</details>'
+
+            + '<details><summary>' + title + '预设</summary>'
             + '<textarea id="adr044-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
             + '</details>'
 
@@ -1563,7 +1565,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.4</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.5</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1671,39 +1673,6 @@
         } catch (e) {}
     }
 
-    function adrDRefreshCounters() {
-        try {
-            var st = settings();
-            var count = adrDAssistantRoundCount();
-
-            ["emotion", "plot"].forEach(function (type) {
-                var nodes;
-                try { nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-counter-" + type)); }
-                catch (e) { nodes = []; }
-                if (!nodes.length) return;
-
-                var enabled = type === "plot" ? st.autoTriggerPlot : st.autoTriggerEmotion;
-                var n = autoTriggerRange(type);
-                var lastKey = type === "plot" ? "lastAutoTriggerPlotCount" : "lastAutoTriggerEmotionCount";
-                var last = Number(st[lastKey]);
-
-                var text;
-                if (!enabled) {
-                    text = "自动触发：未启用（当前角色正文 " + count + " 条）";
-                } else if (!Number.isFinite(last) || last < 0) {
-                    text = "自动触发：基线初始化中（当前 " + count + " 条，每 " + n + " 条触发一次）";
-                } else {
-                    var since = count - last;
-                    var remain = n - since;
-                    if (remain < 0) remain = 0;
-                    text = "自动触发：已积累 " + since + "/" + n + " 条，还差 " + remain + " 条 · " + labelOf(type);
-                }
-
-                nodes.forEach(function (el) { if (el) el.textContent = text; });
-            });
-        } catch (e) {}
-    }
-
     function adrDRefreshAllFieldsFromSettings() {
         try {
             var st = settings();
@@ -1726,6 +1695,7 @@
                 adrDSetAllById("adr044-auto-trigger-range-" + type, st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"] || (type === "plot" ? "10" : "20"));
                 adrDSetAllById("adr044-auto-trigger-custom-" + type, st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "");
             });
+            adrDUpdateAutoCounters();
         } catch (e) {
             console.warn("[Arrebol D] refresh fields failed", e);
         }
@@ -1743,6 +1713,7 @@
                         if (t.id.indexOf("adr044-emotion-") === 0) syncType("emotion");
                         if (t.id.indexOf("adr044-plot-") === 0) syncType("plot");
                         adrDSaveLocalBackup(settings());
+                        adrDUpdateAutoCounters();
                     } catch (e) {}
                 }, true);
                 rootDoc().addEventListener("change", function (ev) {
@@ -1753,6 +1724,7 @@
                         if (t.id.indexOf("adr044-emotion-") === 0) syncType("emotion");
                         if (t.id.indexOf("adr044-plot-") === 0) syncType("plot");
                         adrDSaveLocalBackup(settings());
+                        adrDUpdateAutoCounters();
                     } catch (e) {}
                 }, true);
             }
@@ -1936,7 +1908,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.4.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.5.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2045,7 +2017,7 @@
             + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
-            + '<div class="adr048-counter" id="adr044-counter-' + type + '" style="font-size:12px;color:#e0b0a5;margin-top:6px;">自动触发计数：等待刷新…</div>'
+            + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">自动触发计数：打开面板后刷新</div>'
             + '</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '预设</div>'
@@ -2206,7 +2178,6 @@
 
             adr048BindPopupPanel();
             bindDirect();
-            try { adrDRefreshCounters(); } catch (e2b) {}
 
             try { if (body) body.scrollTop = 0; } catch (e1) {}
         } catch (e) {
@@ -2514,6 +2485,52 @@
         return n;
     }
 
+
+    function adrDSetCounterText(type, text) {
+        try {
+            var d = rootDoc();
+            var id = "adr044-auto-counter-" + type;
+            var nodes = Array.prototype.slice.call(d.querySelectorAll("#" + id));
+            nodes.forEach(function (el) {
+                if (el) el.textContent = text;
+            });
+        } catch (e) {}
+    }
+
+    function adrDAutoCounterText(type) {
+        try {
+            var st = settings();
+            var enabled = type === "plot" ? !!st.autoTriggerPlot : !!st.autoTriggerEmotion;
+            var label = type === "plot" ? "剧情导演" : "情感导演";
+            var count = adrDAssistantRoundCount();
+            var key = type === "plot" ? "lastAutoTriggerPlotCount" : "lastAutoTriggerEmotionCount";
+            var base = Number(st[key]);
+            var n = autoTriggerRange(type);
+
+            if (!enabled) {
+                return label + "：自动触发未开启｜当前有效角色回复 " + count + " 条";
+            }
+
+            if (!Number.isFinite(base) || base < 0) base = count;
+            if (!Number.isFinite(n) || n <= 0) {
+                return label + "：自动触发间隔未设置｜当前有效角色回复 " + count + " 条";
+            }
+
+            var passed = Math.max(0, count - base);
+            var left = Math.max(0, n - passed);
+            return label + "：已新增 " + passed + " / " + n + " 条角色回复｜距离下次还差 " + left + " 条｜当前总数 " + count;
+        } catch (e) {
+            return "自动触发计数：读取失败";
+        }
+    }
+
+    function adrDUpdateAutoCounters() {
+        try {
+            adrDSetCounterText("emotion", adrDAutoCounterText("emotion"));
+            adrDSetCounterText("plot", adrDAutoCounterText("plot"));
+        } catch (e) {}
+    }
+
     function adrDResetAutoTriggerBaseline(reason) {
         try {
             var st = settings();
@@ -2530,6 +2547,7 @@
             }
 
             saveNow();
+            adrDUpdateAutoCounters();
             console.log("[Arrebol D] auto trigger baseline", reason, key, count);
         } catch (e) {}
     }
@@ -2584,6 +2602,7 @@
             }
 
             saveNow();
+            adrDUpdateAutoCounters();
 
             if (!toRun.length) return;
 
@@ -2601,7 +2620,6 @@
         }
 
         adrDAutoTriggerRunning = false;
-        try { adrDRefreshCounters(); } catch (e) {}
     }
 
     function adrDInstallAutoTriggerWatchers() {
@@ -2632,20 +2650,13 @@
                             adrDScheduleAutoTriggerCheck("poll-chat-length");
                         }
                         adrDLastChatLengthSeen = len;
+                        adrDUpdateAutoCounters();
                     } catch (e) {}
                 }, 9000);
-            }
-
-            // 计数显示：每 5 秒刷新一次面板里的"还差几条"提示
-            if (!rootWin().__arrebolDCounterPoll) {
-                rootWin().__arrebolDCounterPoll = setInterval(function () {
-                    try { adrDRefreshCounters(); } catch (e) {}
-                }, 5000);
             }
         } catch (e2) {}
 
         adrDResetAutoTriggerBaseline("install");
-        try { adrDRefreshCounters(); } catch (e) {}
     }
 
 
@@ -2828,6 +2839,8 @@
             adr048CreatePopupPanel();
             adr048EnsureFabLater();
             adrDInstallAutoTriggerWatchers();
+            adrDUpdateAutoCounters();
+            setTimeout(adrDUpdateAutoCounters, 800);
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);
