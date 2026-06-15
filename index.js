@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.8
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.9
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -849,7 +849,7 @@
             return plainMarkerInjection(type, title, body);
         }
 
-        return plainMarkerInjection(type, title, body);
+        return "\n\narrebol_d_visible###\n【暗河红霞 Arrebol D｜" + title + "】\n" + body + "\n###";
     }
 
     function findLastMessageIndex(chat) {
@@ -882,33 +882,34 @@
 
     function refreshMessageDom(index) {
         try {
-            var chat = ctx().chat;
-            var content = chat && chat[index] ? String(chat[index].mes || "") : "";
-            if (!content) return false;
+            var rw = rootWin();
 
-            var m = content.match(/arrebol_d###[\s\S]*?###\s*$/);
-            if (!m) return false;
-            var tag = m[0].trim();
+            if (typeof rw.reloadCurrentChat === "function") {
+                // 太重，先不用。优先改 DOM。
+            }
 
             var d = rootDoc();
-            var el = d.querySelector('#chat .mes[mesid="' + index + '"] .mes_text');
-            if (!el) el = d.querySelector('#chat .mes[data-mesid="' + index + '"] .mes_text');
-            if (!el) return false;
+            var msg = null;
+            var sels = [
+                '#chat .mes[mesid="' + index + '"] .mes_text',
+                '#chat .mes[mesid="' + index + '"] .mes_block .mes_text',
+                '#chat .mes[mesid="' + index + '"]',
+                '#chat .mes[data-mesid="' + index + '"] .mes_text',
+                '#chat .mes[data-mesid="' + index + '"]'
+            ];
 
-            var safe = String(tag)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
+            for (var i = 0; i < sels.length; i++) {
+                msg = d.querySelector(sels[i]);
+                if (msg) break;
+            }
 
-            if (el.innerHTML && el.innerHTML.indexOf(safe) >= 0) return true;
-            el.innerHTML += "<p class=\"arrebol-d-raw-inject\">" + safe + "</p>";
-            return true;
-        } catch (e) {
-            console.warn("[Arrebol D] safe refresh append failed", e);
-            return false;
-        }
+            if (msg) {
+                var chat = ctx().chat;
+                var content = chat && chat[index] ? chat[index].mes : "";
+                msg.innerHTML = content;
+            }
+        } catch (e) {}
     }
-
 
     function injectDirector(type, text) {
         if (!text || !text.trim()) return false;
@@ -1340,7 +1341,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.4.8.2】\n";
+        out += "【红霞探针 v1.0.4.9.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1469,7 +1470,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.8</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.9</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1552,46 +1553,9 @@
         if (pb) pb.classList.toggle("active", type === "plot");
     }
 
-
-    function adrDSetAllById(id, value, checked) {
-        try {
-            var nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id));
-            nodes.forEach(function (el) {
-                if (!el) return;
-                if (el.type === "checkbox") el.checked = !!checked;
-                else el.value = value == null ? "" : value;
-            });
-        } catch (e) {}
-    }
-
-    function adrDRefreshAllFieldsFromSettings() {
-        try {
-            var st = settings();
-
-            adrDSetAllById("adr044-range", st.range || "30");
-            adrDSetAllById("adr044-custom", st.customRange || "");
-            adrDSetAllById("adr044-memory", st.supplementMemory || "");
-            adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
-            adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
-
-            ["emotion", "plot"].forEach(function (type) {
-                var p = prefixOf(type);
-                adrDSetAllById("adr044-" + type + "-endpoint", st[p + "ApiEndpoint"] || "");
-                adrDSetAllById("adr044-" + type + "-key", st[p + "ApiKey"] || "");
-                adrDSetAllById("adr044-" + type + "-model", st[p + "Model"] || "");
-                adrDSetAllById("adr044-" + type + "-preset", st[p + "Preset"] || "");
-                adrDSetAllById("adr044-" + type + "-preview", st[p + "Preview"] || "");
-                adrDSetAllById("adr044-auto-inject-" + type, "", type === "plot" ? st.autoInjectPlot : st.autoInjectEmotion);
-                adrDSetAllById("adr044-auto-trigger-" + type, "", type === "plot" ? st.autoTriggerPlot : st.autoTriggerEmotion);
-                adrDSetAllById("adr044-auto-trigger-range-" + type, st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"] || (type === "plot" ? "10" : "20"));
-                adrDSetAllById("adr044-auto-trigger-custom-" + type, st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "");
-            });
-        } catch (e) {
-            console.warn("[Arrebol D] refresh all fields failed", e);
-        }
-    }
-
     function bindDirect() {
+        try { adrDDiag("bindDirect enter"); } catch (eDiagBind) {}
+
         try {
             if (!rootWin().adrDStableAutoSaveBound) {
                 rootWin().adrDStableAutoSaveBound = true;
@@ -1796,7 +1760,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.4.8.2】\n";
+        out += "【红霞精准读取预览 v1.0.4.9.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1932,7 +1896,7 @@
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；纯文本标记注入；增加全局按钮兜底代理；设置稳定保存。</div>'
+            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；纯文本标记注入；设置保存改为稳定仓库 arrebol_d_settings_stable_v1，更新插件不再丢 API。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1991,6 +1955,8 @@
 
 
     function adr048OpenPopupPanel() {
+        try { adrDDiag("open popup called"); } catch (eDiagOpen) {}
+
         try {
             var d = rootDoc();
 
@@ -2487,7 +2453,25 @@
                             adrDScheduleAutoTriggerCheck("poll-chat-length");
                         }
                         adrDLastChatLengthSeen = len;
-                    } catch (e) {}
+                   
+    function adrDDiagButtonFallbackInstall() {
+        try {
+            if (rootWin().__adrDDiagButtonFallbackInstalled) return;
+            rootWin().__adrDDiagButtonFallbackInstalled = true;
+            rootDoc().addEventListener("click", function (ev) {
+                var t = ev.target;
+                while (t && t !== rootDoc()) {
+                    if (t.id && t.id.indexOf("adr044-") === 0) {
+                        adrDDiag("adr044 button caught in fallback: " + t.id);
+                        break;
+                    }
+                    t = t.parentNode;
+                }
+            }, true);
+        } catch (e) {}
+    }
+
+ } catch (e) {}
                 }, 9000);
             }
         } catch (e2) {}
@@ -2496,146 +2480,65 @@
     }
 
 
-    function adrDButtonTypeFromId(id) {
-        if (!id) return "";
-        if (id.indexOf("emotion") >= 0) return "emotion";
-        if (id.indexOf("plot") >= 0) return "plot";
-        return settings().activeTab || "emotion";
+    function adrDDiag(msg) {
+        try {
+            var d = rootDoc();
+            var box = d.querySelector("#adr-d-diag-box");
+            if (!box) {
+                box = d.createElement("div");
+                box.id = "adr-d-diag-box";
+                box.style.cssText = "position:fixed;left:10px;right:10px;bottom:10px;z-index:2147483647;background:rgba(40,20,20,.92);color:#fff;padding:10px 12px;border-radius:10px;font-size:12px;line-height:1.45;white-space:pre-wrap;max-height:34vh;overflow:auto;";
+                (d.body || d.documentElement).appendChild(box);
+            }
+            var t = new Date();
+            var stamp = String(t.getHours()).padStart(2, "0") + ":" + String(t.getMinutes()).padStart(2, "0") + ":" + String(t.getSeconds()).padStart(2, "0");
+            box.textContent = "[" + stamp + "] " + msg + "\n" + (box.textContent || "").slice(0, 1200);
+        } catch (e) {}
+        try { console.log("[ArrebolD DIAG]", msg); } catch (e2) {}
     }
 
-    function adrDHandleButtonById(id) {
+    function adrDInstallDiagListeners() {
         try {
-            if (!id || id.indexOf("adr044-") !== 0) return false;
+            if (rootWin().__adrDDiagInstalled) return;
+            rootWin().__adrDDiagInstalled = true;
 
-            var type = adrDButtonTypeFromId(id);
-
-            if (id === "adr044-tab-emotion") {
-                settings().activeTab = "emotion";
-                syncAll();
-                saveNow();
-                renderTabs();
-                return true;
-            }
-
-            if (id === "adr044-tab-plot") {
-                settings().activeTab = "plot";
-                syncAll();
-                saveNow();
-                renderTabs();
-                return true;
-            }
-
-            if (id.indexOf("-save") >= 0) {
-                if (typeof adrDForceSaveSettings === "function") adrDForceSaveSettings(type);
-                else { syncAll(); saveNow(); }
-                status(type, "设置已保存 ✓", "#8ed99d");
-                return true;
-            }
-
-            if (id.indexOf("-copy") >= 0) {
-                syncType(type);
-                var pv = qForm("adr044-" + type + "-preview");
-                var text = pv ? pv.value : "";
-                if (!text) { status(type, "没有内容可复制", "#d4726a"); return true; }
-                copyText(type, text);
-                return true;
-            }
-
-            if (id.indexOf("-inject") >= 0) {
-                syncType(type);
-                var pv2 = qForm("adr044-" + type + "-preview");
-                var text2 = pv2 ? pv2.value : "";
-                if (!text2) { status(type, "没有内容可注入", "#d4726a"); return true; }
-                var ok = injectDirector(type, text2);
-                status(type, ok ? "已注入当前聊天 ✓" : "注入失败", ok ? "#8ed99d" : "#d4726a");
-                return true;
-            }
-
-            if (id.indexOf("-run") >= 0) {
-                syncAll();
-                generateDirector(type, "");
-                return true;
-            }
-
-            if (id.indexOf("-abort") >= 0) {
-                abortRun(type);
-                return true;
-            }
-
-            if (id.indexOf("-models") >= 0) {
-                syncType(type);
-                fetchModels(type);
-                return true;
-            }
-
-            if (id.indexOf("-test") >= 0) {
-                testLocalRead(type);
-                return true;
-            }
-
-            if (id.indexOf("-probe") >= 0) {
-                adrDRunContextProbe(type);
-                return true;
-            }
-
-            if (id.indexOf("-content-test") >= 0) {
-                adrDRunContentExtractTest(type);
-                return true;
-            }
-
-            if (id.indexOf("-precise-preview") >= 0) {
-                adrDPreviewPreciseContext(type);
-                return true;
-            }
-        } catch (e) {
-            console.error("[Arrebol D] global click guard failed", e);
-            try { adrDToast("按钮兜底执行失败：" + (e.message || e)); } catch (e2) {}
-            return true;
-        }
-
-        return false;
-    }
-
-    function adrDInstallGlobalClickGuard() {
-        try {
-            if (rootWin().__adrDGlobalClickGuardInstalled) return;
-            rootWin().__adrDGlobalClickGuardInstalled = true;
+            adrDDiag("diagnostic listeners installed");
 
             rootDoc().addEventListener("click", function (ev) {
                 try {
                     var t = ev.target;
-                    while (t && t !== rootDoc()) {
-                        if (t.id && t.id.indexOf("adr044-") === 0) {
-                            var handled = adrDHandleButtonById(t.id);
-                            if (handled) {
-                                ev.preventDefault();
-                                ev.stopPropagation();
-                                return false;
-                            }
-                        }
-                        t = t.parentNode;
+                    var path = [];
+                    var cur = t;
+                    while (cur && path.length < 5) {
+                        path.push((cur.tagName || "node") + (cur.id ? "#" + cur.id : "") + (cur.className ? "." + String(cur.className).slice(0, 40).replace(/\s+/g, ".") : ""));
+                        cur = cur.parentNode;
                     }
-                } catch (e) {}
+                    adrDDiag("click target: " + path.join(" > "));
+                } catch (e) {
+                    adrDDiag("click diag error: " + (e.message || e));
+                }
             }, true);
 
             rootDoc().addEventListener("touchend", function (ev) {
                 try {
                     var t = ev.target;
-                    while (t && t !== rootDoc()) {
-                        if (t.id && t.id.indexOf("adr044-") === 0) {
-                            var handled = adrDHandleButtonById(t.id);
-                            if (handled) {
-                                ev.preventDefault();
-                                ev.stopPropagation();
-                                return false;
-                            }
-                        }
-                        t = t.parentNode;
-                    }
+                    adrDDiag("touchend target: " + (t && t.tagName) + "#" + (t && t.id));
                 } catch (e) {}
             }, true);
+
+            rootWin().adrDForceDiag = function () {
+                try {
+                    var d = rootDoc();
+                    adrDDiag("manual diag | drawer=" + !!d.querySelector("#adr044-drawer")
+                        + " popup=" + !!d.querySelector("#adr048-popup-panel")
+                        + " fab=" + !!d.querySelector("#adr048-ipe-anchor-entry")
+                        + " buttons=" + d.querySelectorAll("[id^='adr044-']").length);
+                } catch (e) {
+                    adrDDiag("manual diag failed: " + (e.message || e));
+                }
+            };
         } catch (e2) {
-            console.warn("[Arrebol D] install global click guard failed", e2);
+            try { alert("diag install failed: " + (e2.message || e2)); } catch (e3) {}
         }
     }
 
@@ -2644,14 +2547,21 @@
         initialized = true;
 
         try {
+            adrDInstallDiagListeners();
+            adrDDiagButtonFallbackInstall();
+            adrDDiag("init start");
             settings();
+            adrDDiag("settings ok");
             mountDrawer();
+            adrDDiag("drawer mounted");
             installProbeGlobals();
             installProbeDelegation();
             bindDirect();
-            adrDInstallGlobalClickGuard();
+            adrDDiag("bindDirect called");
             adr048CreatePopupPanel();
+            adrDDiag("popup panel created");
             adr048EnsureFabLater();
+            adrDDiag("fab ensure called");
             adrDInstallAutoTriggerWatchers();
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);
