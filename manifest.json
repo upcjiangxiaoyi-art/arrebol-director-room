@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞壳测试 Shell Test v0.3.2",
+    "display_name": "红霞导演室 V0.4 内容测试",
     "loading_order": 12,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.3.2",
-    "description": "全新身份测试包：绕开红霞导演室旧缓存，只测试小浮窗与面板"
+    "version": "0.4.0",
+    "description": "红霞导演室：V0.4 基于成功外壳，接入真实面板内容与设置保存，不调用 API"
 }
