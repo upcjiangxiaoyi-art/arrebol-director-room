@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.3.9
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.2
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-d-final-v1039-plain-marker-inject";
+    var EXT = "arrebol-d-final-v1042-safe-dom-inject";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -91,79 +91,48 @@
     }
 
 
-    var ADR_D_LOCAL_BACKUP_KEY = "arrebol_d_final_v1035_settings_backup";
+    var ADR_D_LOCAL_BACKUP_KEY = "arrebol_d_settings_stable_v1";
+    var ADR_D_OLD_BACKUP_KEYS = [
+        "arrebol_d_final_v1035_settings_backup",
+        "arrebol_d_final_v1036_settings_backup",
+        "arrebol_d_final_v1037_settings_backup",
+        "arrebol_d_final_v1038_settings_backup",
+        "arrebol_d_final_v1039_settings_backup",
+        "arrebol_d_final_v1035_save_fix_settings_backup",
+        "arrebol_d_final_v1036_fold_br_fix_settings_backup",
+        "arrebol_d_final_v1037_mystery_sync_fix_settings_backup",
+        "arrebol_d_final_v1038_comment_only_inject_settings_backup",
+        "arrebol_d_final_v1039_plain_marker_inject_settings_backup"
+    ];
 
     function adrDLoadLocalBackup() {
         try {
             var raw = rootWin().localStorage.getItem(ADR_D_LOCAL_BACKUP_KEY);
-            if (!raw) return {};
-            var obj = JSON.parse(raw);
-            return obj && typeof obj === "object" ? obj : {};
-        } catch (e) { return {}; }
+            if (raw) {
+                var obj = JSON.parse(raw);
+                return obj && typeof obj === "object" ? obj : {};
+            }
+
+            // 迁移旧版备份：以后升级插件不再丢 API / 模型 / 预设。
+            for (var i = 0; i < ADR_D_OLD_BACKUP_KEYS.length; i++) {
+                var oldRaw = rootWin().localStorage.getItem(ADR_D_OLD_BACKUP_KEYS[i]);
+                if (!oldRaw) continue;
+                try {
+                    var oldObj = JSON.parse(oldRaw);
+                    if (oldObj && typeof oldObj === "object") {
+                        rootWin().localStorage.setItem(ADR_D_LOCAL_BACKUP_KEY, JSON.stringify(oldObj));
+                        return oldObj;
+                    }
+                } catch (e0) {}
+            }
+        } catch (e) {}
+        return {};
     }
 
     function adrDSaveLocalBackup(obj) {
         try {
-            rootWin().localStorage.setItem(ADR_D_LOCAL_BACKUP_KEY, JSON.stringify(obj || settings()));
+            rootWin().localStorage.setItem(ADR_D_LOCAL_BACKUP_KEY, JSON.stringify(obj || {}));
         } catch (e) {}
-    }
-
-    function adrDBlurActiveElement() {
-        try {
-            var d = rootDoc();
-            if (d && d.activeElement && typeof d.activeElement.blur === "function") {
-                d.activeElement.blur();
-            }
-        } catch (e) {}
-    }
-
-    function adrDToast(msg) {
-        try {
-            var c = ctx();
-            if (c && c.toastr && typeof c.toastr.success === "function") {
-                c.toastr.success(msg);
-                return;
-            }
-        } catch (e) {}
-        try { console.log("[Arrebol D]", msg); } catch (e2) {}
-    }
-
-    function adrDSetAllById(id, value, checked) {
-        try {
-            var nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id));
-            nodes.forEach(function (el) {
-                if (!el) return;
-                if (el.type === "checkbox") el.checked = !!checked;
-                else el.value = value == null ? "" : value;
-            });
-        } catch (e) {}
-    }
-
-    function adrDRefreshAllFieldsFromSettings() {
-        try {
-            var st = settings();
-
-            adrDSetAllById("adr044-range", st.range || "30");
-            adrDSetAllById("adr044-custom", st.customRange || "");
-            adrDSetAllById("adr044-memory", st.supplementMemory || "");
-            adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
-            adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
-
-            ["emotion", "plot"].forEach(function (type) {
-                var p = prefixOf(type);
-                adrDSetAllById("adr044-" + type + "-endpoint", st[p + "ApiEndpoint"] || "");
-                adrDSetAllById("adr044-" + type + "-key", st[p + "ApiKey"] || "");
-                adrDSetAllById("adr044-" + type + "-model", st[p + "Model"] || "");
-                adrDSetAllById("adr044-" + type + "-preset", st[p + "Preset"] || "");
-                adrDSetAllById("adr044-" + type + "-preview", st[p + "Preview"] || "");
-                adrDSetAllById("adr044-auto-inject-" + type, "", type === "plot" ? st.autoInjectPlot : st.autoInjectEmotion);
-                adrDSetAllById("adr044-auto-trigger-" + type, "", type === "plot" ? st.autoTriggerPlot : st.autoTriggerEmotion);
-                adrDSetAllById("adr044-auto-trigger-range-" + type, st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"] || (type === "plot" ? "10" : "20"));
-                adrDSetAllById("adr044-auto-trigger-custom-" + type, st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "");
-            });
-        } catch (e) {
-            console.error("[Arrebol D] refresh fields failed", e);
-        }
     }
 
     function settings() {
@@ -854,6 +823,43 @@
         }
     }
 
+    function adrDEscapeHtmlText(s) {
+        return String(s || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    function adrDAppendInjectedTextDom(idx, tag) {
+        try {
+            var d = rootDoc();
+            var selectors = [
+                '#chat .mes[mesid="' + idx + '"] .mes_text',
+                '#chat .mes[mesid="' + idx + '"] .mes_block .mes_text',
+                '#chat .mes[mesid="' + idx + '"]'
+            ];
+
+            var el = null;
+            for (var i = 0; i < selectors.length; i++) {
+                el = d.querySelector(selectors[i]);
+                if (el) break;
+            }
+            if (!el) return false;
+
+            var escaped = adrDEscapeHtmlText(tag);
+            if (el.innerHTML && el.innerHTML.indexOf(escaped) >= 0) return true;
+
+            var p = d.createElement("p");
+            p.className = "arrebol-d-raw-inject";
+            p.textContent = tag;
+            el.appendChild(p);
+            return true;
+        } catch (e) {
+            console.warn("[Arrebol D] append injected text dom failed", e);
+            return false;
+        }
+    }
+
     function escapeHtmlForDetails(s) {
         s = String(s || "");
         return s
@@ -880,7 +886,7 @@
             return plainMarkerInjection(type, title, body);
         }
 
-        return "\n\narrebol_d_visible###\n【暗河红霞 Arrebol D｜" + title + "】\n" + body + "\n###";
+        return plainMarkerInjection(type, title, body);
     }
 
     function findLastMessageIndex(chat) {
@@ -943,20 +949,24 @@
     }
 
     function injectDirector(type, text) {
-        if (!text || !text.trim()) return false;
-
         try {
             var c = ctx();
-            var chat = c.chat;
-            if (!chat || !chat.length) return false;
+            var chat = getChatArray();
+            if (!chat || !chat.length) {
+                adrDToast("没有可注入的聊天消息");
+                return false;
+            }
 
             var idx = findLastMessageIndex(chat);
-            if (idx < 0 || !chat[idx]) return false;
+            if (idx < 0 || !chat[idx]) {
+                adrDToast("没有找到可注入的角色消息");
+                return false;
+            }
 
             var add = injectionText(type, text);
-
-            // 移除同类型旧注入，避免最后一条消息越堆越多。
             var mes = String(chat[idx].mes || "");
+
+            // 移除旧版 HTML/注释注入，兼容历史消息。
             var startMark = "<!-- ARREBOL_D_START:" + type + " -->";
             var endMark = "<!-- ARREBOL_D_END:" + type + " -->";
 
@@ -982,19 +992,26 @@
             var reOldVisible = new RegExp("\\n\\n【(?:红霞导演室|暗河红霞 Arrebol D)(?:｜|\\|)" + visibleName + "】[\\s\\S]*$", "m");
             mes = mes.replace(reOldVisible, "");
 
-            // 移除旧版纯文本标记注入，避免堆叠。
+            // 移除旧版纯文本标记注入，避免堆叠。当前仍使用 arrebol_d###，但每次只保留最新一次。
             mes = mes.replace(/\n?arrebol_d(?:_visible)?###[\s\S]*?###/g, "").trimEnd();
 
+            // 关键修复：只改数据，不整条重写 DOM。
             chat[idx].mes = mes.trimEnd() + add;
 
             saveChatSafe();
-            refreshMessageDom(idx);
+
+            // IPE 同款思路：显示层只追加安全文本节点，不 innerHTML 重刷整条消息。
+            adrDAppendInjectedTextDom(idx, add.trim());
+
+            adrDToast("已安全注入正文");
             return true;
         } catch (e) {
             console.error("[Arrebol D] inject failed", e);
+            adrDToast("注入失败，详情看控制台");
             return false;
         }
     }
+
 
     function localTest(type) {
         syncAll();
@@ -1372,7 +1389,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.3.9.2】\n";
+        out += "【红霞探针 v1.0.4.2.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1501,7 +1518,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.3.9</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1585,6 +1602,32 @@
     }
 
     function bindDirect() {
+        try {
+            if (!rootWin().adrDStableAutoSaveBound) {
+                rootWin().adrDStableAutoSaveBound = true;
+                rootDoc().addEventListener("input", function (ev) {
+                    var t = ev && ev.target;
+                    if (!t || !t.id || t.id.indexOf("adr044-") !== 0) return;
+                    try {
+                        syncShared();
+                        if (t.id.indexOf("adr044-emotion-") === 0) syncType("emotion");
+                        if (t.id.indexOf("adr044-plot-") === 0) syncType("plot");
+                        adrDSaveLocalBackup(settings());
+                    } catch (e) {}
+                }, true);
+                rootDoc().addEventListener("change", function (ev) {
+                    var t = ev && ev.target;
+                    if (!t || !t.id || t.id.indexOf("adr044-") !== 0) return;
+                    try {
+                        syncShared();
+                        if (t.id.indexOf("adr044-emotion-") === 0) syncType("emotion");
+                        if (t.id.indexOf("adr044-plot-") === 0) syncType("plot");
+                        adrDSaveLocalBackup(settings());
+                    } catch (e) {}
+                }, true);
+            }
+        } catch (eStableBind) {}
+
         var ids = {};
 
         ids["adr044-tab-emotion"] = function () { switchTab("emotion"); };
@@ -1763,7 +1806,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.3.9.2】\n";
+        out += "【红霞精准读取预览 v1.0.4.2.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1899,7 +1942,7 @@
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；神秘注入改为纯文本标记：arrebol_d###...###，不写任何 HTML；推荐外挂显示层正则隐藏。</div>'
+            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；纯文本标记注入；修复 DOM 注入方式，不再重写整条消息；设置稳定保存。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'

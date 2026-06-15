@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.3.9",
-    "description": "小修版：神秘注入改为生图式纯文本标记 arrebol_d###...###，不写任何 HTML 标签/注释，适合外挂显示层正则隐藏"
+    "version": "1.0.4.2",
+    "description": "安全正文注入版：基于 v1.0.4.0 稳定保存仓库，保留 arrebol_d### 纯文本标记；修复注入时整条 innerHTML 重写导致的美化混乱"
 }
