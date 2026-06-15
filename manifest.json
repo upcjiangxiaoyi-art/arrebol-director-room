@@ -1,11 +1,11 @@
 {
-    "display_name": "Arrebol Director Room 红霞导演室",
-    "loading_order": 12,
+    "display_name": "红霞导演室 v0.3.5 隔离接线版",
+    "loading_order": 13,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.3.4",
-    "description": "RP 场外情感导演：副 API 读最近 N 轮剧情输出情感方向，修复面板闪退问题"
+    "version": "0.3.5",
+    "description": "隔离命名空间版本：避开旧 drt 成功壳污染，测试真实面板、按钮绑定和副 API 生成"
 }
