@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.8.2 浮窗开关",
+    "display_name": "红霞导演室 v0.4.8.3 面板壳修复",
     "loading_order": 22,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.8.2",
-    "description": "修复小红霞点击弹不出面板，并新增显示/隐藏小红霞浮窗开关"
+    "version": "0.4.8.3",
+    "description": "面板壳修复版：保留小红霞锚点与开关，重做弹出面板尺寸、深色壳、滚动容器，修复白条/压扁问题"
 }

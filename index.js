@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.8.2.2.1 探针直连
+ * Arrebol Director Room 红霞导演室 v0.4.8.3.3.2.1 探针直连
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v0482-popup-switch";
+    var EXT = "arrebol-director-room-v0483-popup-shell-fix";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -1171,7 +1171,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v0.4.8.2.2】\n";
+        out += "【红霞探针 v0.4.8.3.3.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1290,10 +1290,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.8.2.2.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.8.3.3.2.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">浮窗开关版：小红霞可在共享设置中显示/隐藏；点击小红霞会直接弹出完整导演室面板。</div>'
+            + '<div class="adr044-note">面板壳修复版：小红霞已可显示，本版重做弹出面板尺寸与样式，避免被压成白条。</div>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1360,6 +1360,14 @@
 
         if (ep) ep.style.display = type === "emotion" ? "" : "none";
         if (pp) pp.style.display = type === "plot" ? "" : "none";
+
+        try {
+            var ep2 = rootDoc().querySelector("#adr048-page-emotion");
+            var pp2 = rootDoc().querySelector("#adr048-page-plot");
+            if (ep2) ep2.style.display = type === "emotion" ? "" : "none";
+            if (pp2) pp2.style.display = type === "plot" ? "" : "none";
+        } catch (e) {}
+
         if (eb) eb.classList.toggle("active", type === "emotion");
         if (pb) pb.classList.toggle("active", type === "plot");
     }
@@ -1505,7 +1513,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v0.4.8.2.2】\n";
+        out += "【红霞精准读取预览 v0.4.8.3.3.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1589,22 +1597,82 @@
         return null;
     }
 
-    function adr048PanelHTML() {
-        var html = drawerHTML();
 
-        // 把外层抽屉壳换成浮窗面板壳，但内部保留 adr044 ids，便于复用核心逻辑。
-        html = html.replace('id="adr044-drawer"', 'id="adr048-popup-inner"');
-        html = html.replace('🎬 红霞导演室 v0.4.8.2.2', '🎬 红霞导演室');
-        html = html.replace('class="inline-drawer-toggle inline-drawer-header"', 'class="adr048-popup-header"');
-        html = html.replace('<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>', '<button type="button" id="adr048-popup-close">×</button>');
-        html = html.replace('class="inline-drawer-content"', 'class="adr048-popup-content"');
+    function adr048PageHTML(type) {
+        var st = settings();
+        var p = prefixOf(type);
+        var title = type === "plot" ? "剧情导演" : "情感导演";
+        var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
 
-        return '<div id="adr048-popup-panel" data-open="0">'
-            + '<div id="adr048-popup-shell">'
-            + html
+        return '<div class="adr048-page" id="adr048-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
+            + '<div class="adr048-section"><div class="adr048-summary">' + title + '配置</div>'
+            + '<label>API 地址</label><input type="text" id="adr044-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
+            + '<label>API 密钥</label><input type="password" id="adr044-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
+            + '<label>模型</label><input type="text" id="adr044-' + type + '-model" value="' + esc(st[p + "Model"] || "") + '" placeholder="可以手填，或加载模型">'
+            + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
+            + '<div class="adr048-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
+            + '</div>'
+
+            + '<div class="adr048-section"><div class="adr048-summary">' + title + '预设</div>'
+            + '<textarea id="adr044-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
+            + '</div>'
+
+            + '<div class="adr048-section"><div class="adr048-summary">' + title + '结果</div>'
+            + '<div id="adr044-' + type + '-status" class="adr048-status">请先本地测试，或直接生成方向。</div>'
+            + '<textarea id="adr044-' + type + '-preview" rows="8" placeholder="生成结果显示在这里">' + esc(st[p + "Preview"] || "") + '</textarea>'
+            + '<label>补充指令</label><input type="text" id="adr044-' + type + '-extra" placeholder="只影响本次重新分析">'
+            + '<div class="adr048-actions"><button id="adr044-' + type + '-local" type="button">本地测试</button><button id="adr044-' + type + '-generate" type="button">生成方向</button></div>'
+            + '<div class="adr048-actions"><button id="adr044-' + type + '-reroll" type="button">重新分析</button><button id="adr044-' + type + '-stop" type="button" disabled>打断</button><button id="adr044-' + type + '-copy" type="button">复制</button></div>'
+            + '<div class="adr048-actions"><button id="adr044-' + type + '-inject" type="button">手动注入当前聊天</button></div>'
             + '</div>'
             + '</div>';
     }
+
+    function adr048PanelHTML() {
+        var st = settings();
+
+        return '<div id="adr048-popup-panel" data-open="0">'
+            + '<div id="adr048-popup-shell">'
+            + '<div id="adr048-popup-head">'
+            + '<div><b>🎬 红霞导演室</b><div id="adr048-popup-sub">浮窗面板模式</div></div>'
+            + '<button type="button" id="adr048-popup-close">×</button>'
+            + '</div>'
+            + '<div id="adr048-popup-body">'
+            + '<div class="adr048-note">完整功能面板已弹出。抽屉版仍保留为兜底。</div>'
+
+            + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
+            + '<label>复盘范围</label><select id="adr044-range">'
+            + opt(st.range, "10", "最近 10 轮")
+            + opt(st.range, "20", "最近 20 轮")
+            + opt(st.range, "30", "最近 30 轮")
+            + opt(st.range, "50", "最近 50 轮")
+            + opt(st.range, "custom", "自定义")
+            + '</select>'
+            + '<input type="number" id="adr044-custom" placeholder="自定义轮数" value="' + esc(st.customRange || "") + '" style="display:' + (String(st.range) === "custom" ? "block" : "none") + '">'
+            + '<label>角色卡要点 / 世界书 / 当前担心</label>'
+            + '<textarea id="adr044-memory" rows="5" placeholder="这里会同时发给情感导演和剧情导演">' + esc(st.supplementMemory || "") + '</textarea>'
+            + '<div class="adr048-actions"><button id="adr044-probe-context" type="button">检测上下文</button><button id="adr044-probe-content" type="button">测试 &lt;content&gt; 提取</button></div>'
+            + '<div class="adr048-actions"><button id="adr044-preview-precise" type="button">预览精准读取</button></div>'
+            + '<label>注入方式</label><select id="adr044-inject-mode">'
+            + opt(st.injectMode, "visible", "可见文本注入（推荐测试）")
+            + opt(st.injectMode, "hidden", "HTML 注释隐藏注入")
+            + '</select>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
+            + '</div>'
+
+            + '<div class="adr048-tabs">'
+            + '<button id="adr044-tab-emotion" type="button" class="' + (st.activeTab === "plot" ? "" : "active") + '">情感导演</button>'
+            + '<button id="adr044-tab-plot" type="button" class="' + (st.activeTab === "plot" ? "active" : "") + '">剧情导演</button>'
+            + '</div>'
+
+            + adr048PageHTML("emotion")
+            + adr048PageHTML("plot")
+            + '</div>'
+            + '</div>'
+            + '</div>';
+    }
+
 
     function adr048CreatePopupPanel() {
         try {
@@ -1621,65 +1689,88 @@
             (d.body || d.documentElement).appendChild(panel);
 
             adr048BindPopupPanel();
+            bindDirect();
         } catch (e) {
-            console.error("[ADR048] create popup panel failed", e);
+            console.error("[ADR0483] create popup panel failed", e);
         }
     }
 
 
     function adr048OpenPopupPanel() {
         try {
-            adr048CreatePopupPanel();
             var d = rootDoc();
+
+            if (!d.querySelector("#adr048-popup-panel")) {
+                adr048CreatePopupPanel();
+            }
+
             var p = d.querySelector("#adr048-popup-panel");
             var shell = d.querySelector("#adr048-popup-shell");
+            var body = d.querySelector("#adr048-popup-body");
+
             if (!p || !shell) {
-                console.error("[ADR0482] popup elements missing");
+                try { alert("红霞面板壳未创建成功"); } catch (_) {}
                 return;
             }
 
             p.setAttribute("data-open", "1");
 
-            // 强制打开遮罩层
             adr048SetImportant(p, "display", "block");
             adr048SetImportant(p, "visibility", "visible");
             adr048SetImportant(p, "opacity", "1");
             adr048SetImportant(p, "pointer-events", "auto");
             adr048SetImportant(p, "position", "fixed");
-            adr048SetImportant(p, "inset", "0");
+            adr048SetImportant(p, "left", "0");
+            adr048SetImportant(p, "right", "0");
+            adr048SetImportant(p, "top", "0");
+            adr048SetImportant(p, "bottom", "0");
+            adr048SetImportant(p, "width", "100vw");
+            adr048SetImportant(p, "height", "100vh");
             adr048SetImportant(p, "z-index", "2147483646");
+            adr048SetImportant(p, "background", "rgba(0,0,0,.25)");
 
-            // 强制打开面板壳
-            adr048SetImportant(shell, "display", "block");
+            adr048SetImportant(shell, "display", "flex");
+            adr048SetImportant(shell, "flex-direction", "column");
             adr048SetImportant(shell, "visibility", "visible");
             adr048SetImportant(shell, "opacity", "1");
             adr048SetImportant(shell, "pointer-events", "auto");
             adr048SetImportant(shell, "position", "fixed");
             adr048SetImportant(shell, "left", "10px");
             adr048SetImportant(shell, "right", "10px");
-            adr048SetImportant(shell, "top", "72px");
-            adr048SetImportant(shell, "bottom", "72px");
+            adr048SetImportant(shell, "top", "64px");
+            adr048SetImportant(shell, "bottom", "64px");
+            adr048SetImportant(shell, "width", "auto");
+            adr048SetImportant(shell, "height", "auto");
+            adr048SetImportant(shell, "min-height", "360px");
+            adr048SetImportant(shell, "max-height", "calc(100vh - 128px)");
             adr048SetImportant(shell, "z-index", "2147483647");
-            adr048SetImportant(shell, "overflow", "auto");
-            adr048SetImportant(shell, "-webkit-overflow-scrolling", "touch");
+            adr048SetImportant(shell, "overflow", "hidden");
+            adr048SetImportant(shell, "background", "rgba(31,31,35,.98)");
+            adr048SetImportant(shell, "color", "#f2f2f2");
+            adr048SetImportant(shell, "border", "1px solid rgba(255,255,255,.18)");
+            adr048SetImportant(shell, "border-radius", "14px");
+            adr048SetImportant(shell, "box-shadow", "0 14px 42px rgba(0,0,0,.48)");
 
-            try {
-                var content = shell.querySelector(".adr048-popup-content");
-                if (content) adr048SetImportant(content, "display", "block");
-            } catch (e1) {}
+            if (body) {
+                adr048SetImportant(body, "display", "block");
+                adr048SetImportant(body, "visibility", "visible");
+                adr048SetImportant(body, "opacity", "1");
+                adr048SetImportant(body, "flex", "1 1 auto");
+                adr048SetImportant(body, "overflow", "auto");
+                adr048SetImportant(body, "-webkit-overflow-scrolling", "touch");
+                adr048SetImportant(body, "padding", "10px 12px 16px");
+                adr048SetImportant(body, "min-height", "260px");
+            }
 
             adr048BindPopupPanel();
             bindDirect();
 
-            try {
-                shell.scrollTop = 0;
-            } catch (e2) {}
+            try { if (body) body.scrollTop = 0; } catch (e1) {}
         } catch (e) {
-            console.error("[ADR0482] open popup failed", e);
+            console.error("[ADR0483] open popup failed", e);
             try { alert("红霞面板打开失败：" + (e.message || String(e))); } catch (_) {}
         }
     }
-
 
     function adr048ClosePopupPanel() {
         try {
