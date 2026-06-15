@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 红霞导演室 v0.4.6.2.1 探针直连
+ * Arrebol Director Room 红霞导演室 v0.4.8.1 探针直连
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-director-room-v0462-ipe-entry";
+    var EXT = "arrebol-director-room-v048-ipe-popup-panel";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -109,7 +109,7 @@
     }
 
     function status(type, text, color) {
-        var el = q("#adr044-" + type + "-status");
+        var el = qForm("adr044-" + type + "-status");
         if (el) {
             el.textContent = text;
             if (color) el.style.color = color;
@@ -135,7 +135,7 @@
     }
 
     function setPreview(type, text) {
-        var pv = q("#adr044-" + type + "-preview");
+        var pv = qForm("adr044-" + type + "-preview");
         if (pv) pv.value = text || "";
         save(field(type, "preview"), text || "");
     }
@@ -204,22 +204,22 @@
     function syncShared() {
         var st = settings();
 
-        var range = q("#adr044-range");
+        var range = qForm("adr044-range");
         if (range) save("range", range.value || "30");
 
-        var custom = q("#adr044-custom");
+        var custom = qForm("adr044-custom");
         if (custom) save("customRange", Number(custom.value || 0));
 
-        var memory = q("#adr044-memory");
+        var memory = qForm("adr044-memory");
         if (memory) save("supplementMemory", memory.value || "");
 
-        var mode = q("#adr044-inject-mode");
+        var mode = qForm("adr044-inject-mode");
         if (mode) save("injectMode", mode.value || "visible");
 
-        var aiE = q("#adr044-auto-inject-emotion");
+        var aiE = qForm("adr044-auto-inject-emotion");
         if (aiE) save("autoInjectEmotion", !!aiE.checked);
 
-        var aiP = q("#adr044-auto-inject-plot");
+        var aiP = qForm("adr044-auto-inject-plot");
         if (aiP) save("autoInjectPlot", !!aiP.checked);
 
         saveNow();
@@ -228,11 +228,11 @@
     function syncType(type) {
         var p = prefixOf(type);
 
-        var endpoint = q("#adr044-" + type + "-endpoint");
-        var key = q("#adr044-" + type + "-key");
-        var model = q("#adr044-" + type + "-model");
-        var preset = q("#adr044-" + type + "-preset");
-        var preview = q("#adr044-" + type + "-preview");
+        var endpoint = qForm("adr044-" + type + "-endpoint");
+        var key = qForm("adr044-" + type + "-key");
+        var model = qForm("adr044-" + type + "-model");
+        var preset = qForm("adr044-" + type + "-preset");
+        var preview = qForm("adr044-" + type + "-preview");
 
         if (endpoint) save(p + "ApiEndpoint", endpoint.value || "");
         if (key) save(p + "ApiKey", key.value || "");
@@ -609,12 +609,12 @@
 
     function setButtons(type) {
         ["emotion", "plot"].forEach(function (t) {
-            var g = q("#adr044-" + t + "-generate");
-            var r = q("#adr044-" + t + "-reroll");
-            var s = q("#adr044-" + t + "-stop");
-            var c = q("#adr044-" + t + "-copy");
-            var inj = q("#adr044-" + t + "-inject");
-            var pv = q("#adr044-" + t + "-preview");
+            var g = qForm("adr044-" + t + "-generate");
+            var r = qForm("adr044-" + t + "-reroll");
+            var s = qForm("adr044-" + t + "-stop");
+            var c = qForm("adr044-" + t + "-copy");
+            var inj = qForm("adr044-" + t + "-inject");
+            var pv = qForm("adr044-" + t + "-preview");
             var has = pv && pv.value;
 
             if (g) g.disabled = processing;
@@ -670,7 +670,7 @@
     }
 
     function copyText(type) {
-        var pv = q("#adr044-" + type + "-preview");
+        var pv = qForm("adr044-" + type + "-preview");
         var text = pv ? pv.value : "";
         if (!text) {
             status(type, "没有内容可复制", "#d4726a");
@@ -837,7 +837,7 @@
         var modelKey = field(type, "model");
         var current = st[modelKey] || "";
 
-        var sel = q("#adr044-" + type + "-model-select");
+        var sel = qForm("adr044-" + type + "-model-select");
         if (!sel) return;
 
         var html = "";
@@ -872,7 +872,7 @@
             return;
         }
 
-        var btn = q("#adr044-" + type + "-load-models");
+        var btn = qForm("adr044-" + type + "-load-models");
         if (btn) {
             btn.disabled = true;
             btn.textContent = "加载中…";
@@ -1167,7 +1167,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v0.4.6.2】\n";
+        out += "【红霞探针 v0.4.8】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1286,10 +1286,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.6.2.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 红霞导演室 v0.4.8.1 探针直连</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">IPE入口版：核心面板仍在抽屉内，浮窗入口使用 IPE 同款拖动按钮逻辑。</div>'
+            + '<div class="adr044-note">浮窗面板版：抽屉保留兜底，点击右侧红霞浮窗可在主页弹出完整导演室面板。</div>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -1372,7 +1372,7 @@
             ids["adr044-" + type + "-local"] = function () { localTest(type); };
             ids["adr044-" + type + "-generate"] = function () { run(type, ""); };
             ids["adr044-" + type + "-reroll"] = function () {
-                var extra = q("#adr044-" + type + "-extra");
+                var extra = qForm("adr044-" + type + "-extra");
                 run(type, extra ? extra.value : "");
             };
             ids["adr044-" + type + "-stop"] = function () { abortRun(type); };
@@ -1385,7 +1385,7 @@
             };
             ids["adr044-" + type + "-inject"] = function () {
                 syncType(type);
-                var pv = q("#adr044-" + type + "-preview");
+                var pv = qForm("adr044-" + type + "-preview");
                 var text = pv ? pv.value : "";
                 if (!text) {
                     status(type, "没有内容可注入", "#d4726a");
@@ -1397,27 +1397,40 @@
         });
 
         Object.keys(ids).forEach(function (id) {
-            var el = q("#" + id);
-            if (!el || el.__adr044Bound) return;
-            el.__adr044Bound = true;
-            el.addEventListener("click", function (ev) {
-                try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
-                ids[id]();
+            var nodes = [];
+            try {
+                nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id));
+            } catch (e) {
+                var one = q("#" + id);
+                if (one) nodes = [one];
+            }
+
+            nodes.forEach(function (el) {
+                if (!el || el.__adr044Bound) return;
+                el.__adr044Bound = true;
+                el.addEventListener("click", function (ev) {
+                    try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                    ids[id]();
+                }, true);
+                el.addEventListener("touchend", function (ev) {
+                    try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                    ids[id]();
+                }, true);
             });
         });
 
-        var range = q("#adr044-range");
+        var range = qForm("adr044-range");
         if (range && !range.__adr044Bound) {
             range.__adr044Bound = true;
             range.addEventListener("change", function () {
                 save("range", range.value);
-                var custom = q("#adr044-custom");
+                var custom = qForm("adr044-custom");
                 if (custom) custom.style.display = range.value === "custom" ? "block" : "none";
                 saveNow();
             });
         }
 
-        var mode = q("#adr044-inject-mode");
+        var mode = qForm("adr044-inject-mode");
         if (mode && !mode.__adr044Bound) {
             mode.__adr044Bound = true;
             mode.addEventListener("change", function () {
@@ -1431,7 +1444,7 @@
             if (modelSelect && !modelSelect.__adr044Bound) {
                 modelSelect.__adr044Bound = true;
                 modelSelect.addEventListener("change", function () {
-                    var modelInput = q("#adr044-" + type + "-model");
+                    var modelInput = qForm("adr044-" + type + "-model");
                     if (modelInput) modelInput.value = modelSelect.value;
                     save(field(type, "model"), modelSelect.value || "");
                     saveNow();
@@ -1476,7 +1489,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v0.4.6.2】\n";
+        out += "【红霞精准读取预览 v0.4.8】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1533,252 +1546,240 @@
     }
 
 
-    function adrOpenDrawerFromEntry() {
+    function adr048IsPopupOpen() {
         try {
-            if (!q("#adr044-drawer")) {
-                mountDrawer();
-                bindDirect();
+            var p = rootDoc().querySelector("#adr048-popup-panel");
+            return !!(p && p.getAttribute("data-open") === "1");
+        } catch (e) { return false; }
+    }
+
+    function qForm(id) {
+        try {
+            if (adr048IsPopupOpen()) {
+                var p = rootDoc().querySelector("#adr048-popup-panel");
+                if (p) {
+                    var el = p.querySelector("#" + id);
+                    if (el) return el;
+                }
             }
+        } catch (e) {}
 
-            // 先尝试打开扩展抽屉；失败也不影响核心面板。
-            try {
-                var d0 = rootDoc();
-                var drawer = d0.querySelector("#extensions_settings2");
-                var visibleEnough = false;
-                if (drawer) {
-                    var rect = drawer.getBoundingClientRect();
-                    visibleEnough = rect && rect.width > 0 && rect.height > 0;
-                }
+        try {
+            var el2 = rootDoc().querySelector("#" + id);
+            if (el2) return el2;
+        } catch (e2) {}
 
-                if (!visibleEnough) {
-                    var selectors = [
-                        "#extensions_button",
-                        "#extensionsMenuButton",
-                        "#extensions_menu_button",
-                        "[title='Extensions']",
-                        "[title='扩展']",
-                        ".drawer-toggle[data-drawer='extensions']",
-                        ".drawer-toggle[data-drawer='extensions_settings']"
-                    ];
+        try { return document.querySelector("#" + id); } catch (e3) {}
+        return null;
+    }
 
-                    for (var si = 0; si < selectors.length; si++) {
-                        var b = d0.querySelector(selectors[si]);
-                        if (b) {
-                            try { b.click(); break; } catch (e) {}
-                        }
-                    }
-                }
-            } catch (e0) {}
+    function adr048PanelHTML() {
+        var html = drawerHTML();
 
-            setTimeout(function () {
-                var el = q("#adr044-drawer");
-                if (!el) {
-                    mountDrawer();
-                    bindDirect();
-                    el = q("#adr044-drawer");
-                }
-                if (!el) return;
+        // 把外层抽屉壳换成浮窗面板壳，但内部保留 adr044 ids，便于复用核心逻辑。
+        html = html.replace('id="adr044-drawer"', 'id="adr048-popup-inner"');
+        html = html.replace('🎬 红霞导演室 v0.4.8', '🎬 红霞导演室');
+        html = html.replace('class="inline-drawer-toggle inline-drawer-header"', 'class="adr048-popup-header"');
+        html = html.replace('<div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>', '<button type="button" id="adr048-popup-close">×</button>');
+        html = html.replace('class="inline-drawer-content"', 'class="adr048-popup-content"');
 
-                try {
-                    var content = el.querySelector(".inline-drawer-content");
-                    if (content) content.style.display = "";
-                } catch (e1) {}
+        return '<div id="adr048-popup-panel" data-open="0">'
+            + '<div id="adr048-popup-shell">'
+            + html
+            + '</div>'
+            + '</div>';
+    }
 
-                try { el.scrollIntoView({ behavior: "smooth", block: "center" }); }
-                catch (e2) { try { el.scrollIntoView(); } catch (_) {} }
+    function adr048CreatePopupPanel() {
+        try {
+            var d = rootDoc();
+            if (!d) return;
 
-                try {
-                    el.classList.remove("adr044-highlight");
-                    void el.offsetWidth;
-                    el.classList.add("adr044-highlight");
-                    setTimeout(function () {
-                        try { el.classList.remove("adr044-highlight"); } catch (_) {}
-                    }, 2600);
-                } catch (e3) {}
-            }, 180);
-        } catch (e4) {
-            console.error("[ADR0462] open drawer failed", e4);
+            var old = d.querySelector("#adr048-popup-panel");
+            if (old) return;
+
+            var wrap = d.createElement("div");
+            wrap.innerHTML = adr048PanelHTML();
+            var panel = wrap.firstChild;
+
+            (d.body || d.documentElement).appendChild(panel);
+
+            adr048BindPopupPanel();
+        } catch (e) {
+            console.error("[ADR048] create popup panel failed", e);
         }
     }
 
-    function adrRemoveOldEntryBits() {
+    function adr048OpenPopupPanel() {
+        try {
+            adr048CreatePopupPanel();
+            var p = rootDoc().querySelector("#adr048-popup-panel");
+            if (!p) return;
+            p.setAttribute("data-open", "1");
+            p.style.setProperty("display", "block", "important");
+            p.style.setProperty("visibility", "visible", "important");
+            p.style.setProperty("opacity", "1", "important");
+            adr048BindPopupPanel();
+            bindDirect();
+        } catch (e) {
+            console.error("[ADR048] open popup failed", e);
+        }
+    }
+
+    function adr048ClosePopupPanel() {
+        try {
+            var p = rootDoc().querySelector("#adr048-popup-panel");
+            if (!p) return;
+            p.setAttribute("data-open", "0");
+            p.style.setProperty("display", "none", "important");
+        } catch (e) {}
+    }
+
+    function adr048BindPopupPanel() {
         try {
             var d = rootDoc();
-            ["#adr046-quick-entry", "#adr046-quick-entry-left", "#adr0462-ipe-entry"].forEach(function (sel) {
-                var el = null;
-                try { el = d.querySelector(sel); } catch (e) {}
-                if (el && el.parentNode) {
-                    try { el.parentNode.removeChild(el); } catch (_) {}
-                }
-            });
+            var close = d.querySelector("#adr048-popup-close");
+            if (close && !close.__adr048Bound) {
+                close.__adr048Bound = true;
+                close.addEventListener("click", function (ev) {
+                    try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                    adr048ClosePopupPanel();
+                }, true);
+                close.addEventListener("touchend", function (ev) {
+                    try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                    adr048ClosePopupPanel();
+                }, true);
+            }
+        } catch (e) {}
+    }
+
+    function adr048RemoveOldFloatingBits() {
+        try {
+            var d = rootDoc();
+            var old = d.querySelectorAll("#adr048-fab");
+            for (var i = 0; i < old.length; i++) {
+                try { old[i].remove(); } catch (e) {}
+            }
         } catch (e2) {}
     }
 
-    function adrCreateIpeStyleEntry() {
-        try {
-            var d = rootDoc ? rootDoc() : document;
+    function adr048SetImportant(el, key, value) {
+        try { el.style.setProperty(key, value, "important"); }
+        catch(e) { try { el.style[key] = value; } catch(_) {} }
+    }
 
-            var existing = null;
-            try { existing = d.querySelector("#adr0462-ipe-entry"); } catch (e) {}
+    function adr048CreateFab() {
+        try {
+            var d = rootDoc();
+            if (!d) return;
+
+            var existing = d.querySelector("#adr048-fab");
             if (existing) return;
 
             var btn = d.createElement("button");
-            btn.id = "adr0462-ipe-entry";
+            btn.id = "adr048-fab";
             btn.type = "button";
             btn.textContent = "🎬 红霞";
-            btn.title = "可移动红霞导演室入口：拖动移动，点击定位到抽屉面板";
+            btn.title = "红霞导演室";
 
-            function imp(k, v) {
-                try { btn.style.setProperty(k, v, "important"); }
-                catch(e) { try { btn.style[k] = v; } catch(_) {} }
-            }
-
-            imp("position", "fixed");
-            imp("left", "12px");
-            imp("top", "");
-            imp("right", "12px");
-            imp("bottom", "92px");
-            imp("display", "inline-flex");
-            imp("align-items", "center");
-            imp("justify-content", "center");
-            imp("gap", "4px");
-            imp("height", "34px");
-            imp("min-height", "34px");
-            imp("padding", "0 11px");
-            imp("border-radius", "999px");
-            imp("border", "1px solid rgba(255,255,255,.32)");
-            imp("background", "linear-gradient(135deg, rgba(214,122,106,.96), rgba(178,86,106,.96))");
-            imp("color", "#ffffff");
-            imp("font-size", "13px");
-            imp("font-weight", "700");
-            imp("line-height", "1");
-            imp("box-shadow", "0 8px 22px rgba(0,0,0,.35)");
-            imp("z-index", "2147483647");
-            imp("cursor", "grab");
-            imp("pointer-events", "auto");
-            imp("user-select", "none");
-            imp("-webkit-user-select", "none");
-            imp("touch-action", "none");
-            imp("white-space", "nowrap");
-            imp("visibility", "visible");
-            imp("opacity", "1");
+            adr048SetImportant(btn, "position", "fixed");
+            adr048SetImportant(btn, "right", "12px");
+            adr048SetImportant(btn, "bottom", "148px");
+            adr048SetImportant(btn, "z-index", "2147483647");
+            adr048SetImportant(btn, "display", "inline-flex");
+            adr048SetImportant(btn, "align-items", "center");
+            adr048SetImportant(btn, "justify-content", "center");
+            adr048SetImportant(btn, "height", "42px");
+            adr048SetImportant(btn, "min-width", "88px");
+            adr048SetImportant(btn, "padding", "0 13px");
+            adr048SetImportant(btn, "border-radius", "999px");
+            adr048SetImportant(btn, "border", "1px solid rgba(255,255,255,.28)");
+            adr048SetImportant(btn, "background", "linear-gradient(135deg,#d67a6a,#a65472)");
+            adr048SetImportant(btn, "color", "#fff");
+            adr048SetImportant(btn, "font-size", "14px");
+            adr048SetImportant(btn, "font-weight", "800");
+            adr048SetImportant(btn, "box-shadow", "0 8px 22px rgba(0,0,0,.35)");
+            adr048SetImportant(btn, "cursor", "grab");
+            adr048SetImportant(btn, "pointer-events", "auto");
+            adr048SetImportant(btn, "touch-action", "none");
+            adr048SetImportant(btn, "user-select", "none");
+            adr048SetImportant(btn, "-webkit-user-select", "none");
+            adr048SetImportant(btn, "visibility", "visible");
+            adr048SetImportant(btn, "opacity", "1");
 
             var dragging = false;
             var moved = false;
-            var startX = 0;
-            var startY = 0;
-            var startLeft = 0;
-            var startTop = 0;
+            var sx = 0, sy = 0, sl = 0, st = 0;
 
-            function clampPos(left, top) {
-                var w = 88, h = 36;
-                try {
-                    var rect = btn.getBoundingClientRect();
-                    if (rect && rect.width) w = rect.width;
-                    if (rect && rect.height) h = rect.height;
-                } catch(e) {}
-
-                var win = d.defaultView || window;
-                var maxLeft = Math.max(0, (win.innerWidth || 360) - w - 4);
-                var maxTop = Math.max(0, (win.innerHeight || 640) - h - 4);
-
-                return {
-                    left: Math.max(4, Math.min(maxLeft, left)),
-                    top: Math.max(4, Math.min(maxTop, top))
-                };
-            }
-
-            function getPoint(ev) {
-                if (ev && ev.touches && ev.touches.length) {
-                    return { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
-                }
-                if (ev && ev.changedTouches && ev.changedTouches.length) {
-                    return { x: ev.changedTouches[0].clientX, y: ev.changedTouches[0].clientY };
-                }
+            function point(ev) {
+                if (ev.touches && ev.touches.length) return { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
+                if (ev.changedTouches && ev.changedTouches.length) return { x: ev.changedTouches[0].clientX, y: ev.changedTouches[0].clientY };
                 return { x: ev.clientX || 0, y: ev.clientY || 0 };
             }
 
-            function beginDrag(ev) {
-                var p = getPoint(ev);
+            function clamp(l, t) {
+                var win = d.defaultView || window;
                 var rect = btn.getBoundingClientRect();
+                var w = rect.width || 88;
+                var h = rect.height || 42;
+                return {
+                    left: Math.max(4, Math.min((win.innerWidth || 360) - w - 4, l)),
+                    top: Math.max(4, Math.min((win.innerHeight || 640) - h - 4, t))
+                };
+            }
+
+            function start(ev) {
+                var p = point(ev);
+                var r = btn.getBoundingClientRect();
                 dragging = true;
                 moved = false;
-                startX = p.x;
-                startY = p.y;
-                startLeft = rect.left;
-                startTop = rect.top;
-                imp("cursor", "grabbing");
+                sx = p.x; sy = p.y; sl = r.left; st = r.top;
+                adr048SetImportant(btn, "cursor", "grabbing");
                 try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
             }
 
-            function moveDrag(ev) {
+            function move(ev) {
                 if (!dragging) return;
-                var p = getPoint(ev);
-                var dx = p.x - startX;
-                var dy = p.y - startY;
-
+                var p = point(ev);
+                var dx = p.x - sx;
+                var dy = p.y - sy;
                 if (Math.abs(dx) + Math.abs(dy) > 5) moved = true;
-
-                var pos = clampPos(startLeft + dx, startTop + dy);
-                imp("left", pos.left + "px");
-                imp("top", pos.top + "px");
-                imp("right", "auto");
-                imp("bottom", "auto");
-
+                var pos = clamp(sl + dx, st + dy);
+                adr048SetImportant(btn, "left", pos.left + "px");
+                adr048SetImportant(btn, "top", pos.top + "px");
+                adr048SetImportant(btn, "right", "auto");
+                adr048SetImportant(btn, "bottom", "auto");
                 try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
             }
 
-            function endDrag(ev) {
+            function end(ev) {
                 if (!dragging) return;
                 dragging = false;
-                imp("cursor", "grab");
-
-                var rect = btn.getBoundingClientRect();
-                var pos = clampPos(rect.left, rect.top);
-                imp("left", pos.left + "px");
-                imp("top", pos.top + "px");
-                imp("right", "auto");
-                imp("bottom", "auto");
-
-                if (!moved) {
-                    adrOpenDrawerFromEntry();
-                }
-
+                adr048SetImportant(btn, "cursor", "grab");
+                if (!moved) adr048OpenPopupPanel();
                 try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
             }
 
-            btn.addEventListener("mousedown", beginDrag);
-            btn.addEventListener("touchstart", beginDrag, { passive: false });
+            btn.addEventListener("mousedown", start, { passive: false });
+            btn.addEventListener("touchstart", start, { passive: false });
+            d.addEventListener("mousemove", move, { passive: false });
+            d.addEventListener("mouseup", end, { passive: false });
+            d.addEventListener("touchmove", move, { passive: false });
+            d.addEventListener("touchend", end, { passive: false });
+            d.addEventListener("touchcancel", end, { passive: false });
 
-            try {
-                d.addEventListener("mousemove", moveDrag, { passive: false });
-                d.addEventListener("mouseup", endDrag, { passive: false });
-                d.addEventListener("touchmove", moveDrag, { passive: false });
-                d.addEventListener("touchend", endDrag, { passive: false });
-                d.addEventListener("touchcancel", endDrag, { passive: false });
-            } catch(e) {
-                window.addEventListener("mousemove", moveDrag, { passive: false });
-                window.addEventListener("mouseup", endDrag, { passive: false });
-                window.addEventListener("touchmove", moveDrag, { passive: false });
-                window.addEventListener("touchend", endDrag, { passive: false });
-                window.addEventListener("touchcancel", endDrag, { passive: false });
-            }
-
-            try {
-                (d.body || d.documentElement).appendChild(btn);
-            } catch(e2) {
-                try { document.body.appendChild(btn); } catch(e3) {}
-            }
-        } catch (e4) {
-            console.error("[ADR0462] create IPE-style entry failed", e4);
+            (d.body || d.documentElement).appendChild(btn);
+        } catch (e2) {
+            console.error("[ADR048] create fab failed", e2);
         }
     }
 
-    function adrEnsureIpeStyleEntryLater() {
-        adrCreateIpeStyleEntry();
-        setTimeout(adrCreateIpeStyleEntry, 700);
-        setTimeout(adrCreateIpeStyleEntry, 1600);
-        setTimeout(adrCreateIpeStyleEntry, 3200);
+    function adr048EnsureFabLater() {
+        adr048CreatePopupPanel();
+        adr048CreateFab();
+        setTimeout(adr048CreateFab, 700);
+        setTimeout(adr048CreateFab, 1600);
+        setTimeout(adr048CreateFab, 3200);
     }
 
 
@@ -1792,8 +1793,8 @@
             installProbeGlobals();
             installProbeDelegation();
             bindDirect();
-            adrRemoveOldEntryBits();
-            adrEnsureIpeStyleEntryLater();
+            adr048CreatePopupPanel();
+            adr048EnsureFabLater();
             setTimeout(bindDirect, 500);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);
