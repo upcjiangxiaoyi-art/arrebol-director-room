@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞导演室 v0.4.8.3 面板壳修复",
+    "display_name": "暗河红霞 Arrebol D",
     "loading_order": 22,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.4.8.3",
-    "description": "面板壳修复版：保留小红霞锚点与开关，重做弹出面板尺寸、深色壳、滚动容器，修复白条/压扁问题"
+    "version": "1.0.1",
+    "description": "RP 场外导演室定稿修复版：将折叠注入改为无 summary 标签，避免与酒馆/主题/脚本标签冲突"
 }
