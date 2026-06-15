@@ -1,11 +1,11 @@
 {
-    "display_name": "红霞壳测试 Shell Test v0.3.3",
+    "display_name": "Arrebol Director Room 红霞导演室",
     "loading_order": 12,
     "requires": [],
     "optional": [],
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "0.3.3",
-    "description": "成功壳接线版：保留 v0.3.2 成功外壳，接入真实导演内容与副 API 生成"
+    "version": "0.3.4",
+    "description": "RP 场外情感导演：副 API 读最近 N 轮剧情输出情感方向，修复面板闪退问题"
 }

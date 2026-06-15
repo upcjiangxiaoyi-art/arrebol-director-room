@@ -96,6 +96,11 @@ function drtCfg() {
     }
 }
 
+function cfg_showEntry() {
+    try { var v = drtCfg().showQuickEntry; return v === undefined ? true : !!v; }
+    catch(e) { return true; }
+}
+
 function drtSave(key, val) {
     try {
         var c = drtCtx();
@@ -730,9 +735,17 @@ function drtBindDrawer() {
     try {
         var d = drtRootDocument();
         if (typeof MutationObserver !== "undefined" && d.body && !window.__drtObserver033) {
+            // 关键修复：observer 只负责补回入口按钮，绝不碰面板。
+            // 旧版同时检测面板，面板一旦 display 切换就触发 observer，
+            // 高频回调 + setTimeout 堆积导致面板"闪一下就消失"。
+            // 面板常驻 DOM、只切 display，不需要保活。
+            var pending = false;
             window.__drtObserver033 = new MutationObserver(function() {
-                if (!drtQ("#drt-entry")) setTimeout(drtCreateEntry, 100);
-                if (!drtQ("#drt-panel")) setTimeout(drtCreatePanel, 100);
+                if (pending) return;
+                if (cfg_showEntry() && !drtQ("#drt-entry")) {
+                    pending = true;
+                    setTimeout(function(){ pending = false; try { drtCreateEntry(); } catch(e){} }, 200);
+                }
             });
             window.__drtObserver033.observe(d.body, {childList:true, subtree:true});
         }
