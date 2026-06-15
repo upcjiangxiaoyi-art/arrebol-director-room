@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.0
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.0
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1341,7 +1341,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.4.0.2】\n";
+        out += "【红霞探针 v1.0.5.0.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1470,7 +1470,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.0</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.0</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1533,24 +1533,76 @@
     }
 
     function switchTab(type) {
+        type = type === "plot" ? "plot" : "emotion";
         save("activeTab", type);
-        var ep = q("#adr044-page-emotion");
-        var pp = q("#adr044-page-plot");
-        var eb = q("#adr044-tab-emotion");
-        var pb = q("#adr044-tab-plot");
-
-        if (ep) ep.style.display = type === "emotion" ? "" : "none";
-        if (pp) pp.style.display = type === "plot" ? "" : "none";
 
         try {
-            var ep2 = rootDoc().querySelector("#adr048-page-emotion");
-            var pp2 = rootDoc().querySelector("#adr048-page-plot");
-            if (ep2) ep2.style.display = type === "emotion" ? "" : "none";
-            if (pp2) pp2.style.display = type === "plot" ? "" : "none";
-        } catch (e) {}
+            var d = rootDoc();
 
-        if (eb) eb.classList.toggle("active", type === "emotion");
-        if (pb) pb.classList.toggle("active", type === "plot");
+            // 抽屉与浮窗会同时存在，且内部 id 重复。
+            // 所以这里必须同步所有同名节点，不能只 q("#id")。
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-page-emotion, #adr048-page-emotion")).forEach(function (el) {
+                el.style.display = type === "emotion" ? "" : "none";
+            });
+
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-page-plot, #adr048-page-plot")).forEach(function (el) {
+                el.style.display = type === "plot" ? "" : "none";
+            });
+
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-tab-emotion")).forEach(function (el) {
+                el.classList.toggle("active", type === "emotion");
+            });
+
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-tab-plot")).forEach(function (el) {
+                el.classList.toggle("active", type === "plot");
+            });
+
+            adrDRefreshAllFieldsFromSettings();
+        } catch (e) {
+            console.warn("[Arrebol D] switchTab failed", e);
+        }
+    }
+
+
+    function adrDSetAllById(id, value, checked) {
+        try {
+            var nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id));
+            nodes.forEach(function (el) {
+                if (!el) return;
+                if (el.type === "checkbox") {
+                    el.checked = !!checked;
+                } else {
+                    el.value = value == null ? "" : value;
+                }
+            });
+        } catch (e) {}
+    }
+
+    function adrDRefreshAllFieldsFromSettings() {
+        try {
+            var st = settings();
+
+            adrDSetAllById("adr044-range", st.range || "30");
+            adrDSetAllById("adr044-custom", st.customRange || "");
+            adrDSetAllById("adr044-memory", st.supplementMemory || "");
+            adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
+            adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
+
+            ["emotion", "plot"].forEach(function (type) {
+                var p = prefixOf(type);
+                adrDSetAllById("adr044-" + type + "-endpoint", st[p + "ApiEndpoint"] || "");
+                adrDSetAllById("adr044-" + type + "-key", st[p + "ApiKey"] || "");
+                adrDSetAllById("adr044-" + type + "-model", st[p + "Model"] || "");
+                adrDSetAllById("adr044-" + type + "-preset", st[p + "Preset"] || "");
+                adrDSetAllById("adr044-" + type + "-preview", st[p + "Preview"] || "");
+                adrDSetAllById("adr044-auto-inject-" + type, "", type === "plot" ? st.autoInjectPlot : st.autoInjectEmotion);
+                adrDSetAllById("adr044-auto-trigger-" + type, "", type === "plot" ? st.autoTriggerPlot : st.autoTriggerEmotion);
+                adrDSetAllById("adr044-auto-trigger-range-" + type, st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"] || (type === "plot" ? "10" : "20"));
+                adrDSetAllById("adr044-auto-trigger-custom-" + type, st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "");
+            });
+        } catch (e) {
+            console.warn("[Arrebol D] refresh fields failed", e);
+        }
     }
 
     function bindDirect() {
@@ -1758,7 +1810,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.4.0.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.0.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1953,6 +2005,8 @@
 
 
     function adr048OpenPopupPanel() {
+        try { switchTab(settings().activeTab || "emotion"); adrDRefreshAllFieldsFromSettings(); } catch (eOpenRefresh) {}
+
         try {
             var d = rootDoc();
 
@@ -2457,6 +2511,34 @@
         adrDResetAutoTriggerBaseline("install");
     }
 
+
+    function adrDInstallTabFallbackOnly() {
+        try {
+            if (rootWin().__adrDTabFallbackOnlyInstalled) return;
+            rootWin().__adrDTabFallbackOnlyInstalled = true;
+
+            function handle(ev) {
+                try {
+                    var t = ev.target;
+                    while (t && t !== rootDoc()) {
+                        if (t.id === "adr044-tab-emotion" || t.id === "adr044-tab-plot") {
+                            ev.preventDefault();
+                            ev.stopPropagation();
+                            switchTab(t.id === "adr044-tab-plot" ? "plot" : "emotion");
+                            return false;
+                        }
+                        t = t.parentNode;
+                    }
+                } catch (e) {}
+            }
+
+            rootDoc().addEventListener("click", handle, true);
+            rootDoc().addEventListener("touchend", handle, true);
+        } catch (e2) {
+            console.warn("[Arrebol D] install tab fallback failed", e2);
+        }
+    }
+
     function init() {
         if (initialized) return;
         initialized = true;
@@ -2467,6 +2549,8 @@
             installProbeGlobals();
             installProbeDelegation();
             bindDirect();
+            adrDInstallTabFallbackOnly();
+            switchTab(settings().activeTab || "emotion");
             adr048CreatePopupPanel();
             adr048EnsureFabLater();
             adrDInstallAutoTriggerWatchers();

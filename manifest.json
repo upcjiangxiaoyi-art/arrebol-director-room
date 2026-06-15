@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.4.0",
-    "description": "稳定保存版：API/模型/预设改用固定 localStorage 仓库 arrebol_d_settings_stable_v1，更新插件后继续读取；保留纯文本标记注入"
+    "version": "1.0.5.0",
+    "description": "UI 修复版：基于 v1.0.4.0 稳定保存仓库，仅补齐字段刷新函数并修复情感/剧情 tab 切换；不改注入/API/自动触发"
 }
