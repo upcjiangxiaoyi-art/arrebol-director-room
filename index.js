@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.3.3
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.4.3
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1050,7 +1050,7 @@
 
             chat[idx].mes = mes.trimEnd() + add;
 
-            // v1.0.5.6.3.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
+            // v1.0.5.6.4.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
             adrDSaveThenRedrawAfterInject();
             return true;
         } catch (e) {
@@ -1435,7 +1435,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.6.3.3.2】\n";
+        out += "【红霞探针 v1.0.5.6.4.3.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1574,7 +1574,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.3.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.4.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -2201,7 +2201,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.6.3.3.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.6.4.3.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2773,6 +2773,17 @@
         }
     }
 
+
+    function adrDIsUnstableChatKey(key) {
+        var k = String(key || "");
+        if (!k) return true;
+        if (k === "unknown-chat") return true;
+        if (k === "char::chat") return true;
+        if (k.indexOf("undefined") >= 0) return true;
+        if (k.indexOf("null") >= 0) return true;
+        return false;
+    }
+
     function adrDAssistantRoundCount() {
         var chat;
         try { chat = ctx().chat; } catch (e) { return 0; }
@@ -2905,11 +2916,36 @@
             var nPlot = autoTriggerRange("plot");
 
             if (st.lastAutoTriggerChatKey !== key) {
+                var oldKey = String(st.lastAutoTriggerChatKey || "");
+
+                // v1.0.5.6.4：刷新页面/初始加载时，chat key 可能短暂不稳定。
+                // 这种情况只更新显示，不重置基线，避免“已新增”每次刷新归零。
+                if (adrDIsUnstableChatKey(key)) {
+                    adrDUpdateAutoCounters();
+                    return;
+                }
+
                 st.lastAutoTriggerChatKey = key;
-                st.lastAutoTriggerEmotionCount = count;
-                st.lastAutoTriggerPlotCount = count;
+
+                var oldWasStable = oldKey && !adrDIsUnstableChatKey(oldKey);
+                var emotionBad = !Number.isFinite(Number(st.lastAutoTriggerEmotionCount)) || Number(st.lastAutoTriggerEmotionCount) < 0;
+                var plotBad = !Number.isFinite(Number(st.lastAutoTriggerPlotCount)) || Number(st.lastAutoTriggerPlotCount) < 0;
+
+                // 只有真正从一个稳定聊天切到另一个稳定聊天时，才重置基线。
+                // 如果只是页面刷新后重新识别到同一聊天，保留原基线。
+                if (oldWasStable && oldKey !== key) {
+                    st.lastAutoTriggerEmotionCount = count;
+                    st.lastAutoTriggerPlotCount = count;
+                    console.log("[Arrebol D] real chat changed, reset auto trigger baseline", oldKey, "=>", key, count);
+                } else {
+                    if (emotionBad) st.lastAutoTriggerEmotionCount = count;
+                    if (plotBad) st.lastAutoTriggerPlotCount = count;
+                    console.log("[Arrebol D] chat key restored without baseline reset", key, count);
+                }
+
                 saveNow();
-                console.log("[Arrebol D] chat changed, reset auto trigger baseline", key, count);
+                adrDPersistAutoBaselineFields(st);
+                adrDUpdateAutoCounters();
                 return;
             }
 
@@ -2988,7 +3024,9 @@
             }
         } catch (e2) {}
 
-        adrDResetAutoTriggerBaseline("install");
+        // v1.0.5.6.4：页面刷新/插件重新挂载时不主动重置自动触发基线。
+        // 基线只在开关/间隔改变或真正切换聊天时重置。
+        setTimeout(adrDUpdateAutoCounters, 1200);
     }
 
 
