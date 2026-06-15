@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.2
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.4.3
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -13,7 +13,7 @@
 (function () {
     "use strict";
 
-    var EXT = "arrebol-d-final-v1042-safe-dom-inject";
+    var EXT = "arrebol-d-final-v1043-ipe-safe-inject";
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
 
@@ -823,39 +823,39 @@
         }
     }
 
-    function adrDEscapeHtmlText(s) {
+    function adrDEsc(s) {
         return String(s || "")
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;");
     }
 
-    function adrDAppendInjectedTextDom(idx, tag) {
+    function adrDAppendLikeIPE(idx, tag) {
         try {
             var d = rootDoc();
-            var selectors = [
+            var sels = [
                 '#chat .mes[mesid="' + idx + '"] .mes_text',
+                '#chat .mes[data-mesid="' + idx + '"] .mes_text',
                 '#chat .mes[mesid="' + idx + '"] .mes_block .mes_text',
-                '#chat .mes[mesid="' + idx + '"]'
+                '#chat .mes[data-mesid="' + idx + '"] .mes_block .mes_text'
             ];
 
             var el = null;
-            for (var i = 0; i < selectors.length; i++) {
-                el = d.querySelector(selectors[i]);
+            for (var i = 0; i < sels.length; i++) {
+                el = d.querySelector(sels[i]);
                 if (el) break;
             }
+
             if (!el) return false;
 
-            var escaped = adrDEscapeHtmlText(tag);
-            if (el.innerHTML && el.innerHTML.indexOf(escaped) >= 0) return true;
+            var safe = adrDEsc(tag);
+            if (el.innerHTML && el.innerHTML.indexOf(safe) >= 0) return true;
 
-            var p = d.createElement("p");
-            p.className = "arrebol-d-raw-inject";
-            p.textContent = tag;
-            el.appendChild(p);
+            // 和 IPE 一样：只追加一段安全转义后的 HTML，不重写整条消息。
+            el.innerHTML += "<p class=\"arrebol-d-raw-inject\">" + safe + "</p>";
             return true;
         } catch (e) {
-            console.warn("[Arrebol D] append injected text dom failed", e);
+            console.warn("[Arrebol D] append like IPE failed", e);
             return false;
         }
     }
@@ -918,58 +918,28 @@
     }
 
     function refreshMessageDom(index) {
-        try {
-            var rw = rootWin();
-
-            if (typeof rw.reloadCurrentChat === "function") {
-                // 太重，先不用。优先改 DOM。
-            }
-
-            var d = rootDoc();
-            var msg = null;
-            var sels = [
-                '#chat .mes[mesid="' + index + '"] .mes_text',
-                '#chat .mes[mesid="' + index + '"] .mes_block .mes_text',
-                '#chat .mes[mesid="' + index + '"]',
-                '#chat .mes[data-mesid="' + index + '"] .mes_text',
-                '#chat .mes[data-mesid="' + index + '"]'
-            ];
-
-            for (var i = 0; i < sels.length; i++) {
-                msg = d.querySelector(sels[i]);
-                if (msg) break;
-            }
-
-            if (msg) {
-                var chat = ctx().chat;
-                var content = chat && chat[index] ? chat[index].mes : "";
-                msg.innerHTML = content;
-            }
-        } catch (e) {}
+        // v1.0.4.3：禁用整条消息 DOM 重写，避免破坏其他美化。
+        return false;
     }
 
+
     function injectDirector(type, text) {
+        if (!text || !String(text).trim()) return false;
+
         try {
             var c = ctx();
-            var chat = getChatArray();
-            if (!chat || !chat.length) {
-                adrDToast("没有可注入的聊天消息");
-                return false;
-            }
+            var chat = c && c.chat;
+            if (!chat || !chat.length) return false;
 
             var idx = findLastMessageIndex(chat);
-            if (idx < 0 || !chat[idx]) {
-                adrDToast("没有找到可注入的角色消息");
-                return false;
-            }
+            if (idx < 0 || !chat[idx]) return false;
 
-            var add = injectionText(type, text);
+            var tag = injectionText(type, text);
             var mes = String(chat[idx].mes || "");
 
-            // 移除旧版 HTML/注释注入，兼容历史消息。
+            // 移除同类型旧注入，避免越堆越多。兼容旧 HTML/注释/纯文本版本。
             var startMark = "<!-- ARREBOL_D_START:" + type + " -->";
             var endMark = "<!-- ARREBOL_D_END:" + type + " -->";
-
             var startAt = mes.indexOf(startMark);
             while (startAt >= 0) {
                 var endAt = mes.indexOf(endMark, startAt);
@@ -992,22 +962,19 @@
             var reOldVisible = new RegExp("\\n\\n【(?:红霞导演室|暗河红霞 Arrebol D)(?:｜|\\|)" + visibleName + "】[\\s\\S]*$", "m");
             mes = mes.replace(reOldVisible, "");
 
-            // 移除旧版纯文本标记注入，避免堆叠。当前仍使用 arrebol_d###，但每次只保留最新一次。
             mes = mes.replace(/\n?arrebol_d(?:_visible)?###[\s\S]*?###/g, "").trimEnd();
 
-            // 关键修复：只改数据，不整条重写 DOM。
-            chat[idx].mes = mes.trimEnd() + add;
+            // IPE 同款核心管线：改数据 -> saveChat -> 只追加 escaped DOM 片段。
+            chat[idx].mes = mes.trimEnd() + "\n\n" + tag.trim();
 
-            saveChatSafe();
+            if (typeof c.saveChat === "function") c.saveChat();
+            else saveChatSafe();
 
-            // IPE 同款思路：显示层只追加安全文本节点，不 innerHTML 重刷整条消息。
-            adrDAppendInjectedTextDom(idx, add.trim());
+            adrDAppendLikeIPE(idx, tag.trim());
 
-            adrDToast("已安全注入正文");
             return true;
         } catch (e) {
             console.error("[Arrebol D] inject failed", e);
-            adrDToast("注入失败，详情看控制台");
             return false;
         }
     }
@@ -1389,7 +1356,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.4.2.2】\n";
+        out += "【红霞探针 v1.0.4.3.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1518,7 +1485,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.4.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -1806,7 +1773,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.4.2.2】\n";
+        out += "【红霞精准读取预览 v1.0.4.3.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -1942,7 +1909,7 @@
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；纯文本标记注入；修复 DOM 注入方式，不再重写整条消息；设置稳定保存。</div>'
+            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；纯文本标记注入；采用 IPE 同款安全追加管线，不重写整条消息；设置稳定保存。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'

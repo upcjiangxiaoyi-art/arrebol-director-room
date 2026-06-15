@@ -477,7 +477,7 @@
 /* v1.0.4.0：设置保存改用稳定 localStorage key：arrebol_d_settings_stable_v1 */
 
 
-/* v1.0.4.2：安全正文注入。这里只负责追加出来的纯文本节点；真正隐藏可交给显示层正则。 */
+/* v1.0.4.3：IPE 同款安全追加出来的纯文本节点。 */
 .arrebol-d-raw-inject {
     white-space: pre-wrap !important;
 }
