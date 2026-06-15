@@ -1,0 +1,261 @@
+/* ============================================================
+   Arrebol Director Room 红霞导演室 — 样式
+   ============================================================ */
+
+/* ---------- 聊天框快捷入口 ---------- */
+.dr-quick-entry {
+    position: fixed;
+    bottom: 120px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(214, 122, 106, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 2147483645;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s, box-shadow 0.2s;
+    user-select: none;
+    touch-action: none;
+}
+
+.dr-quick-entry:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.dr-quick-entry.processing {
+    animation: dr-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes dr-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(214, 122, 106, 0.5); }
+    50% { box-shadow: 0 0 0 12px rgba(214, 122, 106, 0); }
+}
+
+/* ---------- 主面板 ---------- */
+.dr-panel {
+    position: fixed;
+    right: 8px;
+    left: 8px;
+    bottom: 78px;
+    max-height: 74vh;
+    background: rgba(26, 22, 24, 0.96);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 14px;
+    border: 1px solid rgba(214, 122, 106, 0.18);
+    color: #d8d2d0;
+    z-index: 2147483646;
+    overflow: hidden;
+    display: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.dr-panel.visible {
+    display: flex;
+    flex-direction: column;
+}
+
+.dr-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 16px 10px;
+    border-bottom: 1px solid rgba(214, 122, 106, 0.12);
+    flex-shrink: 0;
+}
+
+.dr-panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f0e6e3;
+    letter-spacing: 0.3px;
+}
+
+.dr-panel-close {
+    cursor: pointer;
+    color: #999;
+    font-size: 16px;
+    padding: 0 4px;
+    transition: color 0.2s;
+}
+.dr-panel-close:hover { color: #e0a89e; }
+
+/* ---------- 滚动区 ---------- */
+.dr-sections {
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px 0;
+}
+.dr-sections::-webkit-scrollbar { width: 4px; }
+.dr-sections::-webkit-scrollbar-thumb {
+    background: rgba(214, 122, 106, 0.25);
+    border-radius: 2px;
+}
+
+/* ---------- 折叠区块 ---------- */
+.dr-section {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.dr-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #b89a94;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+}
+.dr-section-header:hover { color: #e0c5bd; }
+
+.dr-collapse-icon {
+    font-size: 11px;
+    transition: transform 0.2s;
+    color: #7a6560;
+}
+.dr-section.collapsed .dr-collapse-icon { transform: rotate(-90deg); }
+
+.dr-section-body {
+    padding: 0 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+.dr-section.collapsed .dr-section-body { display: none; }
+
+/* ---------- 表单 ---------- */
+.dr-section-body label {
+    font-size: 11.5px;
+    color: #9a8580;
+    margin-top: 2px;
+}
+
+.dr-section-body input[type="text"],
+.dr-section-body input[type="password"],
+.dr-section-body input[type="number"],
+.dr-section-body select {
+    width: 100%;
+    padding: 7px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(214, 122, 106, 0.15);
+    border-radius: 6px;
+    color: #d8d2d0;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.dr-section-body textarea {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(214, 122, 106, 0.15);
+    border-radius: 6px;
+    color: #d8d2d0;
+    font-size: 13px;
+    font-family: inherit;
+    line-height: 1.55;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+}
+
+.dr-section-body input:focus,
+.dr-section-body textarea:focus,
+.dr-section-body select:focus {
+    border-color: rgba(214, 122, 106, 0.4);
+}
+
+.dr-section-body hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin: 6px 0 2px;
+}
+
+.dr-hint {
+    font-size: 11px;
+    color: #7a6560;
+    padding-left: 1px;
+}
+
+.dr-status {
+    font-size: 11.5px;
+    color: #888;
+    padding: 2px 0;
+}
+
+/* ---------- 按钮 ---------- */
+.dr-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.dr-btn {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(214, 122, 106, 0.2);
+    border-radius: 6px;
+    color: #c5b3ae;
+    font-size: 12.5px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.dr-btn:hover:not(:disabled) {
+    background: rgba(214, 122, 106, 0.15);
+    color: #e8d5cf;
+}
+.dr-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.dr-btn-primary {
+    background: rgba(214, 122, 106, 0.22);
+    border-color: rgba(214, 122, 106, 0.35);
+    color: #e8b3a8;
+}
+.dr-btn-primary:hover:not(:disabled) {
+    background: rgba(214, 122, 106, 0.32);
+    color: #f5c8bd;
+}
+
+/* ---------- iOS 适配 ---------- */
+@media (max-width: 480px) {
+    .dr-panel {
+        max-height: 70vh;
+    }
+    .dr-section-body input,
+    .dr-section-body textarea,
+    .dr-section-body select {
+        font-size: 16px; /* 防止 iOS 聚焦缩放 */
+    }
+}
+
+
+/* ---------- v0.2 小浮窗稳定补强 ---------- */
+#dr-chat-quick-entry.dr-quick-entry {
+    position: fixed !important;
+    z-index: 2147483645 !important;
+    display: flex;
+    pointer-events: auto !important;
+}
