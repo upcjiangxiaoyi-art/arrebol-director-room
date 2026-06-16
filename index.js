@@ -2925,8 +2925,11 @@
 
     // v1.0.5.6.8.3：自动触发计数“换眼睛”。
     // 计数公式仍然是 count - baseline；只把 count 的读取源从当前前端窗口，优先换成 TavernHelper 全量历史。
+    // v1.0.5.6.8.3.1：全量计数粘滞保护。成功取得过一次全量后，瞬时失败不再回退窗口计数，避免 source 抖动清空进度。
+    // v1.0.5.6.8.3.2：冷启动闸门。有 TavernHelper 全量能力时，首次全量成功前不触发、不写 baseline，避免刷新冷窗口误触发。
     var ADR_D_FULL_COUNT_MODE = "full-chat-v1";
-    var adrDFullCountCache = { count: null, source: "window", lastMessageId: -1, updatedAt: 0, loading: false, messages: [] };
+    var ADR_D_STICKY_FULL = true;
+    var adrDFullCountCache = { count: null, source: "window", lastMessageId: -1, updatedAt: 0, loading: false, messages: [], everFull: false };
 
     function adrDGetTavernHelper() {
         try { if (typeof TavernHelper !== "undefined" && TavernHelper) return TavernHelper; } catch (e0) {}
@@ -2973,6 +2976,11 @@
 
         var th = adrDGetTavernHelper();
         if (!th || typeof th.getChatMessages !== "function") {
+            if (ADR_D_STICKY_FULL && adrDFullCountCache.everFull && Number.isFinite(Number(adrDFullCountCache.count))) {
+                try { console.warn("[Arrebol D] full history source temporarily unavailable; keep sticky full cache", reason || ""); } catch (eStickyLog0) {}
+                adrDFullCountCache.updatedAt = Date.now();
+                return Number(adrDFullCountCache.count) || 0;
+            }
             adrDFullCountCache.count = adrDWindowAssistantRoundCount();
             adrDFullCountCache.source = "window";
             try { adrDFullCountCache.messages = (ctx().chat || []).slice(); } catch (eMsgs0) { adrDFullCountCache.messages = []; }
@@ -2994,6 +3002,7 @@
                 adrDFullCountCache.source = "full";
                 adrDFullCountCache.lastMessageId = -1;
                 adrDFullCountCache.messages = [];
+                adrDFullCountCache.everFull = true;
                 adrDFullCountCache.updatedAt = Date.now();
                 return 0;
             }
@@ -3010,10 +3019,16 @@
             adrDFullCountCache.count = n;
             adrDFullCountCache.source = "full";
             adrDFullCountCache.lastMessageId = lastId;
+            adrDFullCountCache.everFull = true;
             adrDFullCountCache.updatedAt = Date.now();
             try { console.log("[Arrebol D] full history count", n, "lastId=", lastId, "reason=", reason || ""); } catch (eLog) {}
             return n;
         } catch (e) {
+            if (ADR_D_STICKY_FULL && adrDFullCountCache.everFull && Number.isFinite(Number(adrDFullCountCache.count))) {
+                console.warn("[Arrebol D] full history count failed; keep sticky full cache", e);
+                adrDFullCountCache.updatedAt = Date.now();
+                return Number(adrDFullCountCache.count) || 0;
+            }
             console.warn("[Arrebol D] full history count failed; fallback to window count", e);
             adrDFullCountCache.count = adrDWindowAssistantRoundCount();
             adrDFullCountCache.source = "window";
@@ -3056,6 +3071,9 @@
             }
         }
 
+        if (ADR_D_STICKY_FULL && adrDFullCountCache && adrDFullCountCache.everFull && Array.isArray(adrDFullCountCache.messages)) {
+            return adrDFullCountCache.messages;
+        }
         try { return (ctx().chat || []).slice(); } catch (e1) { return []; }
     }
 
@@ -3079,6 +3097,14 @@
 
     function adrDCurrentCountMode() {
         return adrDFullCountCache && adrDFullCountCache.source === "full" ? ADR_D_FULL_COUNT_MODE : "window-v1";
+    }
+
+    function adrDCountReady() {
+        // 没有 TavernHelper 全量能力时，window 计数就是当前环境的权威来源，保持旧行为。
+        var th = adrDGetTavernHelper();
+        if (!th || typeof th.getChatMessages !== "function") return true;
+        // 有全量能力时，必须等本次页面生命周期里首次 full 成功后，才允许触发/写 baseline。
+        return !!(adrDFullCountCache && adrDFullCountCache.source === "full");
     }
 
     function adrDCurrentMessageTailForPoll() {
@@ -3235,6 +3261,10 @@
                 return label + "：自动触发间隔未设置";
             }
 
+            if (!adrDCountReady()) {
+                return label + "：当前总数 " + count + " 条｜视野：" + adrDCountSourceLabel() + "｜等待首次全量历史读取，暂不累积/触发";
+            }
+
             var state = adrDGetAutoState(type, count);
             var base = Number(state.base);
             if (!Number.isFinite(base) || base < 0 || base > count) {
@@ -3327,6 +3357,12 @@
             }
 
             var count = await adrDRefreshFullAssistantRoundCount("auto-check:" + (reason || ""));
+            if (!adrDCountReady()) {
+                try { console.log("[Arrebol D] auto trigger waits for first full history count", reason || ""); } catch (eReadyLog) {}
+                adrDUpdateAutoCounters();
+                return;
+            }
+
             var nEmotion = autoTriggerRange("emotion");
             var nPlot = autoTriggerRange("plot");
             var toRun = [];
