@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.8.3
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.8.1.3
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1089,7 +1089,7 @@
 
             chat[idx].mes = mes.trimEnd() + add;
 
-            // v1.0.5.6.8.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
+            // v1.0.5.6.8.1.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
             adrDSaveThenRedrawAfterInject();
             return true;
         } catch (e) {
@@ -1474,7 +1474,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.6.8.3.2】\n";
+        out += "【红霞探针 v1.0.5.6.8.1.3.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1613,7 +1613,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.8.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.8.1.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -2003,14 +2003,22 @@
                 Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-save-" + type)).forEach(function (btn) {
                     if (!btn || btn.__adrDTemplateSaveBound) return;
                     btn.__adrDTemplateSaveBound = true;
+                    btn.addEventListener("touchstart", function (ev) {
+                        adrDMarkButtonTouchStart(btn, ev);
+                    }, { capture: true, passive: true });
+                    btn.addEventListener("touchmove", function (ev) {
+                        adrDMarkButtonTouchMove(btn, ev);
+                    }, { capture: true, passive: true });
                     btn.addEventListener("click", function (ev) {
                         ev.preventDefault();
                         ev.stopPropagation();
+                        if (adrDShouldIgnoreButtonTap(btn, ev)) return;
                         adrDSaveCurrentTemplate(type);
                     }, true);
                     btn.addEventListener("touchend", function (ev) {
                         ev.preventDefault();
                         ev.stopPropagation();
+                        if (adrDShouldIgnoreButtonTap(btn, ev)) return;
                         adrDSaveCurrentTemplate(type);
                     }, true);
                 });
@@ -2018,19 +2026,87 @@
                 Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-template-delete-" + type)).forEach(function (btn) {
                     if (!btn || btn.__adrDTemplateDeleteBound) return;
                     btn.__adrDTemplateDeleteBound = true;
+                    btn.addEventListener("touchstart", function (ev) {
+                        adrDMarkButtonTouchStart(btn, ev);
+                    }, { capture: true, passive: true });
+                    btn.addEventListener("touchmove", function (ev) {
+                        adrDMarkButtonTouchMove(btn, ev);
+                    }, { capture: true, passive: true });
                     btn.addEventListener("click", function (ev) {
                         ev.preventDefault();
                         ev.stopPropagation();
+                        if (adrDShouldIgnoreButtonTap(btn, ev)) return;
                         adrDDeleteCurrentTemplate(type);
                     }, true);
                     btn.addEventListener("touchend", function (ev) {
                         ev.preventDefault();
                         ev.stopPropagation();
+                        if (adrDShouldIgnoreButtonTap(btn, ev)) return;
                         adrDDeleteCurrentTemplate(type);
                     }, true);
                 });
             });
         } catch (e) {}
+    }
+
+
+    function adrDIsTouchLikeEvent(ev) {
+        return !!(ev && (ev.type === "touchend" || ev.type === "pointerup"));
+    }
+
+    function adrDMarkButtonTouchStart(el, ev) {
+        try {
+            var p = null;
+            if (ev && ev.touches && ev.touches.length) p = ev.touches[0];
+            else if (ev) p = ev;
+            el.__adrDTapStart = {
+                x: Number(p && p.clientX) || 0,
+                y: Number(p && p.clientY) || 0,
+                t: Date.now(),
+                moved: false
+            };
+        } catch (e) {}
+    }
+
+    function adrDMarkButtonTouchMove(el, ev) {
+        try {
+            var s = el.__adrDTapStart;
+            if (!s) return;
+            var p = null;
+            if (ev && ev.touches && ev.touches.length) p = ev.touches[0];
+            else if (ev) p = ev;
+            var dx = Math.abs((Number(p && p.clientX) || 0) - s.x);
+            var dy = Math.abs((Number(p && p.clientY) || 0) - s.y);
+            if (dx > 12 || dy > 12) s.moved = true;
+        } catch (e) {}
+    }
+
+    function adrDShouldIgnoreButtonTap(el, ev) {
+        try {
+            var now = Date.now();
+
+            // 防 iOS touchend 后补发 click 造成重复触发。
+            if (ev && ev.type === "click" && el.__adrDLastTouchEndAt && now - el.__adrDLastTouchEndAt < 650) {
+                return true;
+            }
+
+            if (adrDIsTouchLikeEvent(ev)) {
+                el.__adrDLastTouchEndAt = now;
+                var s = el.__adrDTapStart;
+                el.__adrDTapStart = null;
+                if (s && s.moved) return true;
+            }
+
+            // 很短时间内重复点击同一按钮，视为抖动。
+            if (el.__adrDLastAcceptedTapAt && now - el.__adrDLastAcceptedTapAt < 450) {
+                return true;
+            }
+
+            el.__adrDLastAcceptedTapAt = now;
+            return false;
+        } catch (e) {
+            return false;
+        }
     }
 
     function bindDirect() {
@@ -2109,13 +2185,25 @@
             nodes.forEach(function (el) {
                 if (!el || el.__adr044Bound) return;
                 el.__adr044Bound = true;
+
+                el.addEventListener("touchstart", function (ev) {
+                    adrDMarkButtonTouchStart(el, ev);
+                }, { capture: true, passive: true });
+
+                el.addEventListener("touchmove", function (ev) {
+                    adrDMarkButtonTouchMove(el, ev);
+                }, { capture: true, passive: true });
+
                 el.addEventListener("click", function (ev) {
                     try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                    if (adrDShouldIgnoreButtonTap(el, ev)) return;
                     adrDBlurActiveElement();
                     ids[id]();
                 }, true);
+
                 el.addEventListener("touchend", function (ev) {
                     try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                    if (adrDShouldIgnoreButtonTap(el, ev)) return;
                     adrDBlurActiveElement();
                     ids[id]();
                 }, true);
@@ -2240,7 +2328,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.6.8.3.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.6.8.1.3.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2924,7 +3012,7 @@
             return item;
         }
 
-        // v1.0.5.6.8：注入后的 reload 可能导致 chatKey 改变。
+        // v1.0.5.6.8.1：注入后的 reload 可能导致 chatKey 改变。
         // 如果还是同一个角色卡，就迁移上一把计数状态，不重新归零。
         var last = adrDAutoLastKeys();
         var lastKey = last[type];
@@ -2971,11 +3059,11 @@
             var n = autoTriggerRange(type);
 
             if (!enabled) {
-                return label + "：自动触发未开启｜当前有效角色回复 " + count + " 条";
+                return label + "：自动触发未开启";
             }
 
             if (!Number.isFinite(n) || n <= 0) {
-                return label + "：自动触发间隔未设置｜当前有效角色回复 " + count + " 条";
+                return label + "：自动触发间隔未设置";
             }
 
             var state = adrDGetAutoState(type, count);
@@ -2987,7 +3075,7 @@
 
             var passed = Math.max(0, count - base);
             var left = Math.max(0, n - passed);
-            return label + "：已新增 " + passed + " / " + n + " 条角色回复｜距离下次还差 " + left + " 条｜当前总数 " + count;
+            return label + "：已新增 " + passed + " / " + n + " 条角色回复｜距离下次还差 " + left + " 条";
         } catch (e) {
             return "自动触发计数：读取失败";
         }
@@ -3074,7 +3162,7 @@
             var nPlot = autoTriggerRange("plot");
             var toRun = [];
 
-            // v1.0.5.6.8：自动触发判断完全改用独立 auto state。
+            // v1.0.5.6.8.1：自动触发判断完全改用独立 auto state。
             // 情感和剧情各有自己的 baseline，互不影响。
             if (st.autoTriggerEmotion && nEmotion > 0) {
                 var emotionState = adrDGetAutoState("emotion", count);
@@ -3166,7 +3254,7 @@
             }
         } catch (e2) {}
 
-        // v1.0.5.6.8：页面刷新/插件重新挂载时不主动重置自动触发基线。
+        // v1.0.5.6.8.1：页面刷新/插件重新挂载时不主动重置自动触发基线。
         // 基线只在开关/间隔改变或真正切换聊天时重置。
         setTimeout(adrDUpdateAutoCounters, 1200);
     }
