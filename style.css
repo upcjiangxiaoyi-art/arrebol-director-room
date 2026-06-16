@@ -706,3 +706,55 @@
     height: 34px !important;
     font-size: 22px !important;
 }
+
+/* v1.9.2 selectable control polish: make checkboxes visible under white input guard. UI-only. */
+#adr048-popup-body input[type="checkbox"],
+#adr044-drawer input[type="checkbox"],
+#adr044-show-floating-window {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 16px !important;
+    height: 16px !important;
+    min-width: 16px !important;
+    max-width: 16px !important;
+    flex: 0 0 16px !important;
+    padding: 0 !important;
+    margin: 0 6px 0 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 4px !important;
+    border: 2px solid rgba(255,255,255,.88) !important;
+    background: rgba(255,255,255,.16) !important;
+    box-shadow: 0 0 0 1px rgba(214,122,106,.38), inset 0 0 0 1px rgba(0,0,0,.32) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    vertical-align: middle !important;
+    position: relative !important;
+}
+
+#adr048-popup-body input[type="checkbox"]:checked,
+#adr044-drawer input[type="checkbox"]:checked,
+#adr044-show-floating-window:checked {
+    background: #d67a6a !important;
+    border-color: #f0c0b8 !important;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.72), 0 0 0 4px rgba(214,122,106,.18) !important;
+}
+
+#adr048-popup-body input[type="checkbox"]:checked::after,
+#adr044-drawer input[type="checkbox"]:checked::after,
+#adr044-show-floating-window:checked::after {
+    content: "✓" !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-size: 13px !important;
+    font-weight: 900 !important;
+    line-height: 12px !important;
+    text-align: center !important;
+}
+
+.adr048-check,
+.adr044-check {
+    min-height: 22px !important;
+}
