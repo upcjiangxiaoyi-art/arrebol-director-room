@@ -2901,6 +2901,8 @@
     var adrDLastChatLengthSeen = -1;
     var adrDAutoTriggerRunning = false;
     // v1.0.5.6.8.3.5：页面加载后短安全期。自动触发可以读数/对齐，但绝不生成注入，堵住 iOS 刷新抢跑竞态。
+    // v1.0.5.6.8.3.6：启动安全期内彻底只读，不创建/覆盖 baseline，避免面板刷新把 1/30 写成 0/30。
+    // v1.0.5.6.8.3.7：partial 小读数保护。角色总数只应单调增加；count < base 一律视作未加载全，不允许下拉 baseline。
     var ADR_D_AUTO_STARTUP_GRACE_MS = 20000;
     var adrDAutoScriptLoadedAt = Date.now();
 
@@ -3182,6 +3184,27 @@
         return (Number(count) - Number(base)) >= Number(n);
     }
 
+    function adrDAutoStateKeyFor(key, type) {
+        return String(key || "chat") + "::" + String(type || "emotion");
+    }
+
+    // 只读读取 auto state：不创建新 key、不迁移、不落盘。
+    // 用于页面刚加载的安全期，避免 UI 计数面板为了显示而把旧进度写成 0。
+    function adrDPeekAutoState(type) {
+        try {
+            var all = adrDAutoStateAll();
+            var key = adrDAutoStateKey(type);
+            var item = all[key];
+            if (item && typeof item === "object" && Number.isFinite(Number(item.base))) return item;
+
+            var last = adrDAutoLastKeys();
+            var lastKey = last[type];
+            var prev = lastKey ? all[lastKey] : null;
+            if (prev && typeof prev === "object" && Number.isFinite(Number(prev.base))) return prev;
+        } catch (e) {}
+        return null;
+    }
+
     function adrDAutoBroadKey() {
         try {
             var c = ctx();
@@ -3236,7 +3259,7 @@
     }
 
     function adrDAutoStateKey(type) {
-        return String(adrDChatKey ? adrDChatKey() : "chat") + "::" + String(type || "emotion");
+        return adrDAutoStateKeyFor(adrDChatKey ? adrDChatKey() : "chat", type);
     }
 
     function adrDGetAutoState(type, count) {
@@ -3253,7 +3276,14 @@
             // v1.0.5.6.8.3：从窄窗口计数迁移到全量历史计数与复盘时，只校准一次 baseline。
             // 否则旧 base 很小、全量 count 很大，会导致安装后立刻误触发。
             if (adrDCurrentCountMode && adrDCurrentCountMode() === ADR_D_FULL_COUNT_MODE && item.mode !== ADR_D_FULL_COUNT_MODE) {
-                item = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad, mode: ADR_D_FULL_COUNT_MODE, migratedFromMode: item.mode || "window-v1" };
+                var oldBaseForMode = Number(item.base);
+                var currentCountForMode = Number(count) || 0;
+                // 从窗口口径迁移到全量口径时，通常要贴齐当前全量 count，避免旧小 base 误触发。
+                // 但如果当前 count 反而小于旧 base，说明读到了 partial 小数；这时绝不下拉 baseline。
+                var migratedBase = (Number.isFinite(oldBaseForMode) && oldBaseForMode >= 0 && oldBaseForMode > currentCountForMode)
+                    ? oldBaseForMode
+                    : currentCountForMode;
+                item = { base: migratedBase, updatedAt: Date.now(), broad: broad, mode: ADR_D_FULL_COUNT_MODE, migratedFromMode: item.mode || "window-v1" };
                 all[key] = item;
                 adrDSaveAutoStateAll(all);
             }
@@ -3270,7 +3300,8 @@
             var prevBroad = prev.broad || broad;
             var prevBase = Number(prev.base);
             var c = Number(count) || 0;
-            if (prevBroad === broad && prevBase >= 0 && prevBase <= c) {
+            if (prevBroad === broad && prevBase >= 0) {
+                // count 可能是聊天重载瞬间的 partial 小读数；即使 prevBase > count，也要保住旧 base，不下拉归零。
                 item = { base: prevBase, updatedAt: Date.now(), broad: broad, migratedFrom: lastKey, mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1" };
                 all[key] = item;
                 adrDSaveAutoStateAll(all);
@@ -3324,13 +3355,24 @@
                 return label + "：当前总数 " + count + " 条｜视野：" + adrDCountSourceLabel() + "｜等待聊天标识稳定，暂不落盘/触发";
             }
 
+            if (adrDInStartupAutoGrace && adrDInStartupAutoGrace()) {
+                var peek = adrDPeekAutoState(type);
+                var peekBase = peek && Number.isFinite(Number(peek.base)) ? Number(peek.base) : count;
+                if (!Number.isFinite(peekBase) || peekBase < 0) peekBase = count;
+                // 若 count < base，多半是页面重载/楼层未加载全的 partial 小读数；显示 0，但保留 base，不下拉。
+                var peekPassed = Math.max(0, count - peekBase);
+                var peekLeft = Math.max(0, n - peekPassed);
+                var peekMode = peek && peek.mode ? String(peek.mode) : (adrDCurrentCountMode ? adrDCurrentCountMode() : "startup-readonly");
+                return label + "：当前总数 " + count + " 条｜视野：" + adrDCountSourceLabel() + "｜已新增 " + peekPassed + " / " + n + " 条角色回复｜距离下次还差 " + peekLeft + " 条｜base " + peekBase + "(" + peekMode + ")｜启动保护中";
+            }
+
             var state = adrDGetAutoState(type, count);
             var base = Number(state.base);
-            if (!Number.isFinite(base) || base < 0 || base > count) {
+            if (!Number.isFinite(base) || base < 0) {
                 base = count;
                 adrDSetAutoBaseline(type, count);
             }
-
+            // count < base 代表当前读数不可信（聊天重载/只读到一半），只显示 0，不把 baseline 拉下来。
             var passed = Math.max(0, count - base);
             var left = Math.max(0, n - passed);
             var modeText = state && state.mode ? String(state.mode) : (adrDCurrentCountMode ? adrDCurrentCountMode() : "unknown");
@@ -3430,6 +3472,14 @@
             }
 
             var inStartupGrace = adrDInStartupAutoGrace();
+            if (inStartupGrace) {
+                // 启动安全期内完全只读：不比较、不对齐、不创建 state、不写 baseline。
+                // 这样页面抖动/临时 chatKey/面板刷新都不会把 1/30 写成 0/30。
+                try { console.warn("[Arrebol D] suppress auto trigger during startup grace (read-only)", { reason: reason || "", count: count }); } catch (eStartupReadOnly) {}
+                adrDUpdateAutoCounters();
+                return;
+            }
+
             var nEmotion = autoTriggerRange("emotion");
             var nPlot = autoTriggerRange("plot");
             var toRun = [];
@@ -3439,10 +3489,11 @@
             if (st.autoTriggerEmotion && nEmotion > 0) {
                 var emotionState = adrDGetAutoState("emotion", count);
                 var emotionBase = Number(emotionState.base);
-                if (!Number.isFinite(emotionBase) || emotionBase < 0 || emotionBase > count) {
+                if (!Number.isFinite(emotionBase) || emotionBase < 0) {
                     emotionBase = count;
                     adrDSetAutoBaseline("emotion", count);
                 }
+                // 如果 count < base，说明当前可能是 partial 小读数。保住 base，不下拉；count-base 为负，自然不会触发。
 
                 if (adrDShouldAlignDirtyBaselineOnFirstPassiveCheck("emotion", count, emotionBase, nEmotion, reason)) {
                     // 刷新/重挂载后的首次被动检查若已越阈值，视为旧 baseline 与全量 count 不一致：只对齐，不注入。
@@ -3469,10 +3520,11 @@
             if (st.autoTriggerPlot && nPlot > 0) {
                 var plotState = adrDGetAutoState("plot", count);
                 var plotBase = Number(plotState.base);
-                if (!Number.isFinite(plotBase) || plotBase < 0 || plotBase > count) {
+                if (!Number.isFinite(plotBase) || plotBase < 0) {
                     plotBase = count;
                     adrDSetAutoBaseline("plot", count);
                 }
+                // 如果 count < base，说明当前可能是 partial 小读数。保住 base，不下拉；count-base 为负，自然不会触发。
 
                 if (adrDShouldAlignDirtyBaselineOnFirstPassiveCheck("plot", count, plotBase, nPlot, reason)) {
                     // 刷新/重挂载后的首次被动检查若已越阈值，视为旧 baseline 与全量 count 不一致：只对齐，不注入。
