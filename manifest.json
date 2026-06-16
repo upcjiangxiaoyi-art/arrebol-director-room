@@ -6,6 +6,6 @@
     "js": "index.js",
     "css": "style.css",
     "author": "江",
-    "version": "1.0.5.6.8.2",
-    "description": "全量历史计数视野测试版：基于 v1.0.5.6.8.1，只把自动触发计数读取源优先改为 TavernHelper getChatMessages(0-last) 全量历史，并恢复“当前总数”用于验证；不改注入逻辑、双轨 baseline 结构、生成流程、模板和按钮防误触。首次从窄窗口迁移到全量计数时会校准 baseline，避免旧基线误触发。"
+    "version": "1.0.5.6.8.3",
+    "description": "全量历史计数与复盘视野测试版：基于 v1.0.5.6.8.2，在不改注入逻辑、双轨 baseline、自动触发公式与模板的前提下，把复盘范围正文读取也优先改为 TavernHelper getChatMessages(0-last) 全量历史；当前总数继续用于验证全量视野。"
 }

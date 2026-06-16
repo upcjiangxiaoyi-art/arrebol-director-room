@@ -574,9 +574,13 @@
         return parts.join("\n\n");
     }
 
-    function recentContentBlocks(rounds) {
+    async function recentContentBlocks(rounds) {
         var chat;
-        try { chat = ctx().chat; } catch (e) { return ""; }
+        try {
+            chat = await adrDGetFullChatMessagesForRead("recent-content");
+        } catch (e0) {
+            try { chat = ctx().chat; } catch (e1) { return ""; }
+        }
         if (!chat || !chat.length) return "";
 
         var limit = rounds * 2;
@@ -585,10 +589,18 @@
 
         for (var i = chat.length - 1; i >= 0 && count < limit; i--) {
             var m = chat[i];
-            if (!m || m.is_system) continue;
+            if (!m) continue;
 
-            var role = m.is_user ? "用户" : (m.name || "角色");
-            var text = String(m.mes || "");
+            var roleRaw = String(m.role || "").toLowerCase();
+            var isUser = m.is_user === true || roleRaw === "user";
+            // 全量历史读取时，旧楼层可能因“小幽灵/隐藏助手”被标成 is_system。
+            // 复盘范围要读“真实历史正文”，所以只跳过没有 name 的纯 system 通知，不因 is_system=true 直接丢掉角色/用户楼层。
+            if (roleRaw === "system" && !m.name && !isUser) continue;
+
+            var role = isUser ? "用户" : (m.name || "角色");
+            var raw = m.message;
+            if (raw == null) raw = m.mes;
+            var text = String(raw || "");
             text = cleanMessage(text);
 
             var blocks = [];
@@ -600,7 +612,7 @@
             }
 
             // 用户消息通常没有 <content>，保留用户原文作为必要上下文，但限制长度。
-            if (!blocks.length && m.is_user) {
+            if (!blocks.length && isUser) {
                 var u = text.trim();
                 if (u) blocks.push(u.length > 1200 ? u.slice(0, 1200) + "…" : u);
             }
@@ -670,7 +682,7 @@
         ].join("\n");
     }
 
-    function buildPrompt(type, extra) {
+    async function buildPrompt(type, extra) {
         var r = activeRange();
         var out = "";
 
@@ -684,7 +696,7 @@
             out += contextText + "\n\n";
         }
 
-        var recent = recentContentBlocks(r);
+        var recent = await recentContentBlocks(r);
         out += "【最近 " + r + " 轮正文｜精准读取】\n" + (recent || "（未提取到 <content> 正文；用户消息会作为上下文保留）") + "\n\n";
 
         if (type === "plot") {
@@ -751,7 +763,7 @@
             model: model,
             messages: [
                 { role: "system", content: preset },
-                { role: "user", content: buildPrompt(type, extra || "") }
+                { role: "user", content: await buildPrompt(type, extra || "") }
             ],
             temperature: 0.6,
             stream: false
@@ -2325,14 +2337,14 @@
         });
     }
 
-    function runPrecisePreview() {
+    async function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.6.8.1.3.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.6.8.3】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
-        out += recentContentBlocks(activeRange()) || "（未提取到正文）";
+        out += await recentContentBlocks(activeRange()) || "（未提取到正文）";
         setPreview(currentType(), out);
         status(currentType(), "精准读取预览完成 ✓", "#8ed99d");
         setButtons(currentType());
@@ -2911,10 +2923,10 @@
         return false;
     }
 
-    // v1.0.5.6.8.2：自动触发计数“换眼睛”。
+    // v1.0.5.6.8.3：自动触发计数“换眼睛”。
     // 计数公式仍然是 count - baseline；只把 count 的读取源从当前前端窗口，优先换成 TavernHelper 全量历史。
     var ADR_D_FULL_COUNT_MODE = "full-chat-v1";
-    var adrDFullCountCache = { count: null, source: "window", lastMessageId: -1, updatedAt: 0, loading: false };
+    var adrDFullCountCache = { count: null, source: "window", lastMessageId: -1, updatedAt: 0, loading: false, messages: [] };
 
     function adrDGetTavernHelper() {
         try { if (typeof TavernHelper !== "undefined" && TavernHelper) return TavernHelper; } catch (e0) {}
@@ -2963,6 +2975,7 @@
         if (!th || typeof th.getChatMessages !== "function") {
             adrDFullCountCache.count = adrDWindowAssistantRoundCount();
             adrDFullCountCache.source = "window";
+            try { adrDFullCountCache.messages = (ctx().chat || []).slice(); } catch (eMsgs0) { adrDFullCountCache.messages = []; }
             adrDFullCountCache.updatedAt = Date.now();
             return adrDFullCountCache.count;
         }
@@ -2980,12 +2993,14 @@
                 adrDFullCountCache.count = 0;
                 adrDFullCountCache.source = "full";
                 adrDFullCountCache.lastMessageId = -1;
+                adrDFullCountCache.messages = [];
                 adrDFullCountCache.updatedAt = Date.now();
                 return 0;
             }
 
             var messages = await th.getChatMessages("0-" + lastId, { include_swipes: false });
             if (!Array.isArray(messages)) messages = [];
+            adrDFullCountCache.messages = messages;
 
             var n = 0;
             for (var i = 0; i < messages.length; i++) {
@@ -3002,6 +3017,7 @@
             console.warn("[Arrebol D] full history count failed; fallback to window count", e);
             adrDFullCountCache.count = adrDWindowAssistantRoundCount();
             adrDFullCountCache.source = "window";
+            try { adrDFullCountCache.messages = (ctx().chat || []).slice(); } catch (eMsgs0) { adrDFullCountCache.messages = []; }
             adrDFullCountCache.updatedAt = Date.now();
             return adrDFullCountCache.count;
         } finally {
@@ -3015,6 +3031,32 @@
                 try { adrDUpdateAutoCounters(); } catch (e) {}
             });
         } catch (e) {}
+    }
+
+    async function adrDGetFullChatMessagesForRead(reason) {
+        var th = adrDGetTavernHelper();
+        if (th && typeof th.getChatMessages === "function") {
+            var lastId = -1;
+            try {
+                if (typeof th.getLastMessageId === "function") lastId = Number(th.getLastMessageId());
+            } catch (e0) {}
+
+            var hasFreshFullCache = adrDFullCountCache &&
+                adrDFullCountCache.source === "full" &&
+                Array.isArray(adrDFullCountCache.messages) &&
+                adrDFullCountCache.messages.length &&
+                (lastId < 0 || Number(adrDFullCountCache.lastMessageId) === lastId);
+
+            if (!hasFreshFullCache) {
+                await adrDRefreshFullAssistantRoundCount(reason || "full-read");
+            }
+
+            if (adrDFullCountCache && adrDFullCountCache.source === "full" && Array.isArray(adrDFullCountCache.messages)) {
+                return adrDFullCountCache.messages;
+            }
+        }
+
+        try { return (ctx().chat || []).slice(); } catch (e1) { return []; }
     }
 
     function adrDAssistantRoundCount() {
@@ -3128,7 +3170,7 @@
 
         if (item && typeof item === "object" && Number.isFinite(Number(item.base))) {
             if (!item.broad) item.broad = broad;
-            // v1.0.5.6.8.2：从窄窗口计数迁移到全量历史计数时，只校准一次 baseline。
+            // v1.0.5.6.8.3：从窄窗口计数迁移到全量历史计数与复盘时，只校准一次 baseline。
             // 否则旧 base 很小、全量 count 很大，会导致安装后立刻误触发。
             if (adrDCurrentCountMode && adrDCurrentCountMode() === ADR_D_FULL_COUNT_MODE && item.mode !== ADR_D_FULL_COUNT_MODE) {
                 item = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad, mode: ADR_D_FULL_COUNT_MODE, migratedFromMode: item.mode || "window-v1" };
