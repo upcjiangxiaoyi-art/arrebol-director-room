@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.5.3
+ * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.6.3
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -633,9 +633,51 @@
     }
 
 
+
+    function adrDGetExtraInstruction(type) {
+        try {
+            var el = qForm("adr044-" + type + "-extra");
+            return el ? String(el.value || "").trim() : "";
+        } catch (e) {
+            return "";
+        }
+    }
+
+    function adrDClearExtraInstruction(type) {
+        try {
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-" + type + "-extra")).forEach(function (el) {
+                if (!el) return;
+                el.value = "";
+                try { el.dispatchEvent(new Event("input", { bubbles: true })); } catch (e1) {}
+                try { el.dispatchEvent(new Event("change", { bubbles: true })); } catch (e2) {}
+            });
+            try {
+                syncType(type);
+                adrDSaveLocalBackup(settings());
+            } catch (e3) {}
+        } catch (e4) {}
+    }
+
+    function adrDExtraInstructionBlock(type, explicitExtra) {
+        var extra = String(explicitExtra || adrDGetExtraInstruction(type) || "").trim();
+        if (!extra) return "";
+        return [
+            "【最高优先级一次性补充指令】",
+            "以下是用户本轮临时补充的导演需求。它的优先级高于通用导演框架、模板与常规分析偏好；请第一时间吸收，并围绕它构建本次情感/剧情指导。",
+            "这是一条一次性指令：本次生成后会自动清空。不要把它当作长期设定，不要在后续轮次继续沿用，除非用户再次填写。",
+            extra,
+            "【一次性补充指令结束】"
+        ].join("\n");
+    }
+
     function buildPrompt(type, extra) {
         var r = activeRange();
         var out = "";
+
+        var extraBlock = adrDExtraInstructionBlock(type, extra);
+        if (extraBlock) {
+            out += extraBlock + "\n\n";
+        }
 
         var contextText = buildPreciseContext();
         if (contextText) {
@@ -644,10 +686,6 @@
 
         var recent = recentContentBlocks(r);
         out += "【最近 " + r + " 轮正文｜精准读取】\n" + (recent || "（未提取到 <content> 正文；用户消息会作为上下文保留）") + "\n\n";
-
-        if (extra && extra.trim()) {
-            out += "【本次额外指令】\n" + extra.trim() + "\n\n";
-        }
 
         if (type === "plot") {
             out += "请根据以上内容输出剧情导演方向。只输出方向结果，不要复述分析过程，不要写正文。";
@@ -771,7 +809,8 @@
         try {
             var out = await callAPI(type, extra || "");
             setPreview(type, out);
-            status(type, "分析完成 ✓", "#8ed99d");
+            adrDClearExtraInstruction(type);
+            status(type, "分析完成 ✓（补充指令已清空）", "#8ed99d");
 
             var st = settings();
             var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
@@ -1050,7 +1089,7 @@
 
             chat[idx].mes = mes.trimEnd() + add;
 
-            // v1.0.5.6.5.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
+            // v1.0.5.6.6.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
             adrDSaveThenRedrawAfterInject();
             return true;
         } catch (e) {
@@ -1435,7 +1474,7 @@
         var content = contentBlocksProbe(activeRange());
 
         var out = "";
-        out += "【红霞探针 v1.0.5.6.5.3.2】\n";
+        out += "【红霞探针 v1.0.5.6.6.3.2】\n";
         out += "目的：检测酒馆 1.81 当前环境里角色卡 / 世界书 / user 人设 / <content> 所在字段。\n\n";
 
         out += "【Context 顶层 keys】\n";
@@ -1574,7 +1613,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.5.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.6.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
@@ -2201,7 +2240,7 @@
     function runPrecisePreview() {
         syncAll();
         var out = "";
-        out += "【红霞精准读取预览 v1.0.5.6.5.3.2】\n";
+        out += "【红霞精准读取预览 v1.0.5.6.6.3.2】\n";
         out += "以下内容就是下一次发送给副 API 的主要上下文来源。\n\n";
         out += buildPreciseContext() || "（未读取到角色卡 / 世界书 / user 人设补充）";
         out += "\n\n【最近 " + activeRange() + " 轮正文｜<content>精准读取】\n";
@@ -2972,7 +3011,7 @@
             if (st.lastAutoTriggerChatKey !== key) {
                 var oldKey = String(st.lastAutoTriggerChatKey || "");
 
-                // v1.0.5.6.5：刷新页面/初始加载时，chat key 可能短暂不稳定。
+                // v1.0.5.6.6：刷新页面/初始加载时，chat key 可能短暂不稳定。
                 // 这种情况只更新显示，不重置基线，避免“已新增”每次刷新归零。
                 if (adrDIsUnstableChatKey(key)) {
                     adrDUpdateAutoCounters();
@@ -3084,7 +3123,7 @@
             }
         } catch (e2) {}
 
-        // v1.0.5.6.5：页面刷新/插件重新挂载时不主动重置自动触发基线。
+        // v1.0.5.6.6：页面刷新/插件重新挂载时不主动重置自动触发基线。
         // 基线只在开关/间隔改变或真正切换聊天时重置。
         setTimeout(adrDUpdateAutoCounters, 1200);
     }
