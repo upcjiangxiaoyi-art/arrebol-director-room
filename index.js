@@ -2902,7 +2902,7 @@
     var adrDAutoTriggerRunning = false;
     // v1.0.5.6.8.3.5：页面加载后短安全期。自动触发可以读数/对齐，但绝不生成注入，堵住 iOS 刷新抢跑竞态。
     // v1.0.5.6.8.3.6：启动安全期内彻底只读，不创建/覆盖 baseline，避免面板刷新把 1/30 写成 0/30。
-    // v1.0.5.6.8.3.7：partial 小读数保护。角色总数只应单调增加；count < base 一律视作未加载全，不允许下拉 baseline。
+    // v1.0.5.6.8.3.9：partial 小读数保护 + 自动触发吞触发修复。角色总数只应单调增加；count < base 一律视作未加载全，不允许下拉 baseline。
     var ADR_D_AUTO_STARTUP_GRACE_MS = 20000;
     var adrDAutoScriptLoadedAt = Date.now();
 
@@ -3174,14 +3174,29 @@
         return String(adrDChatKey ? adrDChatKey() : "chat") + "::" + String(type || "emotion");
     }
 
-    function adrDShouldAlignDirtyBaselineOnFirstPassiveCheck(type, count, base, n, reason) {
-        if (!adrDIsPassiveAutoCheck(reason)) return false;
+    function adrDIsDirtyBaselineGap(count, base, n) {
+        // v1.0.5.6.8.3.9：first-pass / startup grace 只兜“离谱脏 baseline”，不吞正常跨阈值。
+        // 正常触发通常 gap == n，或最多超出少量；若超出间隔 20 条以上，才视为旧 baseline/口径迁移污染。
         if (!Number.isFinite(Number(n)) || Number(n) <= 0) return false;
         if (!Number.isFinite(Number(count)) || !Number.isFinite(Number(base))) return false;
+        var gap = Number(count) - Number(base);
+        if (gap < Number(n)) return false;
+        return (gap - Number(n)) >= 20;
+    }
+
+    function adrDShouldAlignDirtyBaselineOnFirstPassiveCheck(type, count, base, n, reason, inStartupGrace) {
+        if (!adrDIsPassiveAutoCheck(reason)) return false;
+        if (!adrDIsDirtyBaselineGap(count, base, n)) return false;
+
+        // 启动 grace 仍然可以兜脏 baseline，但不能一刀切吞正常触发。
+        if (inStartupGrace) return true;
+
+        // 非 grace 时，只在真正换聊/载入的首次被动检查兜一次脏 baseline。
+        if (!adrDIsReloadLikeAutoCheck(reason)) return false;
         var key = adrDFirstPassKey(type);
         if (adrDFirstPassiveAutoCheckDone[key]) return false;
         adrDFirstPassiveAutoCheckDone[key] = true;
-        return (Number(count) - Number(base)) >= Number(n);
+        return true;
     }
 
     function adrDAutoStateKeyFor(key, type) {
@@ -3472,13 +3487,8 @@
             }
 
             var inStartupGrace = adrDInStartupAutoGrace();
-            if (inStartupGrace) {
-                // 启动安全期内完全只读：不比较、不对齐、不创建 state、不写 baseline。
-                // 这样页面抖动/临时 chatKey/面板刷新都不会把 1/30 写成 0/30。
-                try { console.warn("[Arrebol D] suppress auto trigger during startup grace (read-only)", { reason: reason || "", count: count }); } catch (eStartupReadOnly) {}
-                adrDUpdateAutoCounters();
-                return;
-            }
+            // v1.0.5.6.8.3.9：启动 grace 不再作为“总开关”吞掉自动触发。
+            // 真正需要静默对齐的，只应是 gap 离谱的脏 baseline；正常 gap >= N 必须继续触发。
 
             var nEmotion = autoTriggerRange("emotion");
             var nPlot = autoTriggerRange("plot");
@@ -3495,25 +3505,17 @@
                 }
                 // 如果 count < base，说明当前可能是 partial 小读数。保住 base，不下拉；count-base 为负，自然不会触发。
 
-                if (adrDShouldAlignDirtyBaselineOnFirstPassiveCheck("emotion", count, emotionBase, nEmotion, reason)) {
+                if (adrDShouldAlignDirtyBaselineOnFirstPassiveCheck("emotion", count, emotionBase, nEmotion, reason, inStartupGrace)) {
                     // 刷新/重挂载后的首次被动检查若已越阈值，视为旧 baseline 与全量 count 不一致：只对齐，不注入。
                     adrDAdvanceAutoBaseline("emotion", count);
                     st.lastAutoTriggerEmotionCount = count;
                     st.lastAutoTriggerEmotionAt = Date.now();
                     try { console.warn("[Arrebol D] align dirty emotion baseline on first passive check", { count: count, base: emotionBase, n: nEmotion, reason: reason || "" }); } catch (eFirstEmotion) {}
                 } else if (count - emotionBase >= nEmotion) {
-                    if (inStartupGrace) {
-                        // 页面加载后的短安全期：可以对齐脏 baseline，但绝不生成/注入，避免 iOS 刷新抢跑。
-                        adrDAdvanceAutoBaseline("emotion", count);
-                        st.lastAutoTriggerEmotionCount = count;
-                        st.lastAutoTriggerEmotionAt = Date.now();
-                        try { console.warn("[Arrebol D] suppress emotion auto trigger during startup grace", { count: count, base: emotionBase, n: nEmotion, reason: reason || "" }); } catch (eGraceEmotion) {}
-                    } else {
-                        toRun.push({ type: "emotion", n: nEmotion });
-                        adrDAdvanceAutoBaseline("emotion", count);
-                        st.lastAutoTriggerEmotionCount = count;
-                        st.lastAutoTriggerEmotionAt = Date.now();
-                    }
+                    toRun.push({ type: "emotion", n: nEmotion });
+                    adrDAdvanceAutoBaseline("emotion", count);
+                    st.lastAutoTriggerEmotionCount = count;
+                    st.lastAutoTriggerEmotionAt = Date.now();
                 }
             }
 
@@ -3526,25 +3528,17 @@
                 }
                 // 如果 count < base，说明当前可能是 partial 小读数。保住 base，不下拉；count-base 为负，自然不会触发。
 
-                if (adrDShouldAlignDirtyBaselineOnFirstPassiveCheck("plot", count, plotBase, nPlot, reason)) {
+                if (adrDShouldAlignDirtyBaselineOnFirstPassiveCheck("plot", count, plotBase, nPlot, reason, inStartupGrace)) {
                     // 刷新/重挂载后的首次被动检查若已越阈值，视为旧 baseline 与全量 count 不一致：只对齐，不注入。
                     adrDAdvanceAutoBaseline("plot", count);
                     st.lastAutoTriggerPlotCount = count;
                     st.lastAutoTriggerPlotAt = Date.now();
                     try { console.warn("[Arrebol D] align dirty plot baseline on first passive check", { count: count, base: plotBase, n: nPlot, reason: reason || "" }); } catch (eFirstPlot) {}
                 } else if (count - plotBase >= nPlot) {
-                    if (inStartupGrace) {
-                        // 页面加载后的短安全期：可以对齐脏 baseline，但绝不生成/注入，避免 iOS 刷新抢跑。
-                        adrDAdvanceAutoBaseline("plot", count);
-                        st.lastAutoTriggerPlotCount = count;
-                        st.lastAutoTriggerPlotAt = Date.now();
-                        try { console.warn("[Arrebol D] suppress plot auto trigger during startup grace", { count: count, base: plotBase, n: nPlot, reason: reason || "" }); } catch (eGracePlot) {}
-                    } else {
-                        toRun.push({ type: "plot", n: nPlot });
-                        adrDAdvanceAutoBaseline("plot", count);
-                        st.lastAutoTriggerPlotCount = count;
-                        st.lastAutoTriggerPlotAt = Date.now();
-                    }
+                    toRun.push({ type: "plot", n: nPlot });
+                    adrDAdvanceAutoBaseline("plot", count);
+                    st.lastAutoTriggerPlotCount = count;
+                    st.lastAutoTriggerPlotAt = Date.now();
                 }
             }
 
