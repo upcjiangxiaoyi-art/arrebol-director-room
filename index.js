@@ -909,10 +909,13 @@
         for (var i = chat.length - 1; i >= 0; i--) {
             var m = chat[i];
             if (!m || m.is_system) continue;
+            var role = String(m.role || "").toLowerCase();
+            if (m.is_user === true || role === "user") continue;
             if (m.mes && String(m.mes).trim()) return i;
         }
 
-        return chat.length - 1;
+        // 没有可注入的角色/助手楼层时，宁可不注入，也绝不写到 user input 楼。
+        return -1;
     }
 
     function saveChatSafe() {
@@ -2897,6 +2900,13 @@
     var adrDAutoTriggerTimer = null;
     var adrDLastChatLengthSeen = -1;
     var adrDAutoTriggerRunning = false;
+    // v1.0.5.6.8.3.5：页面加载后短安全期。自动触发可以读数/对齐，但绝不生成注入，堵住 iOS 刷新抢跑竞态。
+    var ADR_D_AUTO_STARTUP_GRACE_MS = 20000;
+    var adrDAutoScriptLoadedAt = Date.now();
+
+    function adrDInStartupAutoGrace() {
+        return Date.now() - adrDAutoScriptLoadedAt < ADR_D_AUTO_STARTUP_GRACE_MS;
+    }
 
     function adrDChatKey() {
         try {
@@ -2923,11 +2933,27 @@
         return false;
     }
 
+    function adrDChatKeyReady() {
+        try {
+            var c = ctx();
+            if (typeof c.getCurrentChatId === "function") {
+                var x = c.getCurrentChatId();
+                return !!x && !adrDIsUnstableChatKey(String(x));
+            }
+            if (c.chatId) return !adrDIsUnstableChatKey(String(c.chatId));
+            // 旧环境没有稳定 chat-id API 时，只能使用原 fallback key，保持兼容。
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     // v1.0.5.6.8.3：自动触发计数“换眼睛”。
     // 计数公式仍然是 count - baseline；只把 count 的读取源从当前前端窗口，优先换成 TavernHelper 全量历史。
     // v1.0.5.6.8.3.1：全量计数粘滞保护。成功取得过一次全量后，瞬时失败不再回退窗口计数，避免 source 抖动清空进度。
     // v1.0.5.6.8.3.2：冷启动闸门。有 TavernHelper 全量能力时，首次全量成功前不触发、不写 baseline，避免刷新冷窗口误触发。
     // v1.0.5.6.8.3.3：首次被动判定安全网，发现脏 baseline 只对齐不注入。
+    // v1.0.5.6.8.3.5：chatKey 稳定前不落盘/不触发；启动 20 秒内禁自动注入；注入落点只允许助手楼。
     var ADR_D_FULL_COUNT_MODE = "full-chat-v1";
     var ADR_D_STICKY_FULL = true;
     var adrDFullCountCache = { count: null, source: "window", lastMessageId: -1, updatedAt: 0, loading: false, messages: [], everFull: false };
@@ -3214,6 +3240,9 @@
     }
 
     function adrDGetAutoState(type, count) {
+        if (!adrDChatKeyReady()) {
+            return { base: Number(count) || 0, updatedAt: Date.now(), broad: adrDAutoBroadKey(), mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "pending-chat-key", pendingChatKey: true, temporary: true };
+        }
         var all = adrDAutoStateAll();
         var key = adrDAutoStateKey(type);
         var broad = adrDAutoBroadKey();
@@ -3258,6 +3287,7 @@
     }
 
     function adrDSetAutoBaseline(type, count) {
+        if (!adrDChatKeyReady()) return false;
         var all = adrDAutoStateAll();
         var key = adrDAutoStateKey(type);
         var broad = adrDAutoBroadKey();
@@ -3288,6 +3318,10 @@
 
             if (!adrDCountReady()) {
                 return label + "：当前总数 " + count + " 条｜视野：" + adrDCountSourceLabel() + "｜等待首次全量历史读取，暂不累积/触发";
+            }
+
+            if (!adrDChatKeyReady()) {
+                return label + "：当前总数 " + count + " 条｜视野：" + adrDCountSourceLabel() + "｜等待聊天标识稳定，暂不落盘/触发";
             }
 
             var state = adrDGetAutoState(type, count);
@@ -3389,6 +3423,13 @@
                 return;
             }
 
+            if (!adrDChatKeyReady()) {
+                try { console.log("[Arrebol D] auto trigger waits for stable chat key", reason || ""); } catch (eKeyLog) {}
+                adrDUpdateAutoCounters();
+                return;
+            }
+
+            var inStartupGrace = adrDInStartupAutoGrace();
             var nEmotion = autoTriggerRange("emotion");
             var nPlot = autoTriggerRange("plot");
             var toRun = [];
@@ -3410,10 +3451,18 @@
                     st.lastAutoTriggerEmotionAt = Date.now();
                     try { console.warn("[Arrebol D] align dirty emotion baseline on first passive check", { count: count, base: emotionBase, n: nEmotion, reason: reason || "" }); } catch (eFirstEmotion) {}
                 } else if (count - emotionBase >= nEmotion) {
-                    toRun.push({ type: "emotion", n: nEmotion });
-                    adrDAdvanceAutoBaseline("emotion", count);
-                    st.lastAutoTriggerEmotionCount = count;
-                    st.lastAutoTriggerEmotionAt = Date.now();
+                    if (inStartupGrace) {
+                        // 页面加载后的短安全期：可以对齐脏 baseline，但绝不生成/注入，避免 iOS 刷新抢跑。
+                        adrDAdvanceAutoBaseline("emotion", count);
+                        st.lastAutoTriggerEmotionCount = count;
+                        st.lastAutoTriggerEmotionAt = Date.now();
+                        try { console.warn("[Arrebol D] suppress emotion auto trigger during startup grace", { count: count, base: emotionBase, n: nEmotion, reason: reason || "" }); } catch (eGraceEmotion) {}
+                    } else {
+                        toRun.push({ type: "emotion", n: nEmotion });
+                        adrDAdvanceAutoBaseline("emotion", count);
+                        st.lastAutoTriggerEmotionCount = count;
+                        st.lastAutoTriggerEmotionAt = Date.now();
+                    }
                 }
             }
 
@@ -3432,10 +3481,18 @@
                     st.lastAutoTriggerPlotAt = Date.now();
                     try { console.warn("[Arrebol D] align dirty plot baseline on first passive check", { count: count, base: plotBase, n: nPlot, reason: reason || "" }); } catch (eFirstPlot) {}
                 } else if (count - plotBase >= nPlot) {
-                    toRun.push({ type: "plot", n: nPlot });
-                    adrDAdvanceAutoBaseline("plot", count);
-                    st.lastAutoTriggerPlotCount = count;
-                    st.lastAutoTriggerPlotAt = Date.now();
+                    if (inStartupGrace) {
+                        // 页面加载后的短安全期：可以对齐脏 baseline，但绝不生成/注入，避免 iOS 刷新抢跑。
+                        adrDAdvanceAutoBaseline("plot", count);
+                        st.lastAutoTriggerPlotCount = count;
+                        st.lastAutoTriggerPlotAt = Date.now();
+                        try { console.warn("[Arrebol D] suppress plot auto trigger during startup grace", { count: count, base: plotBase, n: nPlot, reason: reason || "" }); } catch (eGracePlot) {}
+                    } else {
+                        toRun.push({ type: "plot", n: nPlot });
+                        adrDAdvanceAutoBaseline("plot", count);
+                        st.lastAutoTriggerPlotCount = count;
+                        st.lastAutoTriggerPlotAt = Date.now();
+                    }
                 }
             }
 
