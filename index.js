@@ -2927,6 +2927,7 @@
     // 计数公式仍然是 count - baseline；只把 count 的读取源从当前前端窗口，优先换成 TavernHelper 全量历史。
     // v1.0.5.6.8.3.1：全量计数粘滞保护。成功取得过一次全量后，瞬时失败不再回退窗口计数，避免 source 抖动清空进度。
     // v1.0.5.6.8.3.2：冷启动闸门。有 TavernHelper 全量能力时，首次全量成功前不触发、不写 baseline，避免刷新冷窗口误触发。
+    // v1.0.5.6.8.3.3：首次被动判定安全网，发现脏 baseline 只对齐不注入。
     var ADR_D_FULL_COUNT_MODE = "full-chat-v1";
     var ADR_D_STICKY_FULL = true;
     var adrDFullCountCache = { count: null, source: "window", lastMessageId: -1, updatedAt: 0, loading: false, messages: [], everFull: false };
@@ -3130,6 +3131,30 @@
 
     var ADR_D_AUTO_STATE_KEY = "arrebol_d_auto_trigger_state_v1";
     var ADR_D_AUTO_LAST_KEY = "arrebol_d_auto_trigger_last_key_v1";
+    // v1.0.5.6.8.3.3：刷新后首次被动判定安全网。
+    // 如果本次会话第一次被动 auto-check 发现 count-base 已经越过阈值，优先判定为脏 baseline，静默对齐，不抢跑注入。
+    var adrDFirstPassiveAutoCheckDone = {};
+
+    function adrDIsPassiveAutoCheck(reason) {
+        var r = String(reason || "");
+        // 用户主动改开关/间隔/自定义间隔时，不吞掉其有意触发；其它事件/轮询/刷新均视为被动检查。
+        if (/^(toggle|range|custom)-/.test(r)) return false;
+        return true;
+    }
+
+    function adrDFirstPassKey(type) {
+        return String(adrDChatKey ? adrDChatKey() : "chat") + "::" + String(type || "emotion");
+    }
+
+    function adrDShouldAlignDirtyBaselineOnFirstPassiveCheck(type, count, base, n, reason) {
+        if (!adrDIsPassiveAutoCheck(reason)) return false;
+        if (!Number.isFinite(Number(n)) || Number(n) <= 0) return false;
+        if (!Number.isFinite(Number(count)) || !Number.isFinite(Number(base))) return false;
+        var key = adrDFirstPassKey(type);
+        if (adrDFirstPassiveAutoCheckDone[key]) return false;
+        adrDFirstPassiveAutoCheckDone[key] = true;
+        return (Number(count) - Number(base)) >= Number(n);
+    }
 
     function adrDAutoBroadKey() {
         try {
@@ -3274,7 +3299,8 @@
 
             var passed = Math.max(0, count - base);
             var left = Math.max(0, n - passed);
-            return label + "：当前总数 " + count + " 条｜视野：" + adrDCountSourceLabel() + "｜已新增 " + passed + " / " + n + " 条角色回复｜距离下次还差 " + left + " 条";
+            var modeText = state && state.mode ? String(state.mode) : (adrDCurrentCountMode ? adrDCurrentCountMode() : "unknown");
+            return label + "：当前总数 " + count + " 条｜视野：" + adrDCountSourceLabel() + "｜已新增 " + passed + " / " + n + " 条角色回复｜距离下次还差 " + left + " 条｜base " + base + "(" + modeText + ")";
         } catch (e) {
             return "自动触发计数：读取失败";
         }
@@ -3377,7 +3403,13 @@
                     adrDSetAutoBaseline("emotion", count);
                 }
 
-                if (count - emotionBase >= nEmotion) {
+                if (adrDShouldAlignDirtyBaselineOnFirstPassiveCheck("emotion", count, emotionBase, nEmotion, reason)) {
+                    // 刷新/重挂载后的首次被动检查若已越阈值，视为旧 baseline 与全量 count 不一致：只对齐，不注入。
+                    adrDAdvanceAutoBaseline("emotion", count);
+                    st.lastAutoTriggerEmotionCount = count;
+                    st.lastAutoTriggerEmotionAt = Date.now();
+                    try { console.warn("[Arrebol D] align dirty emotion baseline on first passive check", { count: count, base: emotionBase, n: nEmotion, reason: reason || "" }); } catch (eFirstEmotion) {}
+                } else if (count - emotionBase >= nEmotion) {
                     toRun.push({ type: "emotion", n: nEmotion });
                     adrDAdvanceAutoBaseline("emotion", count);
                     st.lastAutoTriggerEmotionCount = count;
@@ -3393,7 +3425,13 @@
                     adrDSetAutoBaseline("plot", count);
                 }
 
-                if (count - plotBase >= nPlot) {
+                if (adrDShouldAlignDirtyBaselineOnFirstPassiveCheck("plot", count, plotBase, nPlot, reason)) {
+                    // 刷新/重挂载后的首次被动检查若已越阈值，视为旧 baseline 与全量 count 不一致：只对齐，不注入。
+                    adrDAdvanceAutoBaseline("plot", count);
+                    st.lastAutoTriggerPlotCount = count;
+                    st.lastAutoTriggerPlotAt = Date.now();
+                    try { console.warn("[Arrebol D] align dirty plot baseline on first passive check", { count: count, base: plotBase, n: nPlot, reason: reason || "" }); } catch (eFirstPlot) {}
+                } else if (count - plotBase >= nPlot) {
                     toRun.push({ type: "plot", n: nPlot });
                     adrDAdvanceAutoBaseline("plot", count);
                     st.lastAutoTriggerPlotCount = count;
