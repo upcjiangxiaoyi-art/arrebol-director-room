@@ -2911,7 +2911,19 @@
         return false;
     }
 
-    function adrDAssistantRoundCount() {
+    // v1.0.5.6.8.2：自动触发计数“换眼睛”。
+    // 计数公式仍然是 count - baseline；只把 count 的读取源从当前前端窗口，优先换成 TavernHelper 全量历史。
+    var ADR_D_FULL_COUNT_MODE = "full-chat-v1";
+    var adrDFullCountCache = { count: null, source: "window", lastMessageId: -1, updatedAt: 0, loading: false };
+
+    function adrDGetTavernHelper() {
+        try { if (typeof TavernHelper !== "undefined" && TavernHelper) return TavernHelper; } catch (e0) {}
+        try { var rw = rootWin(); if (rw && rw.TavernHelper) return rw.TavernHelper; } catch (e1) {}
+        try { if (window.parent && window.parent.TavernHelper) return window.parent.TavernHelper; } catch (e2) {}
+        return null;
+    }
+
+    function adrDWindowAssistantRoundCount() {
         var chat;
         try { chat = ctx().chat; } catch (e) { return 0; }
         if (!chat || !chat.length) return 0;
@@ -2925,6 +2937,114 @@
             n++;
         }
         return n;
+    }
+
+    function adrDCountOneFullHistoryMessage(m) {
+        if (!m) return 0;
+
+        var role = String(m.role || "").toLowerCase();
+        var isUser = m.is_user === true || role === "user";
+        if (isUser) return 0;
+
+        // 真 system 通知一般没有角色名；隐藏助手楼层可能被标记为 system，但仍带 name / message。
+        // 为了让“小幽灵/隐藏楼层”也进入真实角色回复数，只有“role=system 且无 name”才跳过。
+        if (role === "system" && !m.name) return 0;
+
+        var raw = m.message;
+        if (raw == null) raw = m.mes;
+        var text = cleanMessage(raw || "");
+        return text.trim() ? 1 : 0;
+    }
+
+    async function adrDRefreshFullAssistantRoundCount(reason) {
+        if (adrDFullCountCache.loading) return Number(adrDFullCountCache.count) || adrDWindowAssistantRoundCount();
+
+        var th = adrDGetTavernHelper();
+        if (!th || typeof th.getChatMessages !== "function") {
+            adrDFullCountCache.count = adrDWindowAssistantRoundCount();
+            adrDFullCountCache.source = "window";
+            adrDFullCountCache.updatedAt = Date.now();
+            return adrDFullCountCache.count;
+        }
+
+        adrDFullCountCache.loading = true;
+        try {
+            var lastId;
+            if (typeof th.getLastMessageId === "function") {
+                lastId = Number(th.getLastMessageId());
+            } else {
+                try { lastId = (ctx().chat || []).length - 1; } catch (e0) { lastId = -1; }
+            }
+
+            if (!Number.isFinite(lastId) || lastId < 0) {
+                adrDFullCountCache.count = 0;
+                adrDFullCountCache.source = "full";
+                adrDFullCountCache.lastMessageId = -1;
+                adrDFullCountCache.updatedAt = Date.now();
+                return 0;
+            }
+
+            var messages = await th.getChatMessages("0-" + lastId, { include_swipes: false });
+            if (!Array.isArray(messages)) messages = [];
+
+            var n = 0;
+            for (var i = 0; i < messages.length; i++) {
+                n += adrDCountOneFullHistoryMessage(messages[i]);
+            }
+
+            adrDFullCountCache.count = n;
+            adrDFullCountCache.source = "full";
+            adrDFullCountCache.lastMessageId = lastId;
+            adrDFullCountCache.updatedAt = Date.now();
+            try { console.log("[Arrebol D] full history count", n, "lastId=", lastId, "reason=", reason || ""); } catch (eLog) {}
+            return n;
+        } catch (e) {
+            console.warn("[Arrebol D] full history count failed; fallback to window count", e);
+            adrDFullCountCache.count = adrDWindowAssistantRoundCount();
+            adrDFullCountCache.source = "window";
+            adrDFullCountCache.updatedAt = Date.now();
+            return adrDFullCountCache.count;
+        } finally {
+            adrDFullCountCache.loading = false;
+        }
+    }
+
+    function adrDQueueFullAssistantRoundCountRefresh(reason) {
+        try {
+            adrDRefreshFullAssistantRoundCount(reason || "queued").then(function () {
+                try { adrDUpdateAutoCounters(); } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
+    function adrDAssistantRoundCount() {
+        // 同步入口保留：UI/旧函数可继续调用。优先返回全量缓存；未就绪时回退当前窗口并异步刷新。
+        if (adrDFullCountCache && adrDFullCountCache.source === "full" && Number.isFinite(Number(adrDFullCountCache.count))) {
+            return Number(adrDFullCountCache.count);
+        }
+        adrDQueueFullAssistantRoundCountRefresh("lazy-count");
+        return adrDWindowAssistantRoundCount();
+    }
+
+    function adrDCountSourceLabel() {
+        try {
+            if (adrDFullCountCache.source === "full") return "全量历史";
+            return "当前窗口/等待全量";
+        } catch (e) {
+            return "当前窗口";
+        }
+    }
+
+    function adrDCurrentCountMode() {
+        return adrDFullCountCache && adrDFullCountCache.source === "full" ? ADR_D_FULL_COUNT_MODE : "window-v1";
+    }
+
+    function adrDCurrentMessageTailForPoll() {
+        var th = adrDGetTavernHelper();
+        try {
+            if (th && typeof th.getLastMessageId === "function") return Number(th.getLastMessageId()) + 1;
+        } catch (e) {}
+        try { return (ctx().chat || []).length || 0; } catch (e2) { return 0; }
     }
 
 
@@ -3008,6 +3128,13 @@
 
         if (item && typeof item === "object" && Number.isFinite(Number(item.base))) {
             if (!item.broad) item.broad = broad;
+            // v1.0.5.6.8.2：从窄窗口计数迁移到全量历史计数时，只校准一次 baseline。
+            // 否则旧 base 很小、全量 count 很大，会导致安装后立刻误触发。
+            if (adrDCurrentCountMode && adrDCurrentCountMode() === ADR_D_FULL_COUNT_MODE && item.mode !== ADR_D_FULL_COUNT_MODE) {
+                item = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad, mode: ADR_D_FULL_COUNT_MODE, migratedFromMode: item.mode || "window-v1" };
+                all[key] = item;
+                adrDSaveAutoStateAll(all);
+            }
             adrDSaveAutoLastKey(type, key);
             return item;
         }
@@ -3022,7 +3149,7 @@
             var prevBase = Number(prev.base);
             var c = Number(count) || 0;
             if (prevBroad === broad && prevBase >= 0 && prevBase <= c) {
-                item = { base: prevBase, updatedAt: Date.now(), broad: broad, migratedFrom: lastKey };
+                item = { base: prevBase, updatedAt: Date.now(), broad: broad, migratedFrom: lastKey, mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1" };
                 all[key] = item;
                 adrDSaveAutoStateAll(all);
                 adrDSaveAutoLastKey(type, key);
@@ -3030,7 +3157,7 @@
             }
         }
 
-        item = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad };
+        item = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad, mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1" };
         all[key] = item;
         adrDSaveAutoStateAll(all);
         adrDSaveAutoLastKey(type, key);
@@ -3041,7 +3168,7 @@
         var all = adrDAutoStateAll();
         var key = adrDAutoStateKey(type);
         var broad = adrDAutoBroadKey();
-        all[key] = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad };
+        all[key] = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad, mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1" };
         adrDSaveAutoStateAll(all);
         adrDSaveAutoLastKey(type, key);
     }
@@ -3075,7 +3202,7 @@
 
             var passed = Math.max(0, count - base);
             var left = Math.max(0, n - passed);
-            return label + "：已新增 " + passed + " / " + n + " 条角色回复｜距离下次还差 " + left + " 条";
+            return label + "：当前总数 " + count + " 条｜视野：" + adrDCountSourceLabel() + "｜已新增 " + passed + " / " + n + " 条角色回复｜距离下次还差 " + left + " 条";
         } catch (e) {
             return "自动触发计数：读取失败";
         }
@@ -3157,7 +3284,7 @@
                 return;
             }
 
-            var count = adrDAssistantRoundCount();
+            var count = await adrDRefreshFullAssistantRoundCount("auto-check:" + (reason || ""));
             var nEmotion = autoTriggerRange("emotion");
             var nPlot = autoTriggerRange("plot");
             var toRun = [];
@@ -3242,9 +3369,9 @@
             if (!rootWin().__arrebolDAutoTriggerPoll) {
                 rootWin().__arrebolDAutoTriggerPoll = setInterval(function () {
                     try {
-                        var chat = ctx().chat || [];
-                        var len = chat.length || 0;
+                        var len = adrDCurrentMessageTailForPoll();
                         if (adrDLastChatLengthSeen >= 0 && len !== adrDLastChatLengthSeen) {
+                            adrDQueueFullAssistantRoundCountRefresh("poll-tail-change");
                             adrDScheduleAutoTriggerCheck("poll-chat-length");
                         }
                         adrDLastChatLengthSeen = len;
@@ -3441,6 +3568,7 @@
             setTimeout(adrDBindCompactTemplateControls, 120);
             adr048EnsureFabLater();
             adrDInstallAutoTriggerWatchers();
+            adrDQueueFullAssistantRoundCountRefresh("init");
             adrDUpdateAutoCounters();
             setTimeout(adrDUpdateAutoCounters, 800);
             setTimeout(bindDirect, 500);
