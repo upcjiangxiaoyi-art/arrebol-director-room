@@ -564,3 +564,69 @@
 
 
 /* v1.0.5.6.8.1 UI clean: hide total counter text, mobile tap/drag guard */
+
+/* v1.9.0 final UI guard: keep floating-window text readable across SillyTavern themes. */
+#adr048-popup-shell,
+#adr048-popup-shell *,
+#adr044-drawer,
+#adr044-drawer * {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif !important;
+}
+
+#adr048-popup-body,
+#adr048-popup-body label,
+#adr048-popup-body .adr048-summary,
+#adr048-popup-sub,
+#adr048-popup-body .adr048-note,
+#adr048-popup-body .adr048-status {
+    color: #ffffff !important;
+}
+
+#adr048-popup-body input,
+#adr048-popup-body select,
+#adr048-popup-body textarea,
+#adr044-drawer input,
+#adr044-drawer select,
+#adr044-drawer textarea {
+    background: #ffffff !important;
+    color: #111111 !important;
+    -webkit-text-fill-color: #111111 !important;
+    caret-color: #111111 !important;
+    border: 1px solid rgba(255,255,255,.72) !important;
+    text-shadow: none !important;
+}
+
+#adr048-popup-body input::placeholder,
+#adr048-popup-body textarea::placeholder,
+#adr044-drawer input::placeholder,
+#adr044-drawer textarea::placeholder {
+    color: #666666 !important;
+    opacity: 1 !important;
+}
+
+#adr048-popup-body button,
+#adr044-drawer button {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif !important;
+    text-shadow: none !important;
+}
+
+.adr048-tabs {
+    gap: 5px !important;
+    margin: 7px 0 6px !important;
+}
+
+.adr048-tabs button {
+    min-height: 28px !important;
+    padding: 4px 8px !important;
+    border-radius: 7px !important;
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+}
+
+.adr044-tabs button {
+    min-height: 28px !important;
+    padding: 4px 8px !important;
+    border-radius: 7px !important;
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+}

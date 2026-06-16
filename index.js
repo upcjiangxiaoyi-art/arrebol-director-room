@@ -1,6 +1,6 @@
 
 /*
- * Arrebol Director Room 暗河红霞 Arrebol D v1.0.5.6.8.1.3
+ * Arrebol D 暗河红霞导演系统 v1.9.0｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -182,6 +182,20 @@
             el.textContent = text;
             if (color) el.style.color = color;
         }
+    }
+
+    function adrDToast(msg) {
+        // v1.9.0：收尾兜底。提示函数绝不允许反向拖崩保存流程。
+        try {
+            var text = String(msg || "");
+            var root = (typeof window !== "undefined") ? window : globalThis;
+            var t = root && root.toastr;
+            if (t && typeof t.success === "function") { t.success(text); return; }
+            if (t && typeof t.info === "function") { t.info(text); return; }
+            try { status("emotion", text, "#8ed99d"); } catch (e1) {}
+            try { status("plot", text, "#8ed99d"); } catch (e2) {}
+            try { console.log("[Arrebol D] " + text); } catch (e3) {}
+        } catch (e) {}
     }
 
     function currentType() {
@@ -1628,10 +1642,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.0.5.6.8.1.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.0</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">灵魂共鸣者Arrebol在线检测</div>'
+            + '<div class="adr044-note">小红霞在线｜ripple & GPT</div>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -2485,11 +2499,11 @@
         return '<div id="adr048-popup-panel" data-open="0">'
             + '<div id="adr048-popup-shell">'
             + '<div id="adr048-popup-head">'
-            + '<div><b>🎬 Arrebol D 暗河红霞导演系统</b><div id="adr048-popup-sub">灵魂共鸣者Arrebol在线检测</div></div>'
+            + '<div><b>🎬 Arrebol D 暗河红霞导演系统</b><div id="adr048-popup-sub">小红霞在线｜ripple & GPT</div></div>'
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + '<div class="adr048-note">暗河红霞 Arrebol D 已就绪。情感/剧情可分别设置自动触发间隔；纯文本标记注入；设置保存改为稳定仓库 arrebol_d_settings_stable_v1，更新插件不再丢 API。</div>'
+            + '<div class="adr048-note">小红霞已就绪。自动触发、手动导演、纯文本注入与本地设置保存均已启用。<br>由 ripple & GPT 收尾维护。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -3172,6 +3186,12 @@
 
     function adrDFirstPassKey(type) {
         return String(adrDChatKey ? adrDChatKey() : "chat") + "::" + String(type || "emotion");
+    }
+
+    function adrDIsReloadLikeAutoCheck(reason) {
+        // v1.9.0：运行期补洞。脏 gap 兜底前已有“离谱差值”与“每聊天每会话一次”守卫。
+        // 这里保持宽松 true，避免 SillyTavern 不同事件名导致脏 baseline 无法自愈。
+        return true;
     }
 
     function adrDIsDirtyBaselineGap(count, base, n) {
