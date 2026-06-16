@@ -630,3 +630,79 @@
     font-size: 14px !important;
     line-height: 1.2 !important;
 }
+
+
+/* v1.9.1 compact typography polish: smaller floating-window text, UI-only. */
+#adr048-popup-shell,
+#adr048-popup-body,
+#adr044-drawer {
+    font-size: 13px !important;
+    line-height: 1.42 !important;
+}
+
+#adr048-popup-head {
+    min-height: 46px !important;
+    padding: 8px 10px !important;
+}
+
+#adr048-popup-body {
+    padding: 8px 10px 14px !important;
+}
+
+#adr048-popup-body label,
+#adr044-drawer label {
+    font-size: 11px !important;
+    line-height: 1.35 !important;
+    margin-top: 6px !important;
+}
+
+#adr048-popup-body input,
+#adr048-popup-body select,
+#adr048-popup-body textarea,
+#adr044-drawer input,
+#adr044-drawer select,
+#adr044-drawer textarea {
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    padding: 6px !important;
+}
+
+#adr048-popup-body .adr048-summary,
+#adr044-drawer summary {
+    font-size: 13px !important;
+    line-height: 1.35 !important;
+}
+
+#adr048-popup-sub,
+#adr048-popup-body .adr048-note,
+#adr048-popup-body .adr048-status,
+#adr044-drawer .adr044-note,
+#adr044-emotion-status,
+#adr044-plot-status,
+.adr044-auto-counter,
+.adr044-template-status {
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+}
+
+.adr048-tabs button,
+.adr044-tabs button {
+    min-height: 26px !important;
+    padding: 3px 7px !important;
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+}
+
+.adr048-actions button,
+.adr044-actions button,
+.adr044-template-mini-actions button {
+    min-height: 28px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+}
+
+#adr048-popup-close {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 22px !important;
+}
