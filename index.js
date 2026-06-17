@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.7｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.9｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -2769,90 +2769,28 @@
                 return;
             }
 
-            var btn = d.querySelector("#adr048-fab");
+            var host = d.body || d.documentElement;
+            if (!host) return;
+
+            // v1.9.9：小红霞完全使用 IPE 式“自住房”入口。
+            // 不读取 IPE，不贴 IPE，不沿用旧锚点；每次 ensure 都把入口拉回可见固定位置。
+            var list = d.querySelectorAll ? d.querySelectorAll("#adr048-fab") : [];
+            var btn = null;
+            for (var i = 0; i < list.length; i++) {
+                if (!btn) btn = list[i];
+                else { try { list[i].remove(); } catch(eRm) {} }
+            }
+
             if (!btn) {
                 btn = d.createElement("button");
                 btn.id = "adr048-fab";
                 btn.type = "button";
                 btn.textContent = "霞";
                 btn.title = "Arrebol D 小红霞";
-
-                var dragging = false;
-                var moved = false;
-                var sx = 0, sy = 0, sl = 0, st = 0;
-
-                function point(ev) {
-                    if (ev.touches && ev.touches.length) return { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
-                    if (ev.changedTouches && ev.changedTouches.length) return { x: ev.changedTouches[0].clientX, y: ev.changedTouches[0].clientY };
-                    return { x: ev.clientX || 0, y: ev.clientY || 0 };
-                }
-
-                function imp(k, v) {
-                    try { btn.style.setProperty(k, v, "important"); }
-                    catch(e) { try { btn.style[k] = v; } catch(_) {} }
-                }
-
-                function clamp(l, t) {
-                    var win = d.defaultView || window;
-                    var rect = btn.getBoundingClientRect();
-                    var w = rect.width || 88;
-                    var h = rect.height || 42;
-                    return {
-                        left: Math.max(4, Math.min((win.innerWidth || 360) - w - 4, l)),
-                        top: Math.max(4, Math.min((win.innerHeight || 640) - h - 4, t))
-                    };
-                }
-
-                function startDrag(ev) {
-                    var p = point(ev);
-                    var r = btn.getBoundingClientRect();
-                    dragging = true;
-                    moved = false;
-                    sx = p.x; sy = p.y; sl = r.left; st = r.top;
-                    imp("cursor", "grabbing");
-                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
-                }
-
-                function moveDrag(ev) {
-                    if (!dragging) return;
-                    var p = point(ev);
-                    var dx = p.x - sx;
-                    var dy = p.y - sy;
-                    if (Math.abs(dx) + Math.abs(dy) > 10) moved = true;
-                    var pos = clamp(sl + dx, st + dy);
-                    imp("left", pos.left + "px");
-                    imp("top", pos.top + "px");
-                    imp("right", "auto");
-                    imp("bottom", "auto");
-                    btn.setAttribute("data-user-moved", "1");
-                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
-                }
-
-                function endDrag(ev) {
-                    if (!dragging) return;
-                    dragging = false;
-                    imp("cursor", "grab");
-
-                    // 移动端没有可靠 click，所以轻点在 touchend/mouseup 打开；
-                    // 但只要移动超过阈值，就认定为拖动，绝不打开。
-                    if (!moved) {
-                        setTimeout(function () {
-                            try { adr048OpenPopupPanel(); } catch (e) { console.error(e); }
-                        }, 30);
-                    }
-
-                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
-                }
-
-                btn.addEventListener("mousedown", startDrag, { passive: false });
-                btn.addEventListener("touchstart", startDrag, { passive: false });
-                d.addEventListener("mousemove", moveDrag, { passive: false });
-                d.addEventListener("mouseup", endDrag, { passive: false });
-                d.addEventListener("touchmove", moveDrag, { passive: false });
-                d.addEventListener("touchend", endDrag, { passive: false });
-                d.addEventListener("touchcancel", endDrag, { passive: false });
-
-                (d.body || d.documentElement).appendChild(btn);
+                btn.setAttribute("aria-label", "打开小红霞");
+                host.appendChild(btn);
+            } else if (btn.parentNode !== host) {
+                try { host.appendChild(btn); } catch(eMove) {}
             }
 
             function setImp(k, v) {
@@ -2860,9 +2798,21 @@
                 catch(e) { try { btn.style[k] = v; } catch(_) {} }
             }
 
-            // v1.9.8：小红霞浮窗入口完全独立，不再读取/依赖 IPE。
-            // 入口自己固定站位；旧 IPE 锚点残留会被清掉，避免“关掉生图浮窗后红霞也失踪”。
+            // 强制自住固定小球：不尊重旧 data-user-moved / data-anchor，避免旧版本把入口拖到屏幕外。
+            try {
+                btn.removeAttribute("data-user-moved");
+                btn.removeAttribute("data-anchor");
+                btn.setAttribute("data-adr-fab-mode", "own-fixed");
+            } catch(eAttr) {}
+
+            btn.textContent = "霞";
+            btn.title = "Arrebol D 小红霞";
+
             setImp("position", "fixed");
+            setImp("right", "12px");
+            setImp("bottom", "148px");
+            setImp("left", "auto");
+            setImp("top", "auto");
             setImp("z-index", "2147483647");
             setImp("display", "inline-flex");
             setImp("align-items", "center");
@@ -2871,60 +2821,49 @@
             setImp("height", "42px");
             setImp("min-width", "42px");
             setImp("min-height", "42px");
+            setImp("max-width", "42px");
+            setImp("max-height", "42px");
             setImp("padding", "0");
+            setImp("margin", "0");
             setImp("border-radius", "999px");
-            setImp("border", "1px solid rgba(255,255,255,.42)");
-            setImp("background", "rgba(255, 116, 169, .62)");
-            setImp("backdrop-filter", "blur(8px)");
-            setImp("-webkit-backdrop-filter", "blur(8px)");
-            setImp("color", "rgba(255,255,255,.96)");
+            setImp("border", "1px solid rgba(255,255,255,.46)");
+            setImp("background", "rgba(255, 116, 169, .66)");
+            setImp("color", "rgba(255,255,255,.98)");
+            setImp("font-family", "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif");
             setImp("font-size", "16px");
             setImp("font-weight", "800");
             setImp("line-height", "1");
-            setImp("box-shadow", "0 6px 18px rgba(255, 116, 169, .28), 0 6px 18px rgba(0,0,0,.22)");
-            setImp("cursor", "grab");
+            setImp("box-shadow", "0 6px 18px rgba(255,116,169,.30), 0 6px 18px rgba(0,0,0,.22)");
+            setImp("backdrop-filter", "blur(8px)");
+            setImp("-webkit-backdrop-filter", "blur(8px)");
+            setImp("cursor", "pointer");
             setImp("pointer-events", "auto");
             setImp("user-select", "none");
             setImp("-webkit-user-select", "none");
-            setImp("touch-action", "none");
+            setImp("touch-action", "manipulation");
             setImp("white-space", "nowrap");
             setImp("visibility", "visible");
-            setImp("opacity", ".92");
+            setImp("opacity", ".94");
+            setImp("overflow", "hidden");
             setImp("transform", "translateZ(0)");
 
-            try {
-                if (btn.getAttribute("data-anchor") === "ipe" || btn.getAttribute("data-adr-fab-mode") !== "own") {
-                    btn.removeAttribute("data-user-moved");
-                    btn.removeAttribute("data-anchor");
-                }
-                btn.setAttribute("data-adr-fab-mode", "own");
-            } catch(eMode) {}
+            if (!btn.__adr048OwnFabBound) {
+                btn.__adr048OwnFabBound = true;
 
-            if (btn.getAttribute("data-user-moved") !== "1") {
-                setImp("right", "12px");
-                setImp("bottom", "148px");
-                setImp("left", "auto");
-                setImp("top", "auto");
-            }
-
-            // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
-            if (!btn.__adr048ClickBound) {
-                btn.__adr048ClickBound = true;
-
-                function hardOpen(ev) {
-                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+                function openNow(ev) {
+                    try { if (ev) { ev.preventDefault(); ev.stopPropagation(); } } catch(e) {}
                     setTimeout(function () {
-                        try { adr048OpenPopupPanel(); } catch (e2) { console.error(e2); }
+                        try { adr048OpenPopupPanel(); } catch (e2) { console.error("[ADR048] open own fab failed", e2); }
                     }, 20);
                     return false;
                 }
 
-                // 桌面 click 兜底；移动端主要走 endDrag 的轻点判断。
-                btn.onclick = hardOpen;
-                btn.addEventListener("click", hardOpen, true);
+                btn.onclick = openNow;
+                btn.addEventListener("click", openNow, true);
+                btn.addEventListener("touchend", openNow, { passive: false, capture: true });
             }
         } catch (e2) {
-            console.error("[ADR0481] create anchored fab failed", e2);
+            console.error("[ADR0481] create own fab failed", e2);
         }
     }
 
@@ -2944,12 +2883,27 @@
 
         try {
             var w = rootWin();
-            if (!w.__adr0481AnchorTimer) {
-                w.__adr0481AnchorTimer = setInterval(function () {
+            if (!w.__adr0481OwnFabTimer) {
+                w.__adr0481OwnFabTimer = setInterval(function () {
                     try { adr048CreateFab(); } catch (e) {}
                 }, 2500);
             }
         } catch (e2) {}
+
+        try {
+            var d = rootDoc();
+            var w = rootWin();
+            if (d && d.body && typeof MutationObserver !== "undefined" && !w.__adr0481OwnFabObserver) {
+                w.__adr0481OwnFabObserver = new MutationObserver(function () {
+                    try {
+                        if (adr048ShouldShowFab() && !d.querySelector("#adr048-fab")) {
+                            setTimeout(adr048CreateFab, 80);
+                        }
+                    } catch(eMo) {}
+                });
+                w.__adr0481OwnFabObserver.observe(d.body, { childList: true, subtree: true });
+            }
+        } catch(eObs) {}
     }
 
 

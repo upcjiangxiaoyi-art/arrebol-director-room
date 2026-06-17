@@ -864,3 +864,6 @@
     font-weight: 700 !important;
     cursor: pointer !important;
 }
+
+/* v1.9.9 own fixed pink fab rescue */
+#adr048-fab[data-adr-fab-mode="own-fixed"]{position:fixed!important;right:12px!important;bottom:148px!important;left:auto!important;top:auto!important;display:inline-flex!important;visibility:visible!important;opacity:.94!important;pointer-events:auto!important;}
