@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.12｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.13｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -54,7 +54,7 @@
     var processing = false;
     var aborter = null;
 
-    var ADR048_FAB_REGISTRY_KEY = "__arrebolD_fab_owner_v1912__";
+    var ADR048_FAB_REGISTRY_KEY = "__arrebolD_fab_owner_v1913__";
     var ADR048_FAB_INSTANCE_ID = "adr048-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 
     function rootWin() {
