@@ -106,26 +106,9 @@
     bottom: 148px !important;
     z-index: 2147483647 !important;
     display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-width: 42px !important;
-    min-height: 42px !important;
-    padding: 0 !important;
-    border-radius: 999px !important;
-    border: 1px solid rgba(255,255,255,.42) !important;
-    background: rgba(255,116,169,.62) !important;
-    color: rgba(255,255,255,.96) !important;
-    font-size: 16px !important;
-    font-weight: 800 !important;
-    box-shadow: 0 6px 18px rgba(255,116,169,.28), 0 6px 18px rgba(0,0,0,.22) !important;
-    backdrop-filter: blur(8px) !important;
-    -webkit-backdrop-filter: blur(8px) !important;
     visibility: visible !important;
-    opacity: .92 !important;
+    opacity: 1 !important;
     pointer-events: auto !important;
-    touch-action: none !important;
 }
 
 #adr048-popup-panel {
@@ -212,6 +195,9 @@
 }
 
 
+#adr048-fab[data-anchor="ipe"] {
+    outline: 1px solid rgba(255,255,255,.2) !important;
+}
 
 
 #adr044-show-floating-window {
@@ -864,6 +850,3 @@
     font-weight: 700 !important;
     cursor: pointer !important;
 }
-
-/* v1.9.9 own fixed pink fab rescue */
-#adr048-fab[data-adr-fab-mode="own-fixed"]{position:fixed!important;right:12px!important;bottom:148px!important;left:auto!important;top:auto!important;display:inline-flex!important;visibility:visible!important;opacity:.94!important;pointer-events:auto!important;}
