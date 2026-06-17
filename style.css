@@ -871,7 +871,7 @@
 }
 
 
-/* v1.9.16: pale-pink compact pill with emoji + ARB, matching the original strip style. UI skin only. */
+/* v1.9.22: pale-pink compact pill with emoji + ARB, IPE-style lazy fixed FAB. UI skin only. */
 #adr048-fab {
     width: 78px !important;
     height: 32px !important;

@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.13｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.22｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -23,6 +23,8 @@
         autoInjectPlot: true,
         injectMode: "visible",
         showFloatingWindow: true,
+        fabLeft: null,
+        fabTop: null,
         autoTriggerEmotion: false,
         autoTriggerPlot: false,
         autoTriggerEmotionRange: "20",
@@ -54,7 +56,7 @@
     var processing = false;
     var aborter = null;
 
-    var ADR048_FAB_REGISTRY_KEY = "__arrebolD_fab_owner_v1921__";
+    var ADR048_FAB_REGISTRY_KEY = "__arrebolD_fab_owner_v1922__";
     var ADR048_FAB_INSTANCE_ID = "adr048-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 
     function rootWin() {
@@ -2773,6 +2775,10 @@
                             clearInterval(w.__adr0481AnchorTimer);
                             w.__adr0481AnchorTimer = null;
                         }
+                        if (w.__adr048FabObserver) {
+                            try { w.__adr048FabObserver.disconnect(); } catch (e0) {}
+                            w.__adr048FabObserver = null;
+                        }
                     } catch (e) {}
                     try { adr048RemoveFab(); } catch (e2) {}
                 }
@@ -2780,97 +2786,61 @@
         } catch (e3) {}
     }
 
-    function adr048StableViewport(win) {
+    function adr048GetFabSavedPosition() {
         try {
-            win = win || rootWin() || window;
-            var vw = win.innerWidth || 360;
-            var ih = win.innerHeight || 640;
-            var vv = win.visualViewport || null;
-            // Prefer visualViewport when available, but never use keyboard-shrunken values to
-            // decide that an already placed FAB should be re-homed.
-            if (vv) {
-                vw = Math.max(320, Number(vv.width) || vw || 360);
-                ih = Math.max(320, Number(vv.height) || ih || 640);
-            }
-            var key = "__adr048StableViewportHeight";
-            if (!Number.isFinite(Number(win[key])) || Number(win[key]) < ih) win[key] = ih;
-            return { vw: vw, vh: Math.max(ih, Number(win[key]) || ih || 640) };
+            var st = settings();
+            var left = Number(st.fabLeft);
+            var top = Number(st.fabTop);
+            if (Number.isFinite(left) && Number.isFinite(top)) return { left: left, top: top };
+        } catch (e) {}
+        return null;
+    }
+
+    function adr048ClampPoint(left, top, width, height) {
+        try {
+            var w = rootWin() || window;
+            var vw = Number(w.innerWidth) || 360;
+            var vh = Number(w.innerHeight) || 640;
+            width = Number(width) || 78;
+            height = Number(height) || 32;
+            return {
+                left: Math.max(4, Math.min(vw - width - 4, Number(left) || 0)),
+                top: Math.max(4, Math.min(vh - height - 4, Number(top) || 0))
+            };
         } catch (e) {
-            return { vw: 360, vh: 640 };
+            return { left: Number(left) || 12, top: Number(top) || 148 };
         }
     }
 
-    function adr048RememberFabPosition(btn) {
+    function adr048ApplyFabPosition(btn, pos, isSaved) {
         try {
             if (!btn) return;
-            var r = btn.getBoundingClientRect();
-            if (r && r.width > 0 && r.height > 0 && Number.isFinite(r.left) && Number.isFinite(r.top)) {
-                btn.setAttribute("data-adr048-last-left", String(Math.round(r.left)));
-                btn.setAttribute("data-adr048-last-top", String(Math.round(r.top)));
+            if (pos && Number.isFinite(Number(pos.left)) && Number.isFinite(Number(pos.top))) {
+                var fixed = isSaved ? adr048ClampPoint(Number(pos.left), Number(pos.top), 78, 32) : pos;
+                adr048SetImportant(btn, "left", Math.round(fixed.left) + "px");
+                adr048SetImportant(btn, "top", Math.round(fixed.top) + "px");
+                adr048SetImportant(btn, "right", "auto");
+                adr048SetImportant(btn, "bottom", "auto");
+                btn.setAttribute("data-user-moved", "1");
+                return;
             }
+            adr048SetImportant(btn, "left", "auto");
+            adr048SetImportant(btn, "top", "auto");
+            adr048SetImportant(btn, "right", "12px");
+            adr048SetImportant(btn, "bottom", "148px");
         } catch (e) {}
     }
 
-    function adr048RestoreLastFabPosition(btn, fallbackLeft, fallbackTop) {
-        try {
-            if (!btn) return false;
-            var l = Number(btn.getAttribute("data-adr048-last-left"));
-            var t = Number(btn.getAttribute("data-adr048-last-top"));
-            if (!Number.isFinite(l)) l = Number(fallbackLeft);
-            if (!Number.isFinite(t)) t = Number(fallbackTop);
-            if (!Number.isFinite(l) || !Number.isFinite(t)) return false;
-            adr048SetImportant(btn, "left", Math.round(l) + "px");
-            adr048SetImportant(btn, "top", Math.round(t) + "px");
-            adr048SetImportant(btn, "right", "auto");
-            adr048SetImportant(btn, "bottom", "auto");
-            btn.setAttribute("data-adr048-positioned", "1");
-            return true;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    function adr048ClampFabIntoViewport(btn) {
+    function adr048SaveFabPosition(btn) {
         try {
             if (!btn) return;
-            var d = rootDoc();
-            var win = d.defaultView || rootWin() || window;
-            var vp = adr048StableViewport(win);
             var r = btn.getBoundingClientRect();
-            var w = r.width || 78;
-            var h = r.height || 32;
-            var vw = vp.vw || 360;
-            var vh = vp.vh || 640;
-            var hasPlaced = btn.getAttribute("data-user-moved") === "1" || btn.getAttribute("data-adr048-positioned") === "1";
-
-            // v1.9.21: Once the FAB has a legal placed box, do not keep re-clamping it.
-            // Mobile keyboard / iOS visual viewport changes can make fixed elements visually drift;
-            // rewriting coordinates here is what causes the "back to birth point" bug.
-            if (hasPlaced && r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0) {
-                adr048RememberFabPosition(btn);
-                return;
-            }
-
-            var fallbackLeft = vw - w - 12;
-            var fallbackTop = vh - h - 148;
-
-            // If the element temporarily degenerates to 0-size/0-rect, restore the last known
-            // legal coordinates instead of recomputing the default birth point.
-            if (r.width <= 0 || r.height <= 0 || r.right <= 0 || r.bottom <= 0) {
-                if (adr048RestoreLastFabPosition(btn, fallbackLeft, fallbackTop)) return;
-            }
-
-            var left = Number.isFinite(r.left) ? r.left : fallbackLeft;
-            var top = Number.isFinite(r.top) ? r.top : fallbackTop;
-            left = Math.max(4, Math.min(vw - w - 4, left));
-            top = Math.max(4, Math.min(vh - h - 4, top));
-            adr048SetImportant(btn, "left", Math.round(left) + "px");
-            adr048SetImportant(btn, "top", Math.round(top) + "px");
-            adr048SetImportant(btn, "right", "auto");
-            adr048SetImportant(btn, "bottom", "auto");
-            btn.setAttribute("data-adr048-positioned", "1");
-            adr048RememberFabPosition(btn);
-        } catch (e4) {}
+            if (!r || r.width <= 0 || r.height <= 0) return;
+            var pos = adr048ClampPoint(r.left, r.top, r.width, r.height);
+            save("fabLeft", Math.round(pos.left));
+            save("fabTop", Math.round(pos.top));
+            try { adrDSaveLocalBackup(settings()); } catch (e0) {}
+        } catch (e) {}
     }
 
     function adr048ShouldShowFab() {
@@ -2879,80 +2849,6 @@
         } catch (e) {
             return true;
         }
-    }
-
-    function adr048IsSendInputTarget(target) {
-        try {
-            if (!target) return false;
-            if (target.id === "send_textarea") return true;
-            if (target.closest && target.closest("#send_textarea")) return true;
-            return false;
-        } catch (e) {
-            return false;
-        }
-    }
-
-    function adr048ApplyInputHiddenState(btn) {
-        try {
-            btn = btn || (rootDoc() && rootDoc().querySelector("#adr048-fab"));
-            if (!btn) return;
-            var w = rootWin() || window;
-            if (w.__adr048InputFocused) {
-                adr048RememberFabPosition(btn);
-                btn.setAttribute("data-adr048-input-hidden", "1");
-                adr048SetImportant(btn, "opacity", "0");
-                adr048SetImportant(btn, "visibility", "hidden");
-                adr048SetImportant(btn, "pointer-events", "none");
-                return;
-            }
-            btn.removeAttribute("data-adr048-input-hidden");
-            adr048RestoreLastFabPosition(btn);
-            adr048SetImportant(btn, "opacity", "1");
-            adr048SetImportant(btn, "visibility", "visible");
-            adr048SetImportant(btn, "pointer-events", "auto");
-        } catch (e) {}
-    }
-
-    function adr048BindInputHideFab() {
-        try {
-            var d = rootDoc();
-            var w = rootWin() || window;
-            if (!d || w.__adr048InputHideBound) return;
-            w.__adr048InputHideBound = true;
-            var showTimer = null;
-
-            function hideSoon() {
-                try { if (showTimer) { clearTimeout(showTimer); showTimer = null; } } catch (e) {}
-                w.__adr048InputFocused = true;
-                adr048ApplyInputHiddenState();
-            }
-
-            function showLater() {
-                try { if (showTimer) clearTimeout(showTimer); } catch (e) {}
-                showTimer = setTimeout(function () {
-                    try {
-                        w.__adr048InputFocused = false;
-                        adr048ApplyInputHiddenState();
-                    } catch (e) {}
-                }, 360);
-            }
-
-            d.addEventListener("focusin", function (ev) {
-                if (adr048IsSendInputTarget(ev && ev.target)) hideSoon();
-            }, true);
-            d.addEventListener("focusout", function (ev) {
-                if (adr048IsSendInputTarget(ev && ev.target)) showLater();
-            }, true);
-            d.addEventListener("input", function (ev) {
-                if (adr048IsSendInputTarget(ev && ev.target)) hideSoon();
-            }, true);
-            d.addEventListener("compositionstart", function (ev) {
-                if (adr048IsSendInputTarget(ev && ev.target)) hideSoon();
-            }, true);
-            d.addEventListener("keydown", function (ev) {
-                if (adr048IsSendInputTarget(ev && ev.target)) hideSoon();
-            }, true);
-        } catch (e) {}
     }
 
     function adr048CreateFab() {
@@ -2966,102 +2862,17 @@
             }
 
             var btn = d.querySelector("#adr048-fab");
-            if (!btn) {
-                btn = d.createElement("button");
-                btn.id = "adr048-fab";
-                btn.setAttribute("data-adr048-owned-fab", ADR048_FAB_INSTANCE_ID);
-                btn.type = "button";
-                btn.textContent = "🎞️ARB";
-                btn.title = "Arrebol D 小红霞";
-                btn.setAttribute("aria-label", "Arrebol D 小红霞");
+            if (btn) return;
 
-                var dragging = false;
-                var moved = false;
-                var sx = 0, sy = 0, sl = 0, st = 0;
+            btn = d.createElement("button");
+            btn.id = "adr048-fab";
+            btn.setAttribute("data-adr048-owned-fab", ADR048_FAB_INSTANCE_ID);
+            btn.type = "button";
+            btn.textContent = "🎞️ARB";
+            btn.title = "Arrebol D 小红霞";
+            btn.setAttribute("aria-label", "Arrebol D 小红霞");
 
-                function point(ev) {
-                    if (ev.touches && ev.touches.length) return { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
-                    if (ev.changedTouches && ev.changedTouches.length) return { x: ev.changedTouches[0].clientX, y: ev.changedTouches[0].clientY };
-                    return { x: ev.clientX || 0, y: ev.clientY || 0 };
-                }
-
-                function imp(k, v) {
-                    try { btn.style.setProperty(k, v, "important"); }
-                    catch(e) { try { btn.style[k] = v; } catch(_) {} }
-                }
-
-                function clamp(l, t) {
-                    var win = d.defaultView || window;
-                    var rect = btn.getBoundingClientRect();
-                    var w = rect.width || 88;
-                    var h = rect.height || 42;
-                    return {
-                        left: Math.max(4, Math.min((win.innerWidth || 360) - w - 4, l)),
-                        top: Math.max(4, Math.min((win.innerHeight || 640) - h - 4, t))
-                    };
-                }
-
-                function startDrag(ev) {
-                    var p = point(ev);
-                    var r = btn.getBoundingClientRect();
-                    dragging = true;
-                    moved = false;
-                    sx = p.x; sy = p.y; sl = r.left; st = r.top;
-                    imp("cursor", "grabbing");
-                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
-                }
-
-                function moveDrag(ev) {
-                    if (!dragging) return;
-                    var p = point(ev);
-                    var dx = p.x - sx;
-                    var dy = p.y - sy;
-                    if (Math.abs(dx) + Math.abs(dy) > 10) moved = true;
-                    var pos = clamp(sl + dx, st + dy);
-                    imp("left", pos.left + "px");
-                    imp("top", pos.top + "px");
-                    imp("right", "auto");
-                    imp("bottom", "auto");
-                    btn.setAttribute("data-user-moved", "1");
-                    adr048RememberFabPosition(btn);
-                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
-                }
-
-                function endDrag(ev) {
-                    if (!dragging) return;
-                    dragging = false;
-                    imp("cursor", "grab");
-
-                    // 移动端没有可靠 click，所以轻点在 touchend/mouseup 打开；
-                    // 但只要移动超过阈值，就认定为拖动，绝不打开。
-                    if (!moved) {
-                        setTimeout(function () {
-                            try { adr048OpenPopupPanel(); } catch (e) { console.error(e); }
-                        }, 30);
-                    }
-
-                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
-                }
-
-                btn.addEventListener("mousedown", startDrag, { passive: false });
-                btn.addEventListener("touchstart", startDrag, { passive: false });
-                d.addEventListener("mousemove", moveDrag, { passive: false });
-                d.addEventListener("mouseup", endDrag, { passive: false });
-                d.addEventListener("touchmove", moveDrag, { passive: false });
-                d.addEventListener("touchend", endDrag, { passive: false });
-                d.addEventListener("touchcancel", endDrag, { passive: false });
-
-                (d.body || d.documentElement).appendChild(btn);
-            }
-
-            function setImp(k, v) {
-                try { btn.style.setProperty(k, v, "important"); }
-                catch(e) { try { btn.style[k] = v; } catch(_) {} }
-            }
-
-            // v1.9.12：浮窗只使用小红霞自己的固定坐标，不再读取 IPE / 生图插件锚点。
-            // 使用 left/top + viewport clamp，避免 right/bottom 被主题或旧坐标影响导致出屏。
-
+            function setImp(k, v) { adr048SetImportant(btn, k, v); }
             setImp("position", "fixed");
             setImp("z-index", "2147483647");
             setImp("display", "inline-flex");
@@ -3092,51 +2903,87 @@
             setImp("visibility", "visible");
             setImp("opacity", "1");
             setImp("transform", "translateZ(0)");
-            btn.setAttribute("data-anchor", "own-fixed");
+            btn.setAttribute("data-anchor", "own-lazy-fixed");
 
-            if (btn.getAttribute("data-user-moved") !== "1" && btn.getAttribute("data-adr048-positioned") !== "1") {
-                try {
-                    var win2 = d.defaultView || rootWin() || window;
-                    var vp2 = adr048StableViewport(win2);
-                    var left2 = (vp2.vw || 360) - 78 - 12;
-                    var top2 = (vp2.vh || 640) - 32 - 148;
-                    setImp("left", Math.round(Math.max(4, left2)) + "px");
-                    setImp("top", Math.round(Math.max(4, top2)) + "px");
-                    setImp("right", "auto");
-                    setImp("bottom", "auto");
-                    btn.setAttribute("data-adr048-positioned", "1");
-                    adr048RememberFabPosition(btn);
-                } catch (e1) {}
+            (d.body || d.documentElement).appendChild(btn);
+            adr048ApplyFabPosition(btn, adr048GetFabSavedPosition(), true);
+
+            var dragging = false;
+            var moved = false;
+            var sx = 0, sy = 0, sl = 0, st = 0;
+
+            function point(ev) {
+                if (ev.touches && ev.touches.length) return { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
+                if (ev.changedTouches && ev.changedTouches.length) return { x: ev.changedTouches[0].clientX, y: ev.changedTouches[0].clientY };
+                return { x: ev.clientX || 0, y: ev.clientY || 0 };
             }
-            adr048ApplyInputHiddenState(btn);
-            setTimeout(function () { try { adr048ClampFabIntoViewport(btn); adr048ApplyInputHiddenState(btn); } catch (e3) {} }, 0);
 
-            // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
-            if (!btn.__adr048ClickBound) {
-                btn.__adr048ClickBound = true;
+            function startDrag(ev) {
+                var p = point(ev);
+                var r = btn.getBoundingClientRect();
+                dragging = true;
+                moved = false;
+                sx = p.x; sy = p.y; sl = r.left; st = r.top;
+                setImp("cursor", "grabbing");
+                try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+            }
 
-                function hardOpen(ev) {
-                    try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+            function moveDrag(ev) {
+                if (!dragging) return;
+                var p = point(ev);
+                var dx = p.x - sx;
+                var dy = p.y - sy;
+                if (Math.abs(dx) + Math.abs(dy) > 10) moved = true;
+                var r = btn.getBoundingClientRect();
+                var pos = adr048ClampPoint(sl + dx, st + dy, r.width || 78, r.height || 32);
+                setImp("left", Math.round(pos.left) + "px");
+                setImp("top", Math.round(pos.top) + "px");
+                setImp("right", "auto");
+                setImp("bottom", "auto");
+                btn.setAttribute("data-user-moved", "1");
+                try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+            }
+
+            function endDrag(ev) {
+                if (!dragging) return;
+                dragging = false;
+                setImp("cursor", "grab");
+                if (moved) {
+                    adr048SaveFabPosition(btn);
+                } else {
                     setTimeout(function () {
-                        try { adr048OpenPopupPanel(); } catch (e2) { console.error(e2); }
-                    }, 20);
-                    return false;
+                        try { adr048OpenPopupPanel(); } catch (e) { console.error(e); }
+                    }, 30);
                 }
-
-                // 桌面 click 兜底；移动端主要走 endDrag 的轻点判断。
-                btn.onclick = hardOpen;
-                btn.addEventListener("click", hardOpen, true);
+                try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
             }
+
+            btn.addEventListener("mousedown", startDrag, { passive: false });
+            btn.addEventListener("touchstart", startDrag, { passive: false });
+            d.addEventListener("mousemove", moveDrag, { passive: false });
+            d.addEventListener("mouseup", endDrag, { passive: false });
+            d.addEventListener("touchmove", moveDrag, { passive: false });
+            d.addEventListener("touchend", endDrag, { passive: false });
+            d.addEventListener("touchcancel", endDrag, { passive: false });
+
+            function hardOpen(ev) {
+                try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
+                setTimeout(function () {
+                    try { adr048OpenPopupPanel(); } catch (e2) { console.error(e2); }
+                }, 20);
+                return false;
+            }
+            btn.onclick = hardOpen;
+            btn.addEventListener("click", hardOpen, true);
         } catch (e2) {
-            console.error("[ADR0481] create anchored fab failed", e2);
+            console.error("[ADR0481] create lazy fab failed", e2);
         }
     }
 
     function adr048EnsureFabLater() {
         adr048InstallFabOwner();
         adr048CreatePopupPanel();
-        adr048BindInputHideFab();
-            setTimeout(adrDBindCompactTemplateControls, 120);
+        setTimeout(adrDBindCompactTemplateControls, 120);
         if (!adr048ShouldShowFab()) {
             adr048RemoveFab();
             return;
@@ -3150,10 +2997,20 @@
 
         try {
             var w = rootWin();
-            if (!w.__adr0481AnchorTimer) {
-                w.__adr0481AnchorTimer = setInterval(function () {
-                    try { adr048CreateFab(); } catch (e) {}
-                }, 2500);
+            var d = rootDoc();
+            if (!w.__adr048FabObserver && typeof MutationObserver === "function" && d && d.body) {
+                var pending = false;
+                w.__adr048FabObserver = new MutationObserver(function () {
+                    if (pending) return;
+                    pending = true;
+                    setTimeout(function () {
+                        pending = false;
+                        try {
+                            if (adr048ShouldShowFab() && !d.querySelector("#adr048-fab")) adr048CreateFab();
+                        } catch (e) {}
+                    }, 120);
+                });
+                w.__adr048FabObserver.observe(d.body, { childList: true, subtree: true });
             }
         } catch (e2) {}
     }
