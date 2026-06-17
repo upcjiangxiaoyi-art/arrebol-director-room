@@ -2829,7 +2829,7 @@
                 btn.id = "adr048-fab";
                 btn.setAttribute("data-adr048-owned-fab", ADR048_FAB_INSTANCE_ID);
                 btn.type = "button";
-                btn.textContent = "";
+                btn.textContent = "🎞️A";
                 btn.title = "Arrebol D 小红霞";
                 btn.setAttribute("aria-label", "Arrebol D 小红霞");
 
