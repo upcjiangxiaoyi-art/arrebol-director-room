@@ -1612,6 +1612,7 @@
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
             + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">自动触发计数：打开面板后刷新</div>'
+            + '<div class="adr044-auto-calibrate-row"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button">校准当前进度</button></div>'
             + '</details>'
 
             + '<details><summary>' + title + '预设</summary>'
@@ -2189,6 +2190,7 @@
                 adrDForceSaveSettings(type);
                 status(type, "设置已保存 ✓", "#8ed99d");
             };
+            ids["adr044-" + type + "-calibrate-auto"] = function () { adrDCalibrateAutoBaseline(type); };
             ids["adr044-" + type + "-inject"] = function () {
                 syncType(type);
                 var pv = qForm("adr044-" + type + "-preview");
@@ -2467,6 +2469,7 @@
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
             + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">自动触发计数：打开面板后刷新</div>'
+            + '<div class="adr044-auto-calibrate-row"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button">校准当前进度</button></div>'
             + '</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '预设</div>'
@@ -3366,6 +3369,48 @@
         adrDSetAutoBaseline(type, count);
     }
 
+    async function adrDCalibrateAutoBaseline(type) {
+        try {
+            type = type === "plot" ? "plot" : "emotion";
+            if (!adrDChatKeyReady()) {
+                status(type, "聊天还在加载，稍等几秒再校准", "#d6a26a");
+                adrDUpdateAutoCounters();
+                return false;
+            }
+
+            var count = await adrDRefreshFullAssistantRoundCount("manual-calibrate:" + type);
+            if (!adrDCountReady()) {
+                status(type, "全量历史还没读完，稍等几秒再校准", "#d6a26a");
+                adrDUpdateAutoCounters();
+                return false;
+            }
+
+            adrDSetAutoBaseline(type, count);
+            try {
+                var st = settings();
+                st.lastAutoTriggerChatKey = adrDChatKey();
+                if (type === "plot") {
+                    st.lastAutoTriggerPlotCount = count;
+                    st.lastAutoTriggerPlotAt = Date.now();
+                } else {
+                    st.lastAutoTriggerEmotionCount = count;
+                    st.lastAutoTriggerEmotionAt = Date.now();
+                }
+                saveNow();
+                adrDPersistAutoBaselineFields(st);
+            } catch (ePersist) {}
+
+            adrDUpdateAutoCounters();
+            status(type, "已校准当前进度：从当前总数 " + count + " 重新计数 ✓", "#8ed99d");
+            adrDToast("小红霞已校准当前进度");
+            return true;
+        } catch (e) {
+            console.error("[Arrebol D] manual auto baseline calibrate failed", e);
+            try { status(type === "plot" ? "plot" : "emotion", "校准失败，请稍后再试", "#d4726a"); } catch (eStatus) {}
+            return false;
+        }
+    }
+
     function adrDAutoCounterText(type) {
         try {
             var st = settings();
@@ -3727,6 +3772,11 @@
             if (id === "adr044-" + type + "-save") {
                 adrDForceSaveSettings(type);
                 status(type, "设置已保存 ✓", "#8ed99d");
+                return true;
+            }
+
+            if (id === "adr044-" + type + "-calibrate-auto") {
+                adrDCalibrateAutoBaseline(type);
                 return true;
             }
 

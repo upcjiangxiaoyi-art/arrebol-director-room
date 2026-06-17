@@ -758,3 +758,25 @@
 .adr044-check {
     min-height: 22px !important;
 }
+
+
+/* v1.9.3 manual calibration button: UI-only, does not change auto guard logic. */
+.adr044-auto-calibrate-row {
+    display: flex !important;
+    justify-content: flex-end !important;
+    margin: 6px 0 2px !important;
+}
+
+.adr044-auto-calibrate {
+    width: auto !important;
+    min-height: 28px !important;
+    padding: 5px 12px !important;
+    border-radius: 12px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    background: rgba(214,122,106,.18) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border: 1px solid rgba(214,122,106,.46) !important;
+    box-shadow: none !important;
+}
