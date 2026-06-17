@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.4｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.7｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -1691,7 +1691,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.7</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">小红霞在线｜ripple & GPT</div>'
@@ -2860,8 +2860,29 @@
                 catch(e) { try { btn.style[k] = v; } catch(_) {} }
             }
 
-            // v1.9.6：小红霞浮窗入口独立定位，并强制固定可见；不再依赖 IPE/生图插件入口。
-            // 这样即使 IPE 浮窗被关闭、隐藏或被主题改写，小红霞也能自己站稳。
+            // v1.9.7：保留原先“可贴着 IPE”的稳定创建链路，但只认真正可见的 IPE。
+            // IPE 被关闭/隐藏/尺寸为 0 时，不再牵着空气走，直接落回小红霞自己的固定位置。
+            var ipe = null;
+            try { ipe = d.querySelector("#ipe-chat-quick-entry"); } catch (e0) {}
+            function adr048IsVisibleAnchor(el) {
+                try {
+                    if (!el) return false;
+                    var win = d.defaultView || window;
+                    var cs = win.getComputedStyle ? win.getComputedStyle(el) : null;
+                    if (cs) {
+                        if (cs.display === "none") return false;
+                        if (cs.visibility === "hidden" || cs.visibility === "collapse") return false;
+                        if (String(cs.opacity) === "0") return false;
+                        if (cs.pointerEvents === "none") return false;
+                    }
+                    var r0 = el.getBoundingClientRect();
+                    if (!r0 || r0.width < 8 || r0.height < 8) return false;
+                    if (r0.right < 0 || r0.bottom < 0) return false;
+                    if (r0.left > (win.innerWidth || 360) || r0.top > (win.innerHeight || 640)) return false;
+                    return true;
+                } catch(eVis) { return false; }
+            }
+            if (!adr048IsVisibleAnchor(ipe)) ipe = null;
 
             setImp("position", "fixed");
             setImp("z-index", "2147483647");
@@ -2890,15 +2911,29 @@
             setImp("opacity", "1");
             setImp("transform", "translateZ(0)");
 
-            // v1.9.6：浮窗入口“强制可见”兜底。
-            // 1.9.5 彻底断开 IPE 锚点后，旧会话里可能残留 data-user-moved / 旧 left-top，
-            // 导致按钮继续停在不可见位置。这里不再沿用旧锚点坐标，入口固定站位，保证能打开。
-            try { btn.removeAttribute("data-user-moved"); } catch(eReset) {}
-            setImp("right", "12px");
-            setImp("bottom", "148px");
-            setImp("left", "auto");
-            setImp("top", "auto");
-            btn.setAttribute("data-anchor", "standalone-fixed");
+            if (ipe && btn.getAttribute("data-user-moved") !== "1") {
+                try {
+                    var r = ipe.getBoundingClientRect();
+                    var win = d.defaultView || window;
+                    var left = Math.max(4, Math.min((win.innerWidth || 360) - 96, r.left));
+                    var top = r.bottom + 8;
+
+                    // 如果 IPE 下方空间不够，就贴到它上方。
+                    if (top > (win.innerHeight || 640) - 48) top = Math.max(4, r.top - 44);
+
+                    setImp("left", Math.round(left) + "px");
+                    setImp("top", Math.round(top) + "px");
+                    setImp("right", "auto");
+                    setImp("bottom", "auto");
+                    btn.setAttribute("data-anchor", "ipe");
+                } catch(e1) {}
+            } else if (btn.getAttribute("data-user-moved") !== "1") {
+                setImp("right", "12px");
+                setImp("bottom", "148px");
+                setImp("left", "auto");
+                setImp("top", "auto");
+                btn.setAttribute("data-anchor", "fallback");
+            }
 
             // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
             if (!btn.__adr048ClickBound) {
