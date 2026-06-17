@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.2｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.4｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -195,6 +195,54 @@
             try { status("emotion", text, "#8ed99d"); } catch (e1) {}
             try { status("plot", text, "#8ed99d"); } catch (e2) {}
             try { console.log("[Arrebol D] " + text); } catch (e3) {}
+        } catch (e) {}
+    }
+
+    function adrDAutoTriggerPopup(items, count) {
+        // v1.9.4：自动分析开始瞬间给用户一个非阻塞提示，避免分析未完成前过快输入。
+        // 只做页面提示，不改变计数、触发、注入、API 调用逻辑。
+        try {
+            var d = rootDoc();
+            if (!d || !d.body) return;
+
+            var list = Array.isArray(items) ? items : [];
+            var names = list.map(function (it) { return labelOf(it && it.type); }).filter(Boolean).join("、") || "小红霞";
+            var old = d.getElementById("adr044-auto-trigger-popup");
+            if (old && old.parentNode) old.parentNode.removeChild(old);
+
+            var box = d.createElement("div");
+            box.id = "adr044-auto-trigger-popup";
+            box.setAttribute("role", "status");
+            box.setAttribute("aria-live", "polite");
+            box.innerHTML = ''
+                + '<div class="adr044-auto-trigger-popup-title">小红霞开始自动分析</div>'
+                + '<div class="adr044-auto-trigger-popup-text">' + esc(names) + '已到触发轮次，正在读取上下文。分析完成前先别太快输入，等注入完成更稳。</div>'
+                + '<button type="button" class="adr044-auto-trigger-popup-close" aria-label="关闭提示">×</button>';
+
+            d.body.appendChild(box);
+
+            var close = box.querySelector(".adr044-auto-trigger-popup-close");
+            if (close) {
+                close.addEventListener("click", function () {
+                    try { if (box && box.parentNode) box.parentNode.removeChild(box); } catch (eClose) {}
+                });
+            }
+
+            try {
+                box.setAttribute("data-open", "1");
+            } catch (eOpen) {}
+
+            setTimeout(function () {
+                try {
+                    if (!box || !box.parentNode) return;
+                    box.setAttribute("data-open", "0");
+                    setTimeout(function () {
+                        try { if (box && box.parentNode) box.parentNode.removeChild(box); } catch (eRemove) {}
+                    }, 260);
+                } catch (eTimeout) {}
+            }, 12000);
+
+            try { console.log("[Arrebol D] auto analysis popup", names, "count=", count); } catch (eLog) {}
         } catch (e) {}
     }
 
@@ -3614,6 +3662,7 @@
 
             if (!toRun.length) return;
 
+            adrDAutoTriggerPopup(toRun, count);
             adrDAutoTriggerRunning = true;
             for (var i = 0; i < toRun.length; i++) {
                 var item = toRun[i];

@@ -780,3 +780,73 @@
     border: 1px solid rgba(214,122,106,.46) !important;
     box-shadow: none !important;
 }
+
+
+/* v1.9.4 auto-trigger start popup: visual hint only, non-blocking. */
+#adr044-auto-trigger-popup {
+    position: fixed !important;
+    right: 22px !important;
+    top: 22px !important;
+    z-index: 2147483647 !important;
+    width: min(360px, calc(100vw - 44px)) !important;
+    box-sizing: border-box !important;
+    padding: 14px 42px 14px 16px !important;
+    border-radius: 18px !important;
+    border: 1px solid rgba(255,255,255,.72) !important;
+    background: rgba(42,28,31,.96) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    box-shadow: 0 14px 38px rgba(0,0,0,.36), 0 0 0 4px rgba(214,122,106,.18) !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif !important;
+    opacity: 0 !important;
+    transform: translateY(-8px) scale(.98) !important;
+    transition: opacity .22s ease, transform .22s ease !important;
+    pointer-events: auto !important;
+}
+
+#adr044-auto-trigger-popup[data-open="1"] {
+    opacity: 1 !important;
+    transform: translateY(0) scale(1) !important;
+}
+
+#adr044-auto-trigger-popup[data-open="0"] {
+    opacity: 0 !important;
+    transform: translateY(-8px) scale(.98) !important;
+}
+
+#adr044-auto-trigger-popup .adr044-auto-trigger-popup-title {
+    margin: 0 0 6px !important;
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    font-weight: 800 !important;
+    color: #ffe3df !important;
+    -webkit-text-fill-color: #ffe3df !important;
+}
+
+#adr044-auto-trigger-popup .adr044-auto-trigger-popup-text {
+    margin: 0 !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}
+
+#adr044-auto-trigger-popup .adr044-auto-trigger-popup-close {
+    position: absolute !important;
+    right: 10px !important;
+    top: 9px !important;
+    width: 24px !important;
+    height: 24px !important;
+    min-height: 24px !important;
+    padding: 0 !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(255,255,255,.38) !important;
+    background: rgba(255,255,255,.12) !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    font-size: 18px !important;
+    line-height: 20px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+}
