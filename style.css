@@ -195,7 +195,8 @@
 }
 
 
-#adr048-fab[data-anchor="standalone"] {
+#adr048-fab[data-anchor="standalone"],
+#adr048-fab[data-anchor="standalone-fixed"] {
     outline: none !important;
 }
 

@@ -2860,7 +2860,7 @@
                 catch(e) { try { btn.style[k] = v; } catch(_) {} }
             }
 
-            // v1.9.5：小红霞浮窗入口独立定位，不再依赖 IPE/生图插件入口。
+            // v1.9.6：小红霞浮窗入口独立定位，并强制固定可见；不再依赖 IPE/生图插件入口。
             // 这样即使 IPE 浮窗被关闭、隐藏或被主题改写，小红霞也能自己站稳。
 
             setImp("position", "fixed");
@@ -2890,13 +2890,15 @@
             setImp("opacity", "1");
             setImp("transform", "translateZ(0)");
 
-            if (btn.getAttribute("data-user-moved") !== "1") {
-                setImp("right", "12px");
-                setImp("bottom", "148px");
-                setImp("left", "auto");
-                setImp("top", "auto");
-                btn.setAttribute("data-anchor", "standalone");
-            }
+            // v1.9.6：浮窗入口“强制可见”兜底。
+            // 1.9.5 彻底断开 IPE 锚点后，旧会话里可能残留 data-user-moved / 旧 left-top，
+            // 导致按钮继续停在不可见位置。这里不再沿用旧锚点坐标，入口固定站位，保证能打开。
+            try { btn.removeAttribute("data-user-moved"); } catch(eReset) {}
+            setImp("right", "12px");
+            setImp("bottom", "148px");
+            setImp("left", "auto");
+            setImp("top", "auto");
+            btn.setAttribute("data-anchor", "standalone-fixed");
 
             // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
             if (!btn.__adr048ClickBound) {
