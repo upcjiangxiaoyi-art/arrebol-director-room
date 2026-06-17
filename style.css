@@ -915,3 +915,11 @@
     transform: scale(.98) translateZ(0) !important;
 }
 
+
+
+/* v1.9.21: hide FAB during mobile typing without display:none, preserving rect and coordinates. */
+#adr048-fab[data-adr048-input-hidden="1"] {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}

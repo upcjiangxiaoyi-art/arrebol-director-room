@@ -54,7 +54,7 @@
     var processing = false;
     var aborter = null;
 
-    var ADR048_FAB_REGISTRY_KEY = "__arrebolD_fab_owner_v1913__";
+    var ADR048_FAB_REGISTRY_KEY = "__arrebolD_fab_owner_v1921__";
     var ADR048_FAB_INSTANCE_ID = "adr048-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 
     function rootWin() {
@@ -2800,6 +2800,36 @@
         }
     }
 
+    function adr048RememberFabPosition(btn) {
+        try {
+            if (!btn) return;
+            var r = btn.getBoundingClientRect();
+            if (r && r.width > 0 && r.height > 0 && Number.isFinite(r.left) && Number.isFinite(r.top)) {
+                btn.setAttribute("data-adr048-last-left", String(Math.round(r.left)));
+                btn.setAttribute("data-adr048-last-top", String(Math.round(r.top)));
+            }
+        } catch (e) {}
+    }
+
+    function adr048RestoreLastFabPosition(btn, fallbackLeft, fallbackTop) {
+        try {
+            if (!btn) return false;
+            var l = Number(btn.getAttribute("data-adr048-last-left"));
+            var t = Number(btn.getAttribute("data-adr048-last-top"));
+            if (!Number.isFinite(l)) l = Number(fallbackLeft);
+            if (!Number.isFinite(t)) t = Number(fallbackTop);
+            if (!Number.isFinite(l) || !Number.isFinite(t)) return false;
+            adr048SetImportant(btn, "left", Math.round(l) + "px");
+            adr048SetImportant(btn, "top", Math.round(t) + "px");
+            adr048SetImportant(btn, "right", "auto");
+            adr048SetImportant(btn, "bottom", "auto");
+            btn.setAttribute("data-adr048-positioned", "1");
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     function adr048ClampFabIntoViewport(btn) {
         try {
             if (!btn) return;
@@ -2813,24 +2843,25 @@
             var vh = vp.vh || 640;
             var hasPlaced = btn.getAttribute("data-user-moved") === "1" || btn.getAttribute("data-adr048-positioned") === "1";
 
-            // v1.9.19: Mobile keyboards can shrink/shift the viewport. If the FAB already has
-            // a legal position, never clamp it just because its rect is below/right of the
-            // temporary visual viewport. That was the source of the input-box jump-home bug.
-            // Only rescue truly invalid/invisible cases: no layout size, or fully gone above/left.
+            // v1.9.21: Once the FAB has a legal placed box, do not keep re-clamping it.
+            // Mobile keyboard / iOS visual viewport changes can make fixed elements visually drift;
+            // rewriting coordinates here is what causes the "back to birth point" bug.
             if (hasPlaced && r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0) {
+                adr048RememberFabPosition(btn);
                 return;
             }
 
-            var left = Number.isFinite(r.left) ? r.left : (vw - w - 12);
-            var top = Number.isFinite(r.top) ? r.top : (vh - h - 148);
+            var fallbackLeft = vw - w - 12;
+            var fallbackTop = vh - h - 148;
 
-            // Do NOT treat r.left > vw or r.top > vh as a reset condition: on mobile keyboard
-            // resize that is exactly the harmless transient state we must preserve.
+            // If the element temporarily degenerates to 0-size/0-rect, restore the last known
+            // legal coordinates instead of recomputing the default birth point.
             if (r.width <= 0 || r.height <= 0 || r.right <= 0 || r.bottom <= 0) {
-                left = vw - w - 12;
-                top = vh - h - 148;
+                if (adr048RestoreLastFabPosition(btn, fallbackLeft, fallbackTop)) return;
             }
 
+            var left = Number.isFinite(r.left) ? r.left : fallbackLeft;
+            var top = Number.isFinite(r.top) ? r.top : fallbackTop;
             left = Math.max(4, Math.min(vw - w - 4, left));
             top = Math.max(4, Math.min(vh - h - 4, top));
             adr048SetImportant(btn, "left", Math.round(left) + "px");
@@ -2838,6 +2869,7 @@
             adr048SetImportant(btn, "right", "auto");
             adr048SetImportant(btn, "bottom", "auto");
             btn.setAttribute("data-adr048-positioned", "1");
+            adr048RememberFabPosition(btn);
         } catch (e4) {}
     }
 
@@ -2847,6 +2879,80 @@
         } catch (e) {
             return true;
         }
+    }
+
+    function adr048IsSendInputTarget(target) {
+        try {
+            if (!target) return false;
+            if (target.id === "send_textarea") return true;
+            if (target.closest && target.closest("#send_textarea")) return true;
+            return false;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function adr048ApplyInputHiddenState(btn) {
+        try {
+            btn = btn || (rootDoc() && rootDoc().querySelector("#adr048-fab"));
+            if (!btn) return;
+            var w = rootWin() || window;
+            if (w.__adr048InputFocused) {
+                adr048RememberFabPosition(btn);
+                btn.setAttribute("data-adr048-input-hidden", "1");
+                adr048SetImportant(btn, "opacity", "0");
+                adr048SetImportant(btn, "visibility", "hidden");
+                adr048SetImportant(btn, "pointer-events", "none");
+                return;
+            }
+            btn.removeAttribute("data-adr048-input-hidden");
+            adr048RestoreLastFabPosition(btn);
+            adr048SetImportant(btn, "opacity", "1");
+            adr048SetImportant(btn, "visibility", "visible");
+            adr048SetImportant(btn, "pointer-events", "auto");
+        } catch (e) {}
+    }
+
+    function adr048BindInputHideFab() {
+        try {
+            var d = rootDoc();
+            var w = rootWin() || window;
+            if (!d || w.__adr048InputHideBound) return;
+            w.__adr048InputHideBound = true;
+            var showTimer = null;
+
+            function hideSoon() {
+                try { if (showTimer) { clearTimeout(showTimer); showTimer = null; } } catch (e) {}
+                w.__adr048InputFocused = true;
+                adr048ApplyInputHiddenState();
+            }
+
+            function showLater() {
+                try { if (showTimer) clearTimeout(showTimer); } catch (e) {}
+                showTimer = setTimeout(function () {
+                    try {
+                        w.__adr048InputFocused = false;
+                        adr048ApplyInputHiddenState();
+                    } catch (e) {}
+                }, 360);
+            }
+
+            d.addEventListener("focusin", function (ev) {
+                if (adr048IsSendInputTarget(ev && ev.target)) hideSoon();
+            }, true);
+            d.addEventListener("focusout", function (ev) {
+                if (adr048IsSendInputTarget(ev && ev.target)) showLater();
+            }, true);
+            d.addEventListener("input", function (ev) {
+                if (adr048IsSendInputTarget(ev && ev.target)) hideSoon();
+            }, true);
+            d.addEventListener("compositionstart", function (ev) {
+                if (adr048IsSendInputTarget(ev && ev.target)) hideSoon();
+            }, true);
+            d.addEventListener("keydown", function (ev) {
+                if (adr048IsSendInputTarget(ev && ev.target)) hideSoon();
+            }, true);
+        } catch (e) {}
     }
 
     function adr048CreateFab() {
@@ -2917,6 +3023,7 @@
                     imp("right", "auto");
                     imp("bottom", "auto");
                     btn.setAttribute("data-user-moved", "1");
+                    adr048RememberFabPosition(btn);
                     try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
                 }
 
@@ -2998,9 +3105,11 @@
                     setImp("right", "auto");
                     setImp("bottom", "auto");
                     btn.setAttribute("data-adr048-positioned", "1");
+                    adr048RememberFabPosition(btn);
                 } catch (e1) {}
             }
-            setTimeout(function () { try { adr048ClampFabIntoViewport(btn); } catch (e3) {} }, 0);
+            adr048ApplyInputHiddenState(btn);
+            setTimeout(function () { try { adr048ClampFabIntoViewport(btn); adr048ApplyInputHiddenState(btn); } catch (e3) {} }, 0);
 
             // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
             if (!btn.__adr048ClickBound) {
@@ -3026,6 +3135,7 @@
     function adr048EnsureFabLater() {
         adr048InstallFabOwner();
         adr048CreatePopupPanel();
+        adr048BindInputHideFab();
             setTimeout(adrDBindCompactTemplateControls, 120);
         if (!adr048ShouldShowFab()) {
             adr048RemoveFab();
