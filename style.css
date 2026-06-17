@@ -871,52 +871,41 @@
 }
 
 
-/* v1.9.13: refined clean pink glass orb. UI skin only; positioning/logic unchanged. */
+/* v1.9.14: simple iphone-like pale pink translucent orb. UI skin only; no text, no layered gloss. */
 #adr048-fab {
-    width: 38px !important;
-    height: 38px !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
-    max-width: 38px !important;
-    max-height: 38px !important;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+    max-width: 40px !important;
+    max-height: 40px !important;
     padding: 0 !important;
     border-radius: 999px !important;
-    border: 1px solid rgba(255,255,255,.42) !important;
-    background:
-        radial-gradient(circle at 30% 24%, rgba(255,255,255,.92) 0%, rgba(255,255,255,.52) 13%, rgba(255,186,213,.74) 33%, rgba(245,101,158,.62) 67%, rgba(191,74,123,.50) 100%) !important;
-    color: rgba(255,255,255,.96) !important;
-    -webkit-text-fill-color: rgba(255,255,255,.96) !important;
-    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif !important;
-    font-size: 14px !important;
-    line-height: 38px !important;
-    font-weight: 700 !important;
-    letter-spacing: 0 !important;
-    text-align: center !important;
-    text-shadow: 0 1px 3px rgba(112,28,70,.34) !important;
-    box-shadow:
-        0 8px 22px rgba(255,92,151,.20),
-        0 3px 10px rgba(0,0,0,.18),
-        inset 0 1px 2px rgba(255,255,255,.45),
-        inset 0 -5px 12px rgba(159,36,92,.13) !important;
-    opacity: .86 !important;
-    backdrop-filter: blur(10px) saturate(1.18) !important;
-    -webkit-backdrop-filter: blur(10px) saturate(1.18) !important;
+    border: 1px solid rgba(255,255,255,.38) !important;
+    background: rgba(255, 191, 214, .52) !important;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    text-indent: -9999px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 12px rgba(255, 122, 162, .12) !important;
+    opacity: 1 !important;
+    backdrop-filter: blur(14px) saturate(1.05) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(1.05) !important;
     transform: translateZ(0) !important;
-    transition: opacity .16s ease, transform .16s ease, box-shadow .16s ease !important;
+    transition: background .16s ease, transform .16s ease, box-shadow .16s ease, opacity .16s ease !important;
 }
 
 #adr048-fab:hover,
 #adr048-fab:focus-visible {
-    opacity: .98 !important;
+    background: rgba(255, 191, 214, .62) !important;
+    box-shadow: 0 6px 14px rgba(255, 122, 162, .16) !important;
     transform: translateY(-1px) translateZ(0) !important;
-    box-shadow:
-        0 10px 26px rgba(255,92,151,.28),
-        0 5px 14px rgba(0,0,0,.22),
-        inset 0 1px 2px rgba(255,255,255,.55),
-        inset 0 -5px 12px rgba(159,36,92,.14) !important;
 }
 
 #adr048-fab:active {
-    transform: translateY(0) scale(.97) translateZ(0) !important;
-    opacity: .92 !important;
+    background: rgba(255, 191, 214, .56) !important;
+    box-shadow: 0 3px 9px rgba(255, 122, 162, .12) !important;
+    transform: scale(.97) translateZ(0) !important;
 }
