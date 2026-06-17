@@ -2860,9 +2860,8 @@
                 catch(e) { try { btn.style[k] = v; } catch(_) {} }
             }
 
-            // 关键：优先贴着已经成功显示的 IPE 浮窗。
-            var ipe = null;
-            try { ipe = d.querySelector("#ipe-chat-quick-entry"); } catch (e0) {}
+            // v1.9.5：小红霞浮窗入口独立定位，不再依赖 IPE/生图插件入口。
+            // 这样即使 IPE 浮窗被关闭、隐藏或被主题改写，小红霞也能自己站稳。
 
             setImp("position", "fixed");
             setImp("z-index", "2147483647");
@@ -2891,28 +2890,12 @@
             setImp("opacity", "1");
             setImp("transform", "translateZ(0)");
 
-            if (ipe && btn.getAttribute("data-user-moved") !== "1") {
-                try {
-                    var r = ipe.getBoundingClientRect();
-                    var win = d.defaultView || window;
-                    var left = Math.max(4, Math.min((win.innerWidth || 360) - 96, r.left));
-                    var top = r.bottom + 8;
-
-                    // 如果 IPE 下方空间不够，就贴到它上方。
-                    if (top > (win.innerHeight || 640) - 48) top = Math.max(4, r.top - 44);
-
-                    setImp("left", Math.round(left) + "px");
-                    setImp("top", Math.round(top) + "px");
-                    setImp("right", "auto");
-                    setImp("bottom", "auto");
-                    btn.setAttribute("data-anchor", "ipe");
-                } catch(e1) {}
-            } else if (btn.getAttribute("data-user-moved") !== "1") {
+            if (btn.getAttribute("data-user-moved") !== "1") {
                 setImp("right", "12px");
                 setImp("bottom", "148px");
                 setImp("left", "auto");
                 setImp("top", "auto");
-                btn.setAttribute("data-anchor", "fallback");
+                btn.setAttribute("data-anchor", "standalone");
             }
 
             // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
