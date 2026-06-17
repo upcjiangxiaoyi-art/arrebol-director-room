@@ -2785,8 +2785,13 @@
             win = win || rootWin() || window;
             var vw = win.innerWidth || 360;
             var ih = win.innerHeight || 640;
-            // iOS/Android soft keyboard shrinks innerHeight. Keep the largest recent height as
-            // the layout baseline so focusing the input box does not pull the FAB back home.
+            var vv = win.visualViewport || null;
+            // Prefer visualViewport when available, but never use keyboard-shrunken values to
+            // decide that an already placed FAB should be re-homed.
+            if (vv) {
+                vw = Math.max(320, Number(vv.width) || vw || 360);
+                ih = Math.max(320, Number(vv.height) || ih || 640);
+            }
             var key = "__adr048StableViewportHeight";
             if (!Number.isFinite(Number(win[key])) || Number(win[key]) < ih) win[key] = ih;
             return { vw: vw, vh: Math.max(ih, Number(win[key]) || ih || 640) };
@@ -2806,20 +2811,26 @@
             var h = r.height || 32;
             var vw = vp.vw || 360;
             var vh = vp.vh || 640;
-            var userMoved = btn.getAttribute("data-user-moved") === "1";
+            var hasPlaced = btn.getAttribute("data-user-moved") === "1" || btn.getAttribute("data-adr048-positioned") === "1";
 
-            // If the user has dragged the FAB, do not re-home it during keyboard resize.
-            // Only rescue it when it is truly invisible/invalid, not merely below the shrunken visual viewport.
-            if (userMoved && r.width > 0 && r.height > 0 && r.right >= 0 && r.left <= vw && r.bottom >= 0 && r.top <= vh) {
+            // v1.9.19: Mobile keyboards can shrink/shift the viewport. If the FAB already has
+            // a legal position, never clamp it just because its rect is below/right of the
+            // temporary visual viewport. That was the source of the input-box jump-home bug.
+            // Only rescue truly invalid/invisible cases: no layout size, or fully gone above/left.
+            if (hasPlaced && r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0) {
                 return;
             }
 
             var left = Number.isFinite(r.left) ? r.left : (vw - w - 12);
             var top = Number.isFinite(r.top) ? r.top : (vh - h - 148);
-            if (r.width <= 0 || r.height <= 0 || r.right < 0 || r.bottom < 0 || r.left > vw || r.top > vh) {
+
+            // Do NOT treat r.left > vw or r.top > vh as a reset condition: on mobile keyboard
+            // resize that is exactly the harmless transient state we must preserve.
+            if (r.width <= 0 || r.height <= 0 || r.right <= 0 || r.bottom <= 0) {
                 left = vw - w - 12;
                 top = vh - h - 148;
             }
+
             left = Math.max(4, Math.min(vw - w - 4, left));
             top = Math.max(4, Math.min(vh - h - 4, top));
             adr048SetImportant(btn, "left", Math.round(left) + "px");
