@@ -2774,8 +2774,8 @@
                 btn = d.createElement("button");
                 btn.id = "adr048-fab";
                 btn.type = "button";
-                btn.textContent = "🎬 红霞";
-                btn.title = "Arrebol D 暗河红霞导演系统";
+                btn.textContent = "霞";
+                btn.title = "Arrebol D 小红霞";
 
                 var dragging = false;
                 var moved = false;
@@ -2860,47 +2860,28 @@
                 catch(e) { try { btn.style[k] = v; } catch(_) {} }
             }
 
-            // v1.9.7：保留原先“可贴着 IPE”的稳定创建链路，但只认真正可见的 IPE。
-            // IPE 被关闭/隐藏/尺寸为 0 时，不再牵着空气走，直接落回小红霞自己的固定位置。
-            var ipe = null;
-            try { ipe = d.querySelector("#ipe-chat-quick-entry"); } catch (e0) {}
-            function adr048IsVisibleAnchor(el) {
-                try {
-                    if (!el) return false;
-                    var win = d.defaultView || window;
-                    var cs = win.getComputedStyle ? win.getComputedStyle(el) : null;
-                    if (cs) {
-                        if (cs.display === "none") return false;
-                        if (cs.visibility === "hidden" || cs.visibility === "collapse") return false;
-                        if (String(cs.opacity) === "0") return false;
-                        if (cs.pointerEvents === "none") return false;
-                    }
-                    var r0 = el.getBoundingClientRect();
-                    if (!r0 || r0.width < 8 || r0.height < 8) return false;
-                    if (r0.right < 0 || r0.bottom < 0) return false;
-                    if (r0.left > (win.innerWidth || 360) || r0.top > (win.innerHeight || 640)) return false;
-                    return true;
-                } catch(eVis) { return false; }
-            }
-            if (!adr048IsVisibleAnchor(ipe)) ipe = null;
-
+            // v1.9.8：小红霞浮窗入口完全独立，不再读取/依赖 IPE。
+            // 入口自己固定站位；旧 IPE 锚点残留会被清掉，避免“关掉生图浮窗后红霞也失踪”。
             setImp("position", "fixed");
             setImp("z-index", "2147483647");
             setImp("display", "inline-flex");
             setImp("align-items", "center");
             setImp("justify-content", "center");
-            setImp("height", "34px");
-            setImp("min-height", "34px");
-            setImp("min-width", "88px");
-            setImp("padding", "0 11px");
+            setImp("width", "42px");
+            setImp("height", "42px");
+            setImp("min-width", "42px");
+            setImp("min-height", "42px");
+            setImp("padding", "0");
             setImp("border-radius", "999px");
-            setImp("border", "1px solid rgba(255,255,255,.32)");
-            setImp("background", "linear-gradient(135deg, rgba(214,122,106,.98), rgba(166,84,114,.98))");
-            setImp("color", "#ffffff");
-            setImp("font-size", "13px");
+            setImp("border", "1px solid rgba(255,255,255,.42)");
+            setImp("background", "rgba(255, 116, 169, .62)");
+            setImp("backdrop-filter", "blur(8px)");
+            setImp("-webkit-backdrop-filter", "blur(8px)");
+            setImp("color", "rgba(255,255,255,.96)");
+            setImp("font-size", "16px");
             setImp("font-weight", "800");
             setImp("line-height", "1");
-            setImp("box-shadow", "0 8px 22px rgba(0,0,0,.35)");
+            setImp("box-shadow", "0 6px 18px rgba(255, 116, 169, .28), 0 6px 18px rgba(0,0,0,.22)");
             setImp("cursor", "grab");
             setImp("pointer-events", "auto");
             setImp("user-select", "none");
@@ -2908,31 +2889,22 @@
             setImp("touch-action", "none");
             setImp("white-space", "nowrap");
             setImp("visibility", "visible");
-            setImp("opacity", "1");
+            setImp("opacity", ".92");
             setImp("transform", "translateZ(0)");
 
-            if (ipe && btn.getAttribute("data-user-moved") !== "1") {
-                try {
-                    var r = ipe.getBoundingClientRect();
-                    var win = d.defaultView || window;
-                    var left = Math.max(4, Math.min((win.innerWidth || 360) - 96, r.left));
-                    var top = r.bottom + 8;
+            try {
+                if (btn.getAttribute("data-anchor") === "ipe" || btn.getAttribute("data-adr-fab-mode") !== "own") {
+                    btn.removeAttribute("data-user-moved");
+                    btn.removeAttribute("data-anchor");
+                }
+                btn.setAttribute("data-adr-fab-mode", "own");
+            } catch(eMode) {}
 
-                    // 如果 IPE 下方空间不够，就贴到它上方。
-                    if (top > (win.innerHeight || 640) - 48) top = Math.max(4, r.top - 44);
-
-                    setImp("left", Math.round(left) + "px");
-                    setImp("top", Math.round(top) + "px");
-                    setImp("right", "auto");
-                    setImp("bottom", "auto");
-                    btn.setAttribute("data-anchor", "ipe");
-                } catch(e1) {}
-            } else if (btn.getAttribute("data-user-moved") !== "1") {
+            if (btn.getAttribute("data-user-moved") !== "1") {
                 setImp("right", "12px");
                 setImp("bottom", "148px");
                 setImp("left", "auto");
                 setImp("top", "auto");
-                btn.setAttribute("data-anchor", "fallback");
             }
 
             // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
