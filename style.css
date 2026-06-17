@@ -850,3 +850,22 @@
     font-weight: 700 !important;
     cursor: pointer !important;
 }
+
+
+/* v1.9.11 test: keep 1.9.4 linked floating-window logic, only make the entry a small pink orb. */
+#adr048-fab {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    padding: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(255,132,178,.72) !important;
+    color: #fff !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    box-shadow: 0 8px 20px rgba(255,105,155,.22), 0 6px 18px rgba(0,0,0,.22) !important;
+    border: 1px solid rgba(255,255,255,.36) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}

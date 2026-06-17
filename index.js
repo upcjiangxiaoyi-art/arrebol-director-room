@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.10｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.4｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -199,7 +199,7 @@
     }
 
     function adrDAutoTriggerPopup(items, count) {
-        // v1.9.10：自动分析开始瞬间给用户一个非阻塞提示，避免分析未完成前过快输入。
+        // v1.9.4：自动分析开始瞬间给用户一个非阻塞提示，避免分析未完成前过快输入。
         // 只做页面提示，不改变计数、触发、注入、API 调用逻辑。
         try {
             var d = rootDoc();
@@ -2752,10 +2752,11 @@
     }
 
     function adr048ShouldShowFab() {
-        // v1.9.10：救援版入口强制可见。
-        // 目的：绕开旧 localStorage / extensionSettings 里残留的 showFloatingWindow=false，
-        // 避免浮窗入口被每 2.5 秒反复掐掉。只影响入口显示，不影响自动触发/计数/注入。
-        return true;
+        try {
+            return settings().showFloatingWindow !== false;
+        } catch (e) {
+            return true;
+        }
     }
 
     function adr048CreateFab() {
@@ -2775,7 +2776,6 @@
                 btn.type = "button";
                 btn.textContent = "霞";
                 btn.title = "Arrebol D 小红霞";
-                btn.setAttribute("aria-label", "打开小红霞");
 
                 var dragging = false;
                 var moved = false;
@@ -2862,43 +2862,37 @@
 
             // 关键：优先贴着已经成功显示的 IPE 浮窗。
             var ipe = null;
-            try { ipe = null; } catch (e0) {}
+            try { ipe = d.querySelector("#ipe-chat-quick-entry"); } catch (e0) {}
 
             setImp("position", "fixed");
             setImp("z-index", "2147483647");
             setImp("display", "inline-flex");
             setImp("align-items", "center");
             setImp("justify-content", "center");
-            setImp("height", "42px");
-            setImp("min-height", "42px");
-            setImp("min-width", "42px");
             setImp("width", "42px");
-            setImp("max-width", "42px");
-            setImp("max-height", "42px");
+            setImp("height", "42px");
+            setImp("min-width", "42px");
+            setImp("min-height", "42px");
             setImp("padding", "0");
-            setImp("margin", "0");
             setImp("border-radius", "999px");
-            setImp("border", "1px solid rgba(255,255,255,.46)");
-            setImp("background", "rgba(255, 116, 169, .66)");
+            setImp("border", "1px solid rgba(255,255,255,.36)");
+            setImp("background", "rgba(255,132,178,.72)");
+            setImp("backdrop-filter", "blur(8px)");
+            setImp("-webkit-backdrop-filter", "blur(8px)");
             setImp("color", "#ffffff");
             setImp("font-size", "16px");
             setImp("font-weight", "800");
             setImp("line-height", "1");
-            setImp("box-shadow", "0 6px 18px rgba(255,116,169,.30), 0 6px 18px rgba(0,0,0,.22)");
-            setImp("cursor", "pointer");
+            setImp("box-shadow", "0 8px 20px rgba(255,105,155,.22), 0 6px 18px rgba(0,0,0,.22)");
+            setImp("cursor", "grab");
             setImp("pointer-events", "auto");
             setImp("user-select", "none");
             setImp("-webkit-user-select", "none");
-            setImp("touch-action", "manipulation");
+            setImp("touch-action", "none");
             setImp("white-space", "nowrap");
             setImp("visibility", "visible");
-            setImp("opacity", ".94");
-            setImp("backdrop-filter", "blur(8px)");
-            setImp("-webkit-backdrop-filter", "blur(8px)");
-            setImp("overflow", "hidden");
+            setImp("opacity", "1");
             setImp("transform", "translateZ(0)");
-
-            try { btn.removeAttribute("data-user-moved"); btn.removeAttribute("data-anchor"); } catch(eClearFabState) {}
 
             if (ipe && btn.getAttribute("data-user-moved") !== "1") {
                 try {
@@ -3948,21 +3942,4 @@
     }
 
     wait();
-
-    // v1.9.10：无后台救援入口。
-    // 即使 init() 前段某一步失败，或者旧设置把浮窗标记为隐藏，也继续尝试创建粉红小球。
-    // 只调用浮窗入口创建，不碰自动触发、计数、baseline、注入。
-    try {
-        setTimeout(adr048CreateFab, 300);
-        setTimeout(adr048CreateFab, 900);
-        setTimeout(adr048CreateFab, 1800);
-        setTimeout(adr048CreateFab, 3200);
-        setTimeout(adr048CreateFab, 5200);
-        var __adr048RescueWin = rootWin();
-        if (__adr048RescueWin && !__adr048RescueWin.__adr0481910FabRescueTimer) {
-            __adr048RescueWin.__adr0481910FabRescueTimer = setInterval(function () {
-                try { adr048CreateFab(); } catch (e) {}
-            }, 2500);
-        }
-    } catch(eRescueFabBoot) {}
 })();
