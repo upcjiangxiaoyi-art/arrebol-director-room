@@ -2780,16 +2780,40 @@
         } catch (e3) {}
     }
 
+    function adr048StableViewport(win) {
+        try {
+            win = win || rootWin() || window;
+            var vw = win.innerWidth || 360;
+            var ih = win.innerHeight || 640;
+            // iOS/Android soft keyboard shrinks innerHeight. Keep the largest recent height as
+            // the layout baseline so focusing the input box does not pull the FAB back home.
+            var key = "__adr048StableViewportHeight";
+            if (!Number.isFinite(Number(win[key])) || Number(win[key]) < ih) win[key] = ih;
+            return { vw: vw, vh: Math.max(ih, Number(win[key]) || ih || 640) };
+        } catch (e) {
+            return { vw: 360, vh: 640 };
+        }
+    }
+
     function adr048ClampFabIntoViewport(btn) {
         try {
             if (!btn) return;
             var d = rootDoc();
             var win = d.defaultView || rootWin() || window;
+            var vp = adr048StableViewport(win);
             var r = btn.getBoundingClientRect();
-            var w = r.width || 42;
-            var h = r.height || 42;
-            var vw = win.innerWidth || 360;
-            var vh = win.innerHeight || 640;
+            var w = r.width || 78;
+            var h = r.height || 32;
+            var vw = vp.vw || 360;
+            var vh = vp.vh || 640;
+            var userMoved = btn.getAttribute("data-user-moved") === "1";
+
+            // If the user has dragged the FAB, do not re-home it during keyboard resize.
+            // Only rescue it when it is truly invisible/invalid, not merely below the shrunken visual viewport.
+            if (userMoved && r.width > 0 && r.height > 0 && r.right >= 0 && r.left <= vw && r.bottom >= 0 && r.top <= vh) {
+                return;
+            }
+
             var left = Number.isFinite(r.left) ? r.left : (vw - w - 12);
             var top = Number.isFinite(r.top) ? r.top : (vh - h - 148);
             if (r.width <= 0 || r.height <= 0 || r.right < 0 || r.bottom < 0 || r.left > vw || r.top > vh) {
@@ -2802,6 +2826,7 @@
             adr048SetImportant(btn, "top", Math.round(top) + "px");
             adr048SetImportant(btn, "right", "auto");
             adr048SetImportant(btn, "bottom", "auto");
+            btn.setAttribute("data-adr048-positioned", "1");
         } catch (e4) {}
     }
 
@@ -2951,15 +2976,17 @@
             setImp("transform", "translateZ(0)");
             btn.setAttribute("data-anchor", "own-fixed");
 
-            if (btn.getAttribute("data-user-moved") !== "1") {
+            if (btn.getAttribute("data-user-moved") !== "1" && btn.getAttribute("data-adr048-positioned") !== "1") {
                 try {
                     var win2 = d.defaultView || rootWin() || window;
-                    var left2 = (win2.innerWidth || 360) - 42 - 12;
-                    var top2 = (win2.innerHeight || 640) - 42 - 148;
+                    var vp2 = adr048StableViewport(win2);
+                    var left2 = (vp2.vw || 360) - 78 - 12;
+                    var top2 = (vp2.vh || 640) - 32 - 148;
                     setImp("left", Math.round(Math.max(4, left2)) + "px");
                     setImp("top", Math.round(Math.max(4, top2)) + "px");
                     setImp("right", "auto");
                     setImp("bottom", "auto");
+                    btn.setAttribute("data-adr048-positioned", "1");
                 } catch (e1) {}
             }
             setTimeout(function () { try { adr048ClampFabIntoViewport(btn); } catch (e3) {} }, 0);
