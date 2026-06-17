@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.4｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.12｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -53,6 +53,9 @@
     var initialized = false;
     var processing = false;
     var aborter = null;
+
+    var ADR048_FAB_REGISTRY_KEY = "__arrebolD_fab_owner_v1912__";
+    var ADR048_FAB_INSTANCE_ID = "adr048-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 
     function rootWin() {
         try {
@@ -2726,12 +2729,14 @@
         } catch (e) {}
     }
 
-    function adr048RemoveOldFloatingBits() {
+    function adr048RemoveOldFloatingBits(forceAll) {
         try {
             var d = rootDoc();
             var old = d.querySelectorAll("#adr048-fab");
             for (var i = 0; i < old.length; i++) {
-                try { old[i].remove(); } catch (e) {}
+                try {
+                    if (forceAll || old[i].getAttribute("data-adr048-owned-fab") === ADR048_FAB_INSTANCE_ID) old[i].remove();
+                } catch (e) {}
             }
         } catch (e2) {}
     }
@@ -2746,9 +2751,58 @@
     function adr048RemoveFab() {
         try {
             var d = rootDoc();
-            var btn = d.querySelector("#adr048-fab");
-            if (btn && btn.parentNode) btn.parentNode.removeChild(btn);
+            var list = d.querySelectorAll("#adr048-fab");
+            for (var i = 0; i < list.length; i++) {
+                try { if (list[i].parentNode) list[i].parentNode.removeChild(list[i]); } catch (e) {}
+            }
         } catch (e) {}
+    }
+
+    function adr048InstallFabOwner() {
+        try {
+            var w = rootWin();
+            var old = w[ADR048_FAB_REGISTRY_KEY];
+            if (old && old.instanceId !== ADR048_FAB_INSTANCE_ID && typeof old.stop === "function") {
+                try { old.stop(); } catch (e) {}
+            }
+            w[ADR048_FAB_REGISTRY_KEY] = {
+                instanceId: ADR048_FAB_INSTANCE_ID,
+                stop: function () {
+                    try {
+                        if (w.__adr0481AnchorTimer) {
+                            clearInterval(w.__adr0481AnchorTimer);
+                            w.__adr0481AnchorTimer = null;
+                        }
+                    } catch (e) {}
+                    try { adr048RemoveFab(); } catch (e2) {}
+                }
+            };
+        } catch (e3) {}
+    }
+
+    function adr048ClampFabIntoViewport(btn) {
+        try {
+            if (!btn) return;
+            var d = rootDoc();
+            var win = d.defaultView || rootWin() || window;
+            var r = btn.getBoundingClientRect();
+            var w = r.width || 42;
+            var h = r.height || 42;
+            var vw = win.innerWidth || 360;
+            var vh = win.innerHeight || 640;
+            var left = Number.isFinite(r.left) ? r.left : (vw - w - 12);
+            var top = Number.isFinite(r.top) ? r.top : (vh - h - 148);
+            if (r.width <= 0 || r.height <= 0 || r.right < 0 || r.bottom < 0 || r.left > vw || r.top > vh) {
+                left = vw - w - 12;
+                top = vh - h - 148;
+            }
+            left = Math.max(4, Math.min(vw - w - 4, left));
+            top = Math.max(4, Math.min(vh - h - 4, top));
+            adr048SetImportant(btn, "left", Math.round(left) + "px");
+            adr048SetImportant(btn, "top", Math.round(top) + "px");
+            adr048SetImportant(btn, "right", "auto");
+            adr048SetImportant(btn, "bottom", "auto");
+        } catch (e4) {}
     }
 
     function adr048ShouldShowFab() {
@@ -2773,6 +2827,7 @@
             if (!btn) {
                 btn = d.createElement("button");
                 btn.id = "adr048-fab";
+                btn.setAttribute("data-adr048-owned-fab", ADR048_FAB_INSTANCE_ID);
                 btn.type = "button";
                 btn.textContent = "霞";
                 btn.title = "Arrebol D 小红霞";
@@ -2860,9 +2915,8 @@
                 catch(e) { try { btn.style[k] = v; } catch(_) {} }
             }
 
-            // 关键：优先贴着已经成功显示的 IPE 浮窗。
-            var ipe = null;
-            try { ipe = d.querySelector("#ipe-chat-quick-entry"); } catch (e0) {}
+            // v1.9.12：浮窗只使用小红霞自己的固定坐标，不再读取 IPE / 生图插件锚点。
+            // 使用 left/top + viewport clamp，避免 right/bottom 被主题或旧坐标影响导致出屏。
 
             setImp("position", "fixed");
             setImp("z-index", "2147483647");
@@ -2893,30 +2947,20 @@
             setImp("visibility", "visible");
             setImp("opacity", "1");
             setImp("transform", "translateZ(0)");
+            btn.setAttribute("data-anchor", "own-fixed");
 
-            if (ipe && btn.getAttribute("data-user-moved") !== "1") {
+            if (btn.getAttribute("data-user-moved") !== "1") {
                 try {
-                    var r = ipe.getBoundingClientRect();
-                    var win = d.defaultView || window;
-                    var left = Math.max(4, Math.min((win.innerWidth || 360) - 96, r.left));
-                    var top = r.bottom + 8;
-
-                    // 如果 IPE 下方空间不够，就贴到它上方。
-                    if (top > (win.innerHeight || 640) - 48) top = Math.max(4, r.top - 44);
-
-                    setImp("left", Math.round(left) + "px");
-                    setImp("top", Math.round(top) + "px");
+                    var win2 = d.defaultView || rootWin() || window;
+                    var left2 = (win2.innerWidth || 360) - 42 - 12;
+                    var top2 = (win2.innerHeight || 640) - 42 - 148;
+                    setImp("left", Math.round(Math.max(4, left2)) + "px");
+                    setImp("top", Math.round(Math.max(4, top2)) + "px");
                     setImp("right", "auto");
                     setImp("bottom", "auto");
-                    btn.setAttribute("data-anchor", "ipe");
-                } catch(e1) {}
-            } else if (btn.getAttribute("data-user-moved") !== "1") {
-                setImp("right", "12px");
-                setImp("bottom", "148px");
-                setImp("left", "auto");
-                setImp("top", "auto");
-                btn.setAttribute("data-anchor", "fallback");
+                } catch (e1) {}
             }
+            setTimeout(function () { try { adr048ClampFabIntoViewport(btn); } catch (e3) {} }, 0);
 
             // 点击兜底：如果拖拽事件没触发，普通 click 也能打开。
             if (!btn.__adr048ClickBound) {
@@ -2940,6 +2984,7 @@
     }
 
     function adr048EnsureFabLater() {
+        adr048InstallFabOwner();
         adr048CreatePopupPanel();
             setTimeout(adrDBindCompactTemplateControls, 120);
         if (!adr048ShouldShowFab()) {
