@@ -876,7 +876,7 @@
     }
 
     async function run(type, extra) {
-        if (processing) return;
+        if (processing) return false;
 
         syncShared();
         syncType(type);
@@ -885,11 +885,13 @@
         setButtons(type);
         status(type, "正在分析…", "#8ed99d");
 
+        var success = false;
         try {
             var out = await callAPI(type, extra || "");
             setPreview(type, out);
             adrDClearExtraInstruction(type);
             status(type, "分析完成 ✓（补充指令已清空）", "#8ed99d");
+            success = true;
 
             var st = settings();
             var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
@@ -901,11 +903,13 @@
         } catch (e) {
             var msg = e && e.name === "AbortError" ? "请求已打断" : (e.message || String(e));
             status(type, "失败：" + msg, "#d4726a");
+            success = false;
         }
 
         processing = false;
         aborter = null;
         setButtons(type);
+        return success;
     }
 
     function abortRun(type) {
@@ -3680,10 +3684,8 @@
                     st.lastAutoTriggerEmotionAt = Date.now();
                     try { console.warn("[Arrebol D] align dirty emotion baseline on first passive check", { count: count, base: emotionBase, n: nEmotion, reason: reason || "" }); } catch (eFirstEmotion) {}
                 } else if (count - emotionBase >= nEmotion) {
-                    toRun.push({ type: "emotion", n: nEmotion });
-                    adrDAdvanceAutoBaseline("emotion", count);
-                    st.lastAutoTriggerEmotionCount = count;
-                    st.lastAutoTriggerEmotionAt = Date.now();
+                    // v1.9.23：不要在 run() 前推进 baseline。API/网络失败时必须保留这一拍，避免失败丢拍后再罚等 N。
+                    toRun.push({ type: "emotion", n: nEmotion, count: count });
                 }
             }
 
@@ -3703,10 +3705,8 @@
                     st.lastAutoTriggerPlotAt = Date.now();
                     try { console.warn("[Arrebol D] align dirty plot baseline on first passive check", { count: count, base: plotBase, n: nPlot, reason: reason || "" }); } catch (eFirstPlot) {}
                 } else if (count - plotBase >= nPlot) {
-                    toRun.push({ type: "plot", n: nPlot });
-                    adrDAdvanceAutoBaseline("plot", count);
-                    st.lastAutoTriggerPlotCount = count;
-                    st.lastAutoTriggerPlotAt = Date.now();
+                    // v1.9.23：不要在 run() 前推进 baseline。API/网络失败时必须保留这一拍，避免失败丢拍后再罚等 N。
+                    toRun.push({ type: "plot", n: nPlot, count: count });
                 }
             }
 
@@ -3723,9 +3723,28 @@
                 var item = toRun[i];
                 var type = item.type;
                 var n = item.n;
+                var triggerCount = Number(item.count);
+                if (!Number.isFinite(triggerCount) || triggerCount < 0) triggerCount = count;
                 var extra = "自动触发：已新增约 " + n + " 个助手正文轮次。请基于当前精准读取上下文输出下一阶段方向。";
-                console.log("[Arrebol D] auto triggering", type, "reason=", reason, "count=", count, "N=", n);
-                await run(type, extra);
+                console.log("[Arrebol D] auto triggering", type, "reason=", reason, "count=", triggerCount, "N=", n);
+                var okRun = await run(type, extra);
+                if (okRun) {
+                    var stAfter = settings();
+                    adrDAdvanceAutoBaseline(type, triggerCount);
+                    stAfter.lastAutoTriggerChatKey = adrDChatKey();
+                    if (type === "plot") {
+                        stAfter.lastAutoTriggerPlotCount = triggerCount;
+                        stAfter.lastAutoTriggerPlotAt = Date.now();
+                    } else {
+                        stAfter.lastAutoTriggerEmotionCount = triggerCount;
+                        stAfter.lastAutoTriggerEmotionAt = Date.now();
+                    }
+                    saveNow();
+                    try { adrDPersistAutoBaselineFields(stAfter); } catch (ePersistAfter) {}
+                    try { adrDUpdateAutoCounters(); } catch (eCountersAfter) {}
+                } else {
+                    try { console.warn("[Arrebol D] auto trigger run failed; baseline not advanced", { type: type, count: triggerCount, n: n, reason: reason || "" }); } catch (eWarnRun) {}
+                }
             }
         } catch (e) {
             console.error("[Arrebol D] auto trigger check failed", e);
