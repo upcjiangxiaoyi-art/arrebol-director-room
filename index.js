@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.24｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.254｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -150,7 +150,9 @@
 
         if (backup && typeof backup === "object") {
             for (var bk in backup) {
-                if (st[bk] === undefined || st[bk] === "") {
+                // 只在字段真正缺失时从本地备份恢复。
+                // 空字符串是用户主动清空文本框/API/模板的合法值，不能被旧备份“复活”。
+                if (st[bk] === undefined) {
                     st[bk] = backup[bk];
                 }
             }
@@ -1727,7 +1729,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.25</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">小红霞在线｜ripple & GPT</div>'

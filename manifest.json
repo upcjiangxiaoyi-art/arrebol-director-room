@@ -6,6 +6,6 @@
   "js": "index.js",
   "css": "style.css",
   "author": "ripple & GPT",
-  "version": "1.9.24",
-  "description": "Arrebol D 小红霞导演插件｜1.9.24 release safety：二段确认、自动分析提示开关、API 超时保护｜ripple & GPT"
+  "version": "1.9.25",
+  "description": "Arrebol D 小红霞导演插件｜1.9.25 clear empty fields fix：允许清空补充指令/API/模板文本，保留 release safety｜ripple & GPT"
 }
