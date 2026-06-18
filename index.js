@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.22｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.24｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -23,6 +23,7 @@
         autoInjectPlot: true,
         injectMode: "visible",
         showFloatingWindow: true,
+        showAutoTriggerPopup: true,
         fabLeft: null,
         fabTop: null,
         autoTriggerEmotion: false,
@@ -379,6 +380,9 @@
 
         var sfw = qForm("adr044-show-floating-window");
         if (sfw) save("showFloatingWindow", !!sfw.checked);
+
+        var satp = qForm("adr044-show-auto-trigger-popup");
+        if (satp) save("showAutoTriggerPopup", !!satp.checked);
 
         saveNow();
     }
@@ -825,6 +829,7 @@
 
         if (typeof AbortController !== "undefined") aborter = new AbortController();
         else aborter = null;
+        var localAborter = aborter;
 
         var body = {
             model: model,
@@ -841,12 +846,34 @@
             headers: headers,
             body: JSON.stringify(body)
         };
-        if (aborter) opts.signal = aborter.signal;
+        if (localAborter) opts.signal = localAborter.signal;
 
-        var res = await fetch(url, opts);
-        var raw = await res.text();
+        var timeoutId = null;
+        var didTimeout = false;
+        if (localAborter && typeof setTimeout === "function") {
+            timeoutId = setTimeout(function () {
+                didTimeout = true;
+                try { localAborter.abort(); } catch (eAbort) {}
+            }, 120000);
+        }
 
-        if (!res.ok) throw new Error("API " + res.status + "：" + raw.slice(0, 220));
+        var res;
+        var raw;
+        try {
+            res = await fetch(url, opts);
+            raw = await res.text();
+        } catch (eFetch) {
+            if (didTimeout && eFetch && eFetch.name === "AbortError") {
+                var timeoutErr = new Error("请求超时，请检查 API、中转站或稍后重试");
+                timeoutErr.name = "TimeoutError";
+                throw timeoutErr;
+            }
+            throw eFetch;
+        } finally {
+            if (timeoutId) clearTimeout(timeoutId);
+        }
+
+        if (!res.ok) throw new Error("API " + res.status + "：" + String(raw || "").slice(0, 220));
 
         var data;
         try { data = JSON.parse(raw); }
@@ -1724,6 +1751,7 @@
             + opt(st.injectMode, "hidden", "纯文本标记注入（推荐外挂正则）")
             + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 自动分析前显示提示</label>'
             + '</details>'
 
             + '<div class="adr044-tabs">'
@@ -1817,6 +1845,7 @@
             adrDSetAllById("adr044-memory", st.supplementMemory || "");
             adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
             adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
+            adrDSetAllById("adr044-show-auto-trigger-popup", "", st.showAutoTriggerPopup !== false);
 
             ["emotion", "plot"].forEach(function (type) {
                 var p = prefixOf(type);
@@ -1986,6 +2015,7 @@
     function adrDGetTemplateName(type) { return qForm("adr044-template-name-" + type); }
 
     function adrDApplyTemplate(type) {
+        adrDResetConfirmAction("delete-template-" + (type === "plot" ? "plot" : "emotion"));
         var data = adrDLoadTemplates();
         var sel = adrDGetTemplateSelect(type);
         var idx = sel ? Number(sel.value) : 0;
@@ -2015,6 +2045,7 @@
     }
 
     function adrDSaveCurrentTemplate(type) {
+        adrDResetConfirmAction("delete-template-" + (type === "plot" ? "plot" : "emotion"));
         var nameBox = adrDGetTemplateName(type);
         var preset = adrDGetPresetBox(type);
         var name = nameBox ? String(nameBox.value || "").trim() : "";
@@ -2043,6 +2074,72 @@
         adrDTemplateStatus(type, found >= 0 ? "已更新：" + name : "已新增：" + name, "#8ed99d");
     }
 
+    var adrDConfirmActionState = {};
+
+    function adrDResetConfirmAction(key) {
+        try {
+            var item = adrDConfirmActionState[key];
+            if (!item) return;
+            if (item.timer) clearTimeout(item.timer);
+            if (item.btn && item.originalText !== undefined) item.btn.textContent = item.originalText;
+            delete adrDConfirmActionState[key];
+        } catch (e) {}
+    }
+
+    function adrDTwoStepConfirm(key, btn, confirmText, hintText, hintFn, actionFn) {
+        try {
+            var now = Date.now();
+            var old = adrDConfirmActionState[key];
+            if (old && old.ready && old.until && now <= old.until) {
+                adrDResetConfirmAction(key);
+                try { actionFn(); } finally { adrDResetConfirmAction(key); }
+                return true;
+            }
+
+            adrDResetConfirmAction(key);
+            var original = btn ? String(btn.textContent || "") : "";
+            var item = {
+                ready: true,
+                btn: btn || null,
+                originalText: original,
+                until: now + 4500,
+                timer: null
+            };
+            if (btn) btn.textContent = confirmText;
+            item.timer = setTimeout(function () { adrDResetConfirmAction(key); }, 4500);
+            adrDConfirmActionState[key] = item;
+            if (typeof hintFn === "function") hintFn(hintText);
+            return false;
+        } catch (e) {
+            try { actionFn(); } catch (e2) {}
+            return true;
+        }
+    }
+
+    function adrDRequestDeleteCurrentTemplate(type, btn) {
+        type = type === "plot" ? "plot" : "emotion";
+        return adrDTwoStepConfirm(
+            "delete-template-" + type,
+            btn || qForm("adr044-template-delete-" + type),
+            "确定删除？",
+            "再点一次确认删除模板",
+            function (msg) { adrDTemplateStatus(type, msg, "#d6a26a"); },
+            function () { adrDDeleteCurrentTemplate(type); }
+        );
+    }
+
+    function adrDRequestCalibrateAutoBaseline(type, btn) {
+        type = type === "plot" ? "plot" : "emotion";
+        return adrDTwoStepConfirm(
+            "calibrate-auto-" + type,
+            btn || qForm("adr044-" + type + "-calibrate-auto"),
+            "确定校准？",
+            "再点一次确认校准当前进度",
+            function (msg) { status(type, msg, "#d6a26a"); },
+            function () { adrDCalibrateAutoBaseline(type); }
+        );
+    }
+
     function adrDDeleteCurrentTemplate(type) {
         var data = adrDLoadTemplates();
         var sel = adrDGetTemplateSelect(type);
@@ -2065,6 +2162,7 @@
         adrDSaveTemplates(data);
         adrDSaveSelectedTemplate(type, arr[0] ? arr[0].name : "");
         adrDRefreshTemplateSelects(type);
+        adrDResetConfirmAction("delete-template-" + (type === "plot" ? "plot" : "emotion"));
         adrDTemplateStatus(type, "已删除：" + name, "#f0b36a");
     }
 
@@ -2123,13 +2221,13 @@
                         ev.preventDefault();
                         ev.stopPropagation();
                         if (adrDShouldIgnoreButtonTap(btn, ev)) return;
-                        adrDDeleteCurrentTemplate(type);
+                        adrDRequestDeleteCurrentTemplate(type, btn);
                     }, true);
                     btn.addEventListener("touchend", function (ev) {
                         ev.preventDefault();
                         ev.stopPropagation();
                         if (adrDShouldIgnoreButtonTap(btn, ev)) return;
-                        adrDDeleteCurrentTemplate(type);
+                        adrDRequestDeleteCurrentTemplate(type, btn);
                     }, true);
                 });
             });
@@ -2247,7 +2345,7 @@
                 adrDForceSaveSettings(type);
                 status(type, "设置已保存 ✓", "#8ed99d");
             };
-            ids["adr044-" + type + "-calibrate-auto"] = function () { adrDCalibrateAutoBaseline(type); };
+            ids["adr044-" + type + "-calibrate-auto"] = function () { adrDRequestCalibrateAutoBaseline(type); };
             ids["adr044-" + type + "-inject"] = function () {
                 syncType(type);
                 var pv = qForm("adr044-" + type + "-preview");
@@ -2326,6 +2424,15 @@
                 saveNow();
                 if (showFab.checked) adr048EnsureFabLater();
                 else adr048RemoveFab();
+            });
+        }
+
+        var showAutoPopup = qForm("adr044-show-auto-trigger-popup");
+        if (showAutoPopup && !showAutoPopup.__adr044Bound) {
+            showAutoPopup.__adr044Bound = true;
+            showAutoPopup.addEventListener("change", function () {
+                save("showAutoTriggerPopup", !!showAutoPopup.checked);
+                saveNow();
             });
         }
 
@@ -2584,6 +2691,7 @@
             + opt(st.injectMode, "hidden", "纯文本标记注入（推荐外挂正则）")
             + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 自动分析前显示提示</label>'
             + '</div>'
 
             + '<div class="adr048-tabs">'
@@ -3717,7 +3825,7 @@
 
             if (!toRun.length) return;
 
-            adrDAutoTriggerPopup(toRun, count);
+            if (settings().showAutoTriggerPopup !== false) adrDAutoTriggerPopup(toRun, count);
             adrDAutoTriggerRunning = true;
             for (var i = 0; i < toRun.length; i++) {
                 var item = toRun[i];
@@ -3899,7 +4007,7 @@
             }
 
             if (id === "adr044-" + type + "-calibrate-auto") {
-                adrDCalibrateAutoBaseline(type);
+                adrDRequestCalibrateAutoBaseline(type);
                 return true;
             }
 
