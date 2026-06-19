@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.254｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.26｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设
@@ -56,6 +56,13 @@
     var initialized = false;
     var processing = false;
     var aborter = null;
+    var adrDAbortWasManual = false;
+
+    // v1.9.26：自动触发失败保拍后的首报/退避状态。
+    // 只服务于“这一拍没结算时稍后重试”，不参与 baseline 数学。
+    var adrDAutoFailureReportedByBeat = {};
+    var adrDAutoRetryByBeat = {};
+    var ADR_D_AUTO_RETRY_DELAYS = [45000, 90000, 120000, 180000];
 
     var ADR048_FAB_REGISTRY_KEY = "__arrebolD_fab_owner_v1922__";
     var ADR048_FAB_INSTANCE_ID = "adr048-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
@@ -251,6 +258,122 @@
             }, 12000);
 
             try { console.log("[Arrebol D] auto analysis popup", names, "count=", count); } catch (eLog) {}
+        } catch (e) {}
+    }
+
+
+    function adrDPopupMessage(title, text, kind) {
+        // v1.9.26：复用自动触发提示组件显示失败首报；失败告警不受“开始分析提示”开关控制。
+        try {
+            var d = rootDoc();
+            if (!d || !d.body) return;
+            var old = d.getElementById("adr044-auto-trigger-popup");
+            if (old && old.parentNode) old.parentNode.removeChild(old);
+
+            var box = d.createElement("div");
+            box.id = "adr044-auto-trigger-popup";
+            box.setAttribute("role", "status");
+            box.setAttribute("aria-live", "polite");
+            box.setAttribute("data-kind", kind || "info");
+            box.innerHTML = ''
+                + '<div class="adr044-auto-trigger-popup-title">' + esc(title || "小红霞提示") + '</div>'
+                + '<div class="adr044-auto-trigger-popup-text">' + esc(text || "") + '</div>'
+                + '<button type="button" class="adr044-auto-trigger-popup-close" aria-label="关闭提示">×</button>';
+            d.body.appendChild(box);
+
+            var close = box.querySelector(".adr044-auto-trigger-popup-close");
+            if (close) {
+                close.addEventListener("click", function () {
+                    try { if (box && box.parentNode) box.parentNode.removeChild(box); } catch (eClose) {}
+                });
+            }
+            try { box.setAttribute("data-open", "1"); } catch (eOpen) {}
+            setTimeout(function () {
+                try {
+                    if (!box || !box.parentNode) return;
+                    box.setAttribute("data-open", "0");
+                    setTimeout(function () {
+                        try { if (box && box.parentNode) box.parentNode.removeChild(box); } catch (eRemove) {}
+                    }, 260);
+                } catch (eTimeout) {}
+            }, kind === "error" ? 18000 : 12000);
+        } catch (e) {}
+    }
+
+    function adrDAutoFailureMessage(kind, type, detail) {
+        var label = labelOf(type);
+        var tail = "这一拍不会被结算，小红霞会稍后自动重试。";
+        if (kind === "timeout") {
+            return {
+                title: "小红霞请求超时",
+                text: "【" + label + "】API 长时间未返回，可能是中转站、网络或模型响应过慢。" + tail
+            };
+        }
+        if (kind === "inject") {
+            return {
+                title: "小红霞自动注入失败",
+                text: "【" + label + "】分析已完成，但没有成功写入当前助手楼。" + tail + "如果持续出现，请检查聊天楼层状态。"
+            };
+        }
+        if (kind === "save") {
+            return {
+                title: "小红霞保存注入失败",
+                text: "【" + label + "】分析和写入已完成，但聊天保存返回失败。" + tail + "请检查网络或稍后重试。"
+            };
+        }
+        return {
+            title: "小红霞自动分析失败",
+            text: "【" + label + "】可能是 API Key、余额、Endpoint、中转站、网络或模型返回异常。" + tail + (detail ? "\n原因：" + String(detail).slice(0, 120) : "")
+        };
+    }
+
+    function adrDReportFailure(kind, type, detail, beatKey) {
+        // 自动触发：同一待结算拍子只首报一次；手动触发：每次失败都可提示。
+        try {
+            if (beatKey) {
+                if (adrDAutoFailureReportedByBeat[beatKey]) return;
+                adrDAutoFailureReportedByBeat[beatKey] = Date.now();
+                var msg = adrDAutoFailureMessage(kind, type, detail);
+                adrDPopupMessage(msg.title, msg.text, "error");
+                return;
+            }
+
+            var label = labelOf(type);
+            var title = "小红霞分析失败";
+            var text = "【" + label + "】请检查 API Key、余额、Endpoint、中转站、网络或模型返回。" + (detail ? "\n原因：" + String(detail).slice(0, 120) : "");
+            if (kind === "timeout") {
+                title = "小红霞请求超时";
+                text = "【" + label + "】API 长时间未返回，请检查中转站、网络或稍后重试。";
+            } else if (kind === "inject") {
+                title = "小红霞自动注入失败";
+                text = "【" + label + "】分析完成，但没有成功写入当前助手楼。你可以手动复制，或检查当前聊天楼层状态。";
+            } else if (kind === "save") {
+                title = "小红霞保存注入失败";
+                text = "【" + label + "】分析和写入已完成，但聊天保存返回失败。请检查网络或稍后重试。";
+            }
+            adrDPopupMessage(title, text, "error");
+        } catch (e) {}
+    }
+
+    function adrDAutoBeatKey(type, count, n) {
+        return [adrDChatKey(), type === "plot" ? "plot" : "emotion", Number(count) || 0, Number(n) || 0].join("::");
+    }
+
+    function adrDClearAutoBeatState(beatKey) {
+        if (!beatKey) return;
+        try { delete adrDAutoFailureReportedByBeat[beatKey]; } catch (e1) {}
+        try { delete adrDAutoRetryByBeat[beatKey]; } catch (e2) {}
+    }
+
+    function adrDNoteAutoRetryResult(beatKey, ok) {
+        if (!beatKey) return;
+        if (ok) { adrDClearAutoBeatState(beatKey); return; }
+        try {
+            var item = adrDAutoRetryByBeat[beatKey] || { fails: 0, nextAt: 0 };
+            item.fails = Math.max(0, Number(item.fails) || 0) + 1;
+            var idx = Math.min(item.fails - 1, ADR_D_AUTO_RETRY_DELAYS.length - 1);
+            item.nextAt = Date.now() + ADR_D_AUTO_RETRY_DELAYS[idx];
+            adrDAutoRetryByBeat[beatKey] = item;
         } catch (e) {}
     }
 
@@ -829,6 +952,7 @@
         var headers = { "Content-Type": "application/json" };
         if (key) headers.Authorization = "Bearer " + key;
 
+        adrDAbortWasManual = false;
         if (typeof AbortController !== "undefined") aborter = new AbortController();
         else aborter = null;
         var localAborter = aborter;
@@ -904,8 +1028,12 @@
         });
     }
 
-    async function run(type, extra) {
+    async function run(type, extra, opts) {
         if (processing) return false;
+
+        opts = opts || {};
+        var isAutoRun = !!opts.autoTrigger;
+        var beatKey = opts.beatKey || "";
 
         syncShared();
         syncType(type);
@@ -915,22 +1043,39 @@
         status(type, "正在分析…", "#8ed99d");
 
         var success = false;
+        var failureKind = "api";
+        var failureMsg = "";
         try {
             var out = await callAPI(type, extra || "");
             setPreview(type, out);
             adrDClearExtraInstruction(type);
             status(type, "分析完成 ✓（补充指令已清空）", "#8ed99d");
-            success = true;
 
             var st = settings();
             var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
             if (st[autoKey]) {
-                var ok = injectDirector(type, out);
-                if (ok) status(type, "分析完成并已注入当前聊天 ✓", "#8ed99d");
-                else status(type, "分析完成，但自动注入失败，请手动复制", "#d6b177");
+                var ok = isAutoRun ? await injectDirectorAsync(type, out) : injectDirector(type, out);
+                if (ok) {
+                    success = true;
+                    status(type, "分析完成并已注入当前聊天 ✓", "#8ed99d");
+                } else {
+                    success = false;
+                    failureKind = "inject";
+                    failureMsg = "自动注入失败";
+                    status(type, isAutoRun ? "分析完成，但自动注入失败；已保留本拍，稍后自动重试" : "分析完成，但自动注入失败，请手动复制", "#d6b177");
+                }
+            } else {
+                success = true;
             }
         } catch (e) {
-            var msg = e && e.name === "AbortError" ? "请求已打断" : (e.message || String(e));
+            failureMsg = e && e.message ? e.message : String(e);
+            if (e && e.name === "TimeoutError") failureKind = "timeout";
+            else if (e && e.name === "SaveChatError") failureKind = "save";
+            else if (e && e.name === "AbortError" && adrDAbortWasManual) failureKind = "manual-abort";
+            else if (e && e.name === "AbortError") failureKind = "abort";
+            else failureKind = "api";
+
+            var msg = (failureKind === "manual-abort" || failureKind === "abort") ? "请求已打断" : failureMsg;
             status(type, "失败：" + msg, "#d4726a");
             success = false;
         }
@@ -938,11 +1083,16 @@
         processing = false;
         aborter = null;
         setButtons(type);
+
+        if (!success && failureKind !== "manual-abort" && failureKind !== "abort") {
+            adrDReportFailure(failureKind, type, failureMsg, isAutoRun ? beatKey : "");
+        }
         return success;
     }
 
     function abortRun(type) {
         try {
+            adrDAbortWasManual = true;
             if (aborter) aborter.abort();
             status(type, "已打断请求", "#d4726a");
         } catch (e) {
@@ -1104,38 +1254,51 @@
     }
 
     function adrDSaveThenRedrawAfterInject() {
-        try {
-            var c = ctx();
-            var done = false;
-
-            function redrawLater(ms) {
-                setTimeout(function () {
-                    if (done) return;
-                    done = true;
-                    adrDNativeRedrawNow();
-                }, ms);
-            }
-
+        // v1.9.26：温和可观测保存。
+        // saveChat 若返回 Promise，则显式 reject 才判失败；不可观测时保守视为成功，避免卡死。
+        return new Promise(function (resolve, reject) {
             try {
-                if (c && typeof c.saveChat === "function") {
-                    var ret = c.saveChat();
-                    if (ret && typeof ret.then === "function") {
-                        ret.then(function () {
-                            redrawLater(180);
-                        }).catch(function () {
-                            redrawLater(1200);
-                        });
-                        return;
-                    }
-                }
-            } catch (e1) {}
+                var c = ctx();
+                var done = false;
 
-            // 如果 saveChat 不是 Promise，就给移动端文件保存/IndexedDB 一点时间。
-            redrawLater(1200);
-        } catch (e) {
-            console.warn("[Arrebol D] save then redraw failed", e);
-            setTimeout(function () { adrDNativeRedrawNow(); }, 1500);
-        }
+                function redrawLater(ms, ok, err) {
+                    setTimeout(function () {
+                        if (done) return;
+                        done = true;
+                        try { adrDNativeRedrawNow(); } catch (eRedraw) {}
+                        if (ok === false) reject(err || new Error("聊天保存失败"));
+                        else resolve(true);
+                    }, ms);
+                }
+
+                try {
+                    if (c && typeof c.saveChat === "function") {
+                        var ret = c.saveChat();
+                        if (ret && typeof ret.then === "function") {
+                            ret.then(function () {
+                                redrawLater(180, true);
+                            }).catch(function (err) {
+                                var e = err instanceof Error ? err : new Error(String(err || "聊天保存失败"));
+                                e.name = "SaveChatError";
+                                redrawLater(180, false, e);
+                            });
+                            return;
+                        }
+                    }
+                } catch (e1) {
+                    e1.name = e1.name || "SaveChatError";
+                    redrawLater(180, false, e1);
+                    return;
+                }
+
+                // 如果 saveChat 不是 Promise，就给移动端文件保存/IndexedDB 一点时间；不可观测不强判失败。
+                redrawLater(1200, true);
+            } catch (e) {
+                console.warn("[Arrebol D] save then redraw failed", e);
+                setTimeout(function () { try { adrDNativeRedrawNow(); } catch (e2) {} }, 1500);
+                resolve(true);
+            }
+        });
     }
 
 
@@ -1159,7 +1322,7 @@
         return false;
     }
 
-    function injectDirector(type, text) {
+    function adrDWriteDirectorInjection(type, text) {
         if (!text || !text.trim()) return false;
 
         try {
@@ -1203,13 +1366,37 @@
             mes = mes.replace(/\n?arrebol_d(?:_visible)?###[\s\S]*?###/g, "").trimEnd();
 
             chat[idx].mes = mes.trimEnd() + add;
+            return true;
+        } catch (e) {
+            console.error("[Arrebol D] inject write failed", e);
+            return false;
+        }
+    }
 
-            // v1.0.5.6.8.1.3：先保存，保存完成/延迟足够后再原生重绘，避免 reload 抢跑导致注入消失。
-            adrDSaveThenRedrawAfterInject();
+    function injectDirector(type, text) {
+        try {
+            var ok = adrDWriteDirectorInjection(type, text);
+            if (!ok) return false;
+            adrDSaveThenRedrawAfterInject().catch(function (e) {
+                try { console.warn("[Arrebol D] async save after manual inject failed", e); } catch (eWarn) {}
+            });
             return true;
         } catch (e) {
             console.error("[Arrebol D] inject failed", e);
             return false;
+        }
+    }
+
+    async function injectDirectorAsync(type, text) {
+        try {
+            var ok = adrDWriteDirectorInjection(type, text);
+            if (!ok) return false;
+            await adrDSaveThenRedrawAfterInject();
+            return true;
+        } catch (e) {
+            console.error("[Arrebol D] inject async failed", e);
+            if (e && !e.name) e.name = "SaveChatError";
+            throw e;
         }
     }
 
@@ -3687,6 +3874,42 @@
     }
 
 
+    function adrDShouldSchedulePendingAutoRetry() {
+        // v1.9.26：楼层尾长不变时，也要给“已到 N 但失败保拍”的待触发拍子一次退避重试机会。
+        // 只读检查，不创建/下拉 baseline，不参与 dirty-gap/no-shrink 数学。
+        try {
+            if (adrDAutoTriggerRunning || processing) return false;
+            if (!adrDCountReady() || !adrDChatKeyReady()) return false;
+            if (adrDInStartupAutoGrace && adrDInStartupAutoGrace()) return false;
+
+            var st = settings();
+            var count = adrDAssistantRoundCount();
+            var now = Date.now();
+            var types = ["emotion", "plot"];
+
+            for (var i = 0; i < types.length; i++) {
+                var type = types[i];
+                var enabled = type === "plot" ? !!st.autoTriggerPlot : !!st.autoTriggerEmotion;
+                if (!enabled) continue;
+                var n = autoTriggerRange(type);
+                if (!Number.isFinite(n) || n <= 0) continue;
+                var state = adrDPeekAutoState(type);
+                if (!state || !Number.isFinite(Number(state.base))) continue;
+                var base = Number(state.base);
+                if (count < base) continue; // partial 小读数，绝不重试。
+                if (count - base < n) continue;
+
+                var beatKey = adrDAutoBeatKey(type, count, n);
+                var retry = adrDAutoRetryByBeat[beatKey];
+                if (!retry || !Number.isFinite(Number(retry.nextAt)) || now >= Number(retry.nextAt)) {
+                    return true;
+                }
+            }
+        } catch (e) {}
+        return false;
+    }
+
+
     function adrDPersistAutoBaselineFields(source) {
         try {
             var st = source || settings();
@@ -3795,7 +4018,7 @@
                     try { console.warn("[Arrebol D] align dirty emotion baseline on first passive check", { count: count, base: emotionBase, n: nEmotion, reason: reason || "" }); } catch (eFirstEmotion) {}
                 } else if (count - emotionBase >= nEmotion) {
                     // v1.9.23：不要在 run() 前推进 baseline。API/网络失败时必须保留这一拍，避免失败丢拍后再罚等 N。
-                    toRun.push({ type: "emotion", n: nEmotion, count: count });
+                    toRun.push({ type: "emotion", n: nEmotion, count: count, beatKey: adrDAutoBeatKey("emotion", count, nEmotion) });
                 }
             }
 
@@ -3816,7 +4039,7 @@
                     try { console.warn("[Arrebol D] align dirty plot baseline on first passive check", { count: count, base: plotBase, n: nPlot, reason: reason || "" }); } catch (eFirstPlot) {}
                 } else if (count - plotBase >= nPlot) {
                     // v1.9.23：不要在 run() 前推进 baseline。API/网络失败时必须保留这一拍，避免失败丢拍后再罚等 N。
-                    toRun.push({ type: "plot", n: nPlot, count: count });
+                    toRun.push({ type: "plot", n: nPlot, count: count, beatKey: adrDAutoBeatKey("plot", count, nPlot) });
                 }
             }
 
@@ -3827,7 +4050,8 @@
 
             if (!toRun.length) return;
 
-            if (settings().showAutoTriggerPopup !== false) adrDAutoTriggerPopup(toRun, count);
+            var isPendingRetryCheck = String(reason || "").indexOf("pending-retry") >= 0;
+            if (!isPendingRetryCheck && settings().showAutoTriggerPopup !== false) adrDAutoTriggerPopup(toRun, count);
             adrDAutoTriggerRunning = true;
             for (var i = 0; i < toRun.length; i++) {
                 var item = toRun[i];
@@ -3835,9 +4059,10 @@
                 var n = item.n;
                 var triggerCount = Number(item.count);
                 if (!Number.isFinite(triggerCount) || triggerCount < 0) triggerCount = count;
+                var beatKey = item.beatKey || adrDAutoBeatKey(type, triggerCount, n);
                 var extra = "自动触发：已新增约 " + n + " 个助手正文轮次。请基于当前精准读取上下文输出下一阶段方向。";
                 console.log("[Arrebol D] auto triggering", type, "reason=", reason, "count=", triggerCount, "N=", n);
-                var okRun = await run(type, extra);
+                var okRun = await run(type, extra, { autoTrigger: true, beatKey: beatKey });
                 if (okRun) {
                     var stAfter = settings();
                     adrDAdvanceAutoBaseline(type, triggerCount);
@@ -3852,7 +4077,9 @@
                     saveNow();
                     try { adrDPersistAutoBaselineFields(stAfter); } catch (ePersistAfter) {}
                     try { adrDUpdateAutoCounters(); } catch (eCountersAfter) {}
+                        adrDNoteAutoRetryResult(beatKey, true);
                 } else {
+                    adrDNoteAutoRetryResult(beatKey, false);
                     try { console.warn("[Arrebol D] auto trigger run failed; baseline not advanced", { type: type, count: triggerCount, n: n, reason: reason || "" }); } catch (eWarnRun) {}
                 }
             }
@@ -3890,6 +4117,9 @@
                         if (adrDLastChatLengthSeen >= 0 && len !== adrDLastChatLengthSeen) {
                             adrDQueueFullAssistantRoundCountRefresh("poll-tail-change");
                             adrDScheduleAutoTriggerCheck("poll-chat-length");
+                        } else if (adrDShouldSchedulePendingAutoRetry()) {
+                            adrDQueueFullAssistantRoundCountRefresh("poll-pending-retry");
+                            adrDScheduleAutoTriggerCheck("pending-retry");
                         }
                         adrDLastChatLengthSeen = len;
                         adrDUpdateAutoCounters();

@@ -923,3 +923,13 @@
     visibility: hidden !important;
     pointer-events: none !important;
 }
+
+/* v1.9.26 failure first-report popup: same component, warmer warning tone. */
+#adr044-auto-trigger-popup[data-kind="error"] {
+    box-shadow: 0 14px 38px rgba(0,0,0,.38), 0 0 0 4px rgba(244,161,92,.20) !important;
+    border-color: rgba(255,214,174,.76) !important;
+}
+#adr044-auto-trigger-popup[data-kind="error"] .adr044-auto-trigger-popup-title {
+    color: #ffd6ae !important;
+    -webkit-text-fill-color: #ffd6ae !important;
+}
