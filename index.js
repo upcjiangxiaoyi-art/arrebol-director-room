@@ -3,7 +3,7 @@
  * Arrebol D 暗河红霞导演系统 v1.9.26｜ripple & GPT
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
- * - 双 API / 双模型 / 双预设
+ * - 双 API / 双模型 / 双预设 / 双侧独立 API 档案
  * - 拉取模型
  * - 本地测试
  * - 直接分析
@@ -1873,6 +1873,18 @@
             + '<label>模型</label><input type="text" id="adr044-' + type + '-model" value="' + esc(st[p + "Model"] || "") + '" placeholder="可以手填，或加载模型">'
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
             + '<div class="adr044-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
+            + '<div class="adr044-template-compact adr044-api-profile-compact">'
+            + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
+            + '<input id="adr044-api-profile-name-' + type + '" placeholder="本导演 API 档案名，如 DS / Claude">'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前档案</button>'
+            + '<button type="button" id="adr044-api-profile-load-' + type + '">套用档案</button>'
+            + '</div>'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除档案</button>'
+            + '</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">本导演独立档案库：只保存当前导演的 API 地址、密钥、模型；两边互不影响。</div>'
+            + '</div>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "启用剧情导演自动触发" : "启用情感导演自动触发") + '</label>'
             + '<label>自动触发间隔</label>'
@@ -2042,6 +2054,7 @@
                 adrDSetAllById("adr044-" + type + "-endpoint", st[p + "ApiEndpoint"] || "");
                 adrDSetAllById("adr044-" + type + "-key", st[p + "ApiKey"] || "");
                 adrDSetAllById("adr044-" + type + "-model", st[p + "Model"] || "");
+                adrDRefreshApiProfileSelects(type);
                 adrDSetAllById("adr044-" + type + "-preset", st[p + "Preset"] || "");
                 adrDSetAllById("adr044-" + type + "-preview", st[p + "Preview"] || "");
                 adrDSetAllById("adr044-auto-inject-" + type, "", type === "plot" ? st.autoInjectPlot : st.autoInjectEmotion);
@@ -2058,6 +2071,8 @@
 
     var ADR_D_TEMPLATE_KEY = "arrebol_d_prompt_templates_v1";
     var ADR_D_SELECTED_TEMPLATE_KEY = "arrebol_d_selected_prompt_templates_v1";
+    var ADR_D_API_PROFILE_KEY = "arrebol_d_api_profiles_v1";
+    var ADR_D_SELECTED_API_PROFILE_KEY = "arrebol_d_selected_api_profiles_v1";
 
     function adrDLoadSelectedTemplates() {
         try {
@@ -2425,6 +2440,346 @@
     }
 
 
+    function adrDApiProfileType(type) {
+        return type === "plot" ? "plot" : "emotion";
+    }
+
+    function adrDNormalizeApiProfiles(raw) {
+        var arr = Array.isArray(raw) ? raw : [];
+        var out = [];
+        var seen = {};
+
+        arr.forEach(function (it) {
+            if (!it) return;
+            var name = String(it.name || "").trim();
+            if (!name) return;
+            var key = name.toLowerCase();
+            var item = {
+                name: name,
+                endpoint: String(it.endpoint || ""),
+                apiKey: String(it.apiKey || it.key || ""),
+                model: String(it.model || ""),
+                updatedAt: Number(it.updatedAt || 0) || Date.now()
+            };
+            if (seen[key] !== undefined) out[seen[key]] = item;
+            else {
+                seen[key] = out.length;
+                out.push(item);
+            }
+        });
+
+        return out;
+    }
+
+    function adrDNormalizeApiProfileStore(raw) {
+        var store = { emotion: [], plot: [] };
+
+        // 兼容上一版共享数组：首次读取时复制到两边，随后两边各自保存、互不影响。
+        if (Array.isArray(raw)) {
+            var shared = adrDNormalizeApiProfiles(raw);
+            store.emotion = shared.slice();
+            store.plot = shared.slice();
+            return store;
+        }
+
+        if (raw && typeof raw === "object") {
+            store.emotion = adrDNormalizeApiProfiles(raw.emotion || []);
+            store.plot = adrDNormalizeApiProfiles(raw.plot || []);
+
+            // 兼容可能存在的 shared 字段：只补空侧，不覆盖已有独立档案。
+            if (Array.isArray(raw.shared)) {
+                var shared2 = adrDNormalizeApiProfiles(raw.shared);
+                if (!store.emotion.length) store.emotion = shared2.slice();
+                if (!store.plot.length) store.plot = shared2.slice();
+            }
+        }
+
+        return store;
+    }
+
+    function adrDLoadApiProfileStore() {
+        try {
+            var rw = rootWin();
+            if (rw.__adrDApiProfilesCache) return adrDNormalizeApiProfileStore(rw.__adrDApiProfilesCache);
+
+            var s = "";
+            try { s = rw.localStorage.getItem(ADR_D_API_PROFILE_KEY) || ""; } catch (e1) {}
+            if (!s) {
+                rw.__adrDApiProfilesCache = { emotion: [], plot: [] };
+                return { emotion: [], plot: [] };
+            }
+
+            rw.__adrDApiProfilesCache = adrDNormalizeApiProfileStore(JSON.parse(s));
+            return adrDNormalizeApiProfileStore(rw.__adrDApiProfilesCache);
+        } catch (e) {
+            return { emotion: [], plot: [] };
+        }
+    }
+
+    function adrDLoadApiProfiles(type) {
+        var t = adrDApiProfileType(type);
+        var store = adrDLoadApiProfileStore();
+        return adrDNormalizeApiProfiles(store[t] || []);
+    }
+
+    function adrDSaveApiProfiles(type, arr) {
+        try {
+            var rw = rootWin();
+            var t = adrDApiProfileType(type);
+            var store = adrDLoadApiProfileStore();
+            store[t] = adrDNormalizeApiProfiles(arr);
+            rw.__adrDApiProfilesCache = adrDNormalizeApiProfileStore(store);
+            rw.localStorage.setItem(ADR_D_API_PROFILE_KEY, JSON.stringify(rw.__adrDApiProfilesCache));
+            return true;
+        } catch (e) {
+            console.warn("[Arrebol D] save api profiles failed", e);
+            return false;
+        }
+    }
+
+    function adrDLoadSelectedApiProfiles() {
+        try {
+            var s = rootWin().localStorage.getItem(ADR_D_SELECTED_API_PROFILE_KEY) || "";
+            if (!s) return {};
+            return JSON.parse(s) || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function adrDSaveSelectedApiProfile(type, name) {
+        try {
+            var obj = adrDLoadSelectedApiProfiles();
+            obj[type === "plot" ? "plot" : "emotion"] = String(name || "");
+            rootWin().localStorage.setItem(ADR_D_SELECTED_API_PROFILE_KEY, JSON.stringify(obj));
+        } catch (e) {}
+    }
+
+    function adrDSelectedApiProfileName(type) {
+        try {
+            var obj = adrDLoadSelectedApiProfiles();
+            return String(obj[type === "plot" ? "plot" : "emotion"] || "");
+        } catch (e) {
+            return "";
+        }
+    }
+
+    function adrDApiProfileOptions(type) {
+        var arr = adrDLoadApiProfiles(type);
+        var selectedName = adrDSelectedApiProfileName(type);
+        var html = '<option value="">选择本导演 API 档案</option>';
+        arr.forEach(function (it, idx) {
+            var name = String(it.name || ("API 档案 " + (idx + 1)));
+            var selected = selectedName && name === selectedName ? ' selected' : '';
+            html += '<option value="' + idx + '"' + selected + '>' + esc(name) + '</option>';
+        });
+        return html;
+    }
+
+    function adrDRefreshApiProfileSelects(type, selectedName) {
+        try {
+            if (!selectedName) selectedName = adrDSelectedApiProfileName(type);
+            var html = adrDApiProfileOptions(type);
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-select-" + type)).forEach(function (sel) {
+                sel.innerHTML = html;
+                var matched = false;
+                if (selectedName) {
+                    for (var i = 0; i < sel.options.length; i++) {
+                        if (sel.options[i].textContent === selectedName) {
+                            sel.value = String(i);
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+                if (!matched) sel.value = "";
+            });
+        } catch (e) {}
+    }
+
+    function adrDApiProfileStatus(type, text, color) {
+        try {
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-status-" + type)).forEach(function (el) {
+                el.textContent = text || "";
+                if (color) el.style.color = color;
+            });
+        } catch (e) {}
+    }
+
+    function adrDActivePageRoot(type) {
+        try {
+            var d = rootDoc();
+            var popup = d.querySelector('#adr048-popup-panel[data-open="1"] #adr048-page-' + type);
+            if (popup) return popup;
+            var drawer = d.querySelector('#adr044-page-' + type);
+            if (drawer) return drawer;
+        } catch (e) {}
+        return rootDoc();
+    }
+
+    function adrDActiveField(type, id) {
+        try {
+            var root = adrDActivePageRoot(type);
+            var el = root && root.querySelector ? root.querySelector("#" + id) : null;
+            if (el) return el;
+        } catch (e) {}
+        return qForm(id);
+    }
+
+    function adrDSetCurrentApiFields(type, item) {
+        var p = prefixOf(type);
+        item = item || {};
+        adrDSetAllById("adr044-" + type + "-endpoint", item.endpoint || "");
+        adrDSetAllById("adr044-" + type + "-key", item.apiKey || "");
+        adrDSetAllById("adr044-" + type + "-model", item.model || "");
+        save(p + "ApiEndpoint", item.endpoint || "");
+        save(p + "ApiKey", item.apiKey || "");
+        save(p + "Model", item.model || "");
+        try {
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-" + type + "-model-select")).forEach(function (sel) {
+                var model = String(item.model || "");
+                sel.innerHTML = model ? '<option value="' + esc(model) + '">' + esc(model) + '（当前）</option>' : '<option value="">加载后选择模型</option>';
+                sel.value = model;
+            });
+        } catch (e) {}
+        saveNow();
+    }
+
+    function adrDCurrentApiFields(type) {
+        type = type === "plot" ? "plot" : "emotion";
+        var endpoint = adrDActiveField(type, "adr044-" + type + "-endpoint");
+        var key = adrDActiveField(type, "adr044-" + type + "-key");
+        var model = adrDActiveField(type, "adr044-" + type + "-model");
+        return {
+            endpoint: endpoint ? String(endpoint.value || "") : "",
+            apiKey: key ? String(key.value || "") : "",
+            model: model ? String(model.value || "") : ""
+        };
+    }
+
+    function adrDSelectedApiProfileItem(type) {
+        var sel = adrDActiveField(type, "adr044-api-profile-select-" + type);
+        var idx = sel ? Number(sel.value) : -1;
+        var arr = adrDLoadApiProfiles(type);
+        return arr[idx] || null;
+    }
+
+    function adrDSaveCurrentApiProfile(type) {
+        type = type === "plot" ? "plot" : "emotion";
+        adrDResetConfirmAction("delete-api-profile-" + type);
+
+        var nameBox = adrDActiveField(type, "adr044-api-profile-name-" + type);
+        var name = nameBox ? String(nameBox.value || "").trim() : "";
+        var fields = adrDCurrentApiFields(type);
+
+        if (!name) {
+            adrDApiProfileStatus(type, "请先写档案名，例如 DS / Claude", "#e28a9c");
+            return;
+        }
+        if (!fields.endpoint && !fields.apiKey && !fields.model) {
+            adrDApiProfileStatus(type, "请先填写 API 地址、密钥或模型", "#e28a9c");
+            return;
+        }
+
+        var arr = adrDLoadApiProfiles(type);
+        var found = -1;
+        arr.forEach(function (it, idx) {
+            if (String(it.name || "").toLowerCase() === name.toLowerCase()) found = idx;
+        });
+
+        var item = {
+            name: name,
+            endpoint: fields.endpoint,
+            apiKey: fields.apiKey,
+            model: fields.model,
+            updatedAt: Date.now()
+        };
+
+        if (found >= 0) arr[found] = item;
+        else arr.push(item);
+
+        adrDSaveApiProfiles(type, arr);
+        adrDSaveSelectedApiProfile(type, name);
+        adrDRefreshApiProfileSelects(type, name);
+        adrDSetCurrentApiFields(type, item);
+        adrDApiProfileStatus(type, found >= 0 ? "已更新 API 档案：" + name : "已新增 API 档案：" + name, "#8ed99d");
+    }
+
+    function adrDApplyApiProfile(type) {
+        type = type === "plot" ? "plot" : "emotion";
+        adrDResetConfirmAction("delete-api-profile-" + type);
+
+        var item = adrDSelectedApiProfileItem(type);
+        if (!item) {
+            adrDApiProfileStatus(type, "请先选择 API 档案", "#e28a9c");
+            return;
+        }
+
+        Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + type)).forEach(function (el) {
+            el.value = String(item.name || "");
+        });
+        adrDSaveSelectedApiProfile(type, item.name || "");
+        adrDRefreshApiProfileSelects(type, item.name || "");
+        adrDSetCurrentApiFields(type, item);
+        adrDApiProfileStatus(type, "已套用 API 档案：" + item.name, "#8ed99d");
+    }
+
+    function adrDDeleteCurrentApiProfile(type) {
+        type = type === "plot" ? "plot" : "emotion";
+        var sel = adrDActiveField(type, "adr044-api-profile-select-" + type);
+        var idx = sel ? Number(sel.value) : -1;
+        var arr = adrDLoadApiProfiles(type);
+        var item = arr[idx];
+
+        if (!item) {
+            adrDApiProfileStatus(type, "没有选中的 API 档案", "#e28a9c");
+            return;
+        }
+
+        var name = item.name;
+        arr.splice(idx, 1);
+        adrDSaveApiProfiles(type, arr);
+        if (adrDSelectedApiProfileName(type) === name) adrDSaveSelectedApiProfile(type, "");
+        adrDRefreshApiProfileSelects(type);
+        adrDResetConfirmAction("delete-api-profile-" + type);
+        adrDApiProfileStatus(type, "已删除 API 档案：" + name, "#f0b36a");
+    }
+
+    function adrDRequestDeleteCurrentApiProfile(type, btn) {
+        type = type === "plot" ? "plot" : "emotion";
+        return adrDTwoStepConfirm(
+            "delete-api-profile-" + type,
+            btn || qForm("adr044-api-profile-delete-" + type),
+            "确定删除？",
+            "再点一次确认删除 API 档案",
+            function (msg) { adrDApiProfileStatus(type, msg, "#d6a26a"); },
+            function () { adrDDeleteCurrentApiProfile(type); }
+        );
+    }
+
+    function adrDBindApiProfileControls() {
+        try {
+            ["emotion", "plot"].forEach(function (type) {
+                Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-select-" + type)).forEach(function (sel) {
+                    if (!sel) return;
+                    if (sel.__adrDApiProfileSelectBound) return;
+                    sel.__adrDApiProfileSelectBound = true;
+                    sel.addEventListener("change", function () {
+                        var arr = adrDLoadApiProfiles(type);
+                        var item = arr[Number(sel.value)];
+                        var name = item ? String(item.name || "") : "";
+                        Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + type)).forEach(function (el) {
+                            if (el) el.value = name;
+                        });
+                        adrDSaveSelectedApiProfile(type, name);
+                        adrDRefreshApiProfileSelects(type, name);
+                        adrDApiProfileStatus(type, item ? "已选择：" + name + "，点「套用档案」切换" : "", item ? "#8ed99d" : "#d989a1");
+                    }, true);
+                });
+            });
+        } catch (e) {}
+    }
+
     function adrDIsTouchLikeEvent(ev) {
         return !!(ev && (ev.type === "touchend" || ev.type === "pointerup"));
     }
@@ -2535,6 +2890,9 @@
                 adrDForceSaveSettings(type);
                 status(type, "设置已保存 ✓", "#8ed99d");
             };
+            ids["adr044-api-profile-save-" + type] = function () { adrDSaveCurrentApiProfile(type); };
+            ids["adr044-api-profile-load-" + type] = function () { adrDApplyApiProfile(type); };
+            ids["adr044-api-profile-delete-" + type] = function () { adrDRequestDeleteCurrentApiProfile(type); };
             ids["adr044-" + type + "-calibrate-auto"] = function () { adrDRequestCalibrateAutoBaseline(type); };
             ids["adr044-" + type + "-inject"] = function () {
                 syncType(type);
@@ -2811,6 +3169,18 @@
             + '<label>模型</label><input type="text" id="adr044-' + type + '-model" value="' + esc(st[p + "Model"] || "") + '" placeholder="可以手填，或加载模型">'
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
             + '<div class="adr048-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
+            + '<div class="adr044-template-compact adr044-api-profile-compact">'
+            + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
+            + '<input id="adr044-api-profile-name-' + type + '" placeholder="本导演 API 档案名，如 DS / Claude">'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前档案</button>'
+            + '<button type="button" id="adr044-api-profile-load-' + type + '">套用档案</button>'
+            + '</div>'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除档案</button>'
+            + '</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">本导演独立档案库：只保存当前导演的 API 地址、密钥、模型；两边互不影响。</div>'
+            + '</div>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "启用剧情导演自动触发" : "启用情感导演自动触发") + '</label>'
             + '<label>自动触发间隔</label>'
@@ -2934,6 +3304,7 @@
 
             adr048CreatePopupPanel();
             setTimeout(adrDBindCompactTemplateControls, 120);
+            setTimeout(adrDBindApiProfileControls, 120);
             adrDRefreshAllFieldsFromSettings();
 
             var p = d.querySelector("#adr048-popup-panel");
@@ -3287,6 +3658,7 @@
         adr048InstallFabOwner();
         adr048CreatePopupPanel();
         setTimeout(adrDBindCompactTemplateControls, 120);
+        setTimeout(adrDBindApiProfileControls, 120);
         if (!adr048ShouldShowFab()) {
             adr048RemoveFab();
             return;
@@ -4240,6 +4612,21 @@
                 return true;
             }
 
+            if (id === "adr044-api-profile-save-" + type) {
+                adrDSaveCurrentApiProfile(type);
+                return true;
+            }
+
+            if (id === "adr044-api-profile-load-" + type) {
+                adrDApplyApiProfile(type);
+                return true;
+            }
+
+            if (id === "adr044-api-profile-delete-" + type) {
+                adrDRequestDeleteCurrentApiProfile(type);
+                return true;
+            }
+
             if (id === "adr044-" + type + "-calibrate-auto") {
                 adrDRequestCalibrateAutoBaseline(type);
                 return true;
@@ -4315,11 +4702,13 @@
             installProbeDelegation();
             bindDirect();
             adrDBindCompactTemplateControls();
+            adrDBindApiProfileControls();
             adrDInstallTabFallbackOnly();
             adrDInstallAllButtonFallback();
             switchTab(settings().activeTab || "emotion");
             adr048CreatePopupPanel();
             setTimeout(adrDBindCompactTemplateControls, 120);
+            setTimeout(adrDBindApiProfileControls, 120);
             adr048EnsureFabLater();
             adrDInstallAutoTriggerWatchers();
             adrDQueueFullAssistantRoundCountRefresh("init");
@@ -4327,6 +4716,7 @@
             setTimeout(adrDUpdateAutoCounters, 800);
             setTimeout(bindDirect, 500);
             setTimeout(adrDBindCompactTemplateControls, 650);
+            setTimeout(adrDBindApiProfileControls, 650);
             setTimeout(bindDirect, 1500);
             setTimeout(bindDirect, 3000);
             console.log("[ADR044] dual drawer loaded");
