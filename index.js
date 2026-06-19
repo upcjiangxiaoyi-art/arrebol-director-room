@@ -6,7 +6,7 @@
  * - 双 API / 双模型 / 双预设
  * - 拉取模型
  * - 本地测试
- * - 生成方向
+ * - 生成导演分析
  * - 自动注入到当前聊天，下一轮可读到
  */
 
@@ -1885,6 +1885,7 @@
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
             + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">自动触发计数：打开面板后刷新</div>'
+            + '<div class="adr044-note adr044-auto-reroll-note">ℹ️ 触发层重 roll 不会自动再触发；如需基于新回复补导演建议，请点「重新分析」手动补一次。</div>'
             + '<div class="adr044-auto-calibrate-row"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button">校准当前进度</button></div>'
             + '</details>'
 
@@ -1902,10 +1903,10 @@
             + '</details>'
 
             + '<details open><summary>' + title + '结果</summary>'
-            + '<div id="adr044-' + type + '-status">请先本地测试，或直接生成方向。</div>'
+            + '<div id="adr044-' + type + '-status">请先本地测试，或直接生成导演分析。</div>'
             + '<textarea id="adr044-' + type + '-preview" rows="8" placeholder="生成结果显示在这里">' + esc(st[p + "Preview"] || "") + '</textarea>'
             + '<label>补充指令</label><input type="text" id="adr044-' + type + '-extra" placeholder="只影响本次重新分析">'
-            + '<div class="adr044-actions"><button id="adr044-' + type + '-local" type="button">本地测试</button><button id="adr044-' + type + '-generate" type="button">生成方向</button></div>'
+            + '<div class="adr044-actions"><button id="adr044-' + type + '-local" type="button">本地测试</button><button id="adr044-' + type + '-generate" type="button">生成导演分析</button></div>'
             + '<div class="adr044-actions"><button id="adr044-' + type + '-reroll" type="button">重新分析</button><button id="adr044-' + type + '-stop" type="button" disabled>打断</button><button id="adr044-' + type + '-copy" type="button">复制</button></div>'
             + '<div class="adr044-actions"><button id="adr044-' + type + '-inject" type="button">手动注入当前聊天</button></div>'
             + '</details>'
@@ -2822,6 +2823,7 @@
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
             + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">自动触发计数：打开面板后刷新</div>'
+            + '<div class="adr048-note adr048-auto-reroll-note">ℹ️ 触发层重 roll 不会自动再触发；如需基于新回复补导演建议，请点「重新分析」手动补一次。</div>'
             + '<div class="adr044-auto-calibrate-row"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button">校准当前进度</button></div>'
             + '</div>'
 
@@ -2839,10 +2841,10 @@
             + '</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '结果</div>'
-            + '<div id="adr044-' + type + '-status" class="adr048-status">请先本地测试，或直接生成方向。</div>'
+            + '<div id="adr044-' + type + '-status" class="adr048-status">请先本地测试，或直接生成导演分析。</div>'
             + '<textarea id="adr044-' + type + '-preview" rows="8" placeholder="生成结果显示在这里">' + esc(st[p + "Preview"] || "") + '</textarea>'
             + '<label>补充指令</label><input type="text" id="adr044-' + type + '-extra" placeholder="只影响本次重新分析">'
-            + '<div class="adr048-actions"><button id="adr044-' + type + '-local" type="button">本地测试</button><button id="adr044-' + type + '-generate" type="button">生成方向</button></div>'
+            + '<div class="adr048-actions"><button id="adr044-' + type + '-local" type="button">本地测试</button><button id="adr044-' + type + '-generate" type="button">生成导演分析</button></div>'
             + '<div class="adr048-actions"><button id="adr044-' + type + '-reroll" type="button">重新分析</button><button id="adr044-' + type + '-stop" type="button" disabled>打断</button><button id="adr044-' + type + '-copy" type="button">复制</button></div>'
             + '<div class="adr048-actions"><button id="adr044-' + type + '-inject" type="button">手动注入当前聊天</button></div>'
             + '</div>'
