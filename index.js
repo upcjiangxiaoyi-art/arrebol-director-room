@@ -1868,20 +1868,21 @@
 
         return '<div class="adr044-page" id="adr044-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
             + '<details open><summary>' + title + '配置</summary>'
+            + '<label>当前 API 预设</label>'
+            + '<div class="adr044-template-compact adr044-api-profile-compact">'
+            + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-api-profile-load-' + type + '">切换</button>'
+            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存/改名</button>'
+            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
+            + '</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">选预设点「切换」；改下方 API 后点「保存/改名」。</div>'
+            + '</div>'
             + '<label>API 地址</label><input type="text" id="adr044-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
             + '<label>API 密钥</label><input type="password" id="adr044-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
             + '<label>模型</label><input type="text" id="adr044-' + type + '-model" value="' + esc(st[p + "Model"] || "") + '" placeholder="可以手填，或加载模型">'
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
-            + '<div class="adr044-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
-            + '<div class="adr044-template-compact adr044-api-profile-compact">'
-            + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
-            + '<div class="adr044-template-mini-actions">'
-            + '<button type="button" id="adr044-api-profile-load-' + type + '">确认</button>'
-            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前</button>'
-            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
-            + '</div>'
-            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">下拉选档案后点「确认」；点「保存当前」会询问名称。</div>'
-            + '</div>'
+            + '<div class="adr044-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存当前使用</button></div>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "启用剧情导演自动触发" : "启用情感导演自动触发") + '</label>'
             + '<label>自动触发间隔</label>'
@@ -2564,7 +2565,7 @@
     function adrDApiProfileOptions(type) {
         var arr = adrDLoadApiProfiles(type);
         var selectedName = adrDSelectedApiProfileName(type);
-        var html = '<option value="">选择 API 档案</option>';
+        var html = '<option value="">选择当前预设</option>';
         arr.forEach(function (it, idx) {
             var name = String(it.name || ("API 档案 " + (idx + 1)));
             var selected = selectedName && name === selectedName ? ' selected' : '';
@@ -2672,25 +2673,28 @@
         }
 
         var arr = adrDLoadApiProfiles(type);
-        var selected = adrDSelectedApiProfileItem(type);
-        var defaultName = selected && selected.name ? String(selected.name) : "";
-        var name = "";
-        try {
-            name = rw.prompt("保存当前 API 为档案：", defaultName || "DS / Claude") || "";
-        } catch (e) {
-            name = defaultName || "";
-        }
-        name = String(name || "").trim();
+        var sel = adrDActiveField(type, "adr044-api-profile-select-" + type);
+        var selectedIdx = sel ? Number(sel.value) : -1;
+        var selected = arr[selectedIdx] || null;
+        var defaultName = selected && selected.name ? String(selected.name) : adrDSelectedApiProfileName(type);
+        var prompted = null;
 
-        if (!name || name === "DS / Claude") {
-            adrDApiProfileStatus(type, "请输入档案名，例如 DS / Claude", "#e28a9c");
+        try {
+            prompted = rootWin().prompt("API 预设名：", defaultName || "DS / Claude");
+        } catch (e) {
+            prompted = defaultName || "";
+        }
+
+        if (prompted === null) {
+            adrDApiProfileStatus(type, "已取消保存", "#d989a1");
             return;
         }
 
-        var found = -1;
-        arr.forEach(function (it, idx) {
-            if (String(it.name || "").toLowerCase() === name.toLowerCase()) found = idx;
-        });
+        var name = String(prompted || "").trim();
+        if (!name || name === "DS / Claude") {
+            adrDApiProfileStatus(type, "请输入预设名，例如 DS / Claude", "#e28a9c");
+            return;
+        }
 
         var item = {
             name: name,
@@ -2700,14 +2704,29 @@
             updatedAt: Date.now()
         };
 
-        if (found >= 0) arr[found] = item;
-        else arr.push(item);
+        var found = -1;
+        arr.forEach(function (it, idx) {
+            if (String(it.name || "").toLowerCase() === name.toLowerCase()) found = idx;
+        });
+
+        if (selected && selectedIdx >= 0) {
+            if (found >= 0 && found !== selectedIdx) {
+                arr[found] = item;
+                arr.splice(selectedIdx, 1);
+            } else {
+                arr[selectedIdx] = item;
+            }
+        } else if (found >= 0) {
+            arr[found] = item;
+        } else {
+            arr.push(item);
+        }
 
         adrDSaveApiProfiles(type, arr);
         adrDSaveSelectedApiProfile(type, name);
         adrDRefreshApiProfileSelects(type, name);
         adrDSetCurrentApiFields(type, item);
-        adrDApiProfileStatus(type, "已保存：" + name, "#8ed99d");
+        adrDApiProfileStatus(type, "已保存预设：" + name, "#8ed99d");
     }
 
     function adrDApplyApiProfile(type) {
@@ -2723,7 +2742,7 @@
         adrDSaveSelectedApiProfile(type, item.name || "");
         adrDRefreshApiProfileSelects(type, item.name || "");
         adrDSetCurrentApiFields(type, item);
-        adrDApiProfileStatus(type, "已切换：" + item.name, "#8ed99d");
+        adrDApiProfileStatus(type, "当前预设：" + item.name, "#8ed99d");
     }
 
     function adrDDeleteCurrentApiProfile(type) {
@@ -2772,7 +2791,7 @@
                         var name = item ? String(item.name || "") : "";
                         adrDSaveSelectedApiProfile(type, name);
                         adrDRefreshApiProfileSelects(type, name);
-                        adrDApiProfileStatus(type, item ? "已选择：" + name + "，点「确认」" : "", item ? "#8ed99d" : "#d989a1");
+                        adrDApiProfileStatus(type, item ? "已选择：" + name + "，点「切换」" : "", item ? "#8ed99d" : "#d989a1");
                     }, true);
                 });
             });
@@ -2887,7 +2906,7 @@
             ids["adr044-" + type + "-load-models"] = function () { loadModels(type); };
             ids["adr044-" + type + "-save"] = function () {
                 adrDForceSaveSettings(type);
-                status(type, "设置已保存 ✓", "#8ed99d");
+                status(type, "当前使用已保存 ✓", "#8ed99d");
             };
             ids["adr044-api-profile-save-" + type] = function () { adrDSaveCurrentApiProfile(type); };
             ids["adr044-api-profile-load-" + type] = function () { adrDApplyApiProfile(type); };
@@ -3163,20 +3182,21 @@
 
         return '<div class="adr048-page" id="adr048-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '配置</div>'
+            + '<label>当前 API 预设</label>'
+            + '<div class="adr044-template-compact adr044-api-profile-compact">'
+            + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-api-profile-load-' + type + '">切换</button>'
+            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存/改名</button>'
+            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
+            + '</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">选预设点「切换」；改下方 API 后点「保存/改名」。</div>'
+            + '</div>'
             + '<label>API 地址</label><input type="text" id="adr044-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
             + '<label>API 密钥</label><input type="password" id="adr044-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
             + '<label>模型</label><input type="text" id="adr044-' + type + '-model" value="' + esc(st[p + "Model"] || "") + '" placeholder="可以手填，或加载模型">'
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
-            + '<div class="adr048-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
-            + '<div class="adr044-template-compact adr044-api-profile-compact">'
-            + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
-            + '<div class="adr044-template-mini-actions">'
-            + '<button type="button" id="adr044-api-profile-load-' + type + '">确认</button>'
-            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前</button>'
-            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
-            + '</div>'
-            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">下拉选档案后点「确认」；点「保存当前」会询问名称。</div>'
-            + '</div>'
+            + '<div class="adr048-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存当前使用</button></div>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "启用剧情导演自动触发" : "启用情感导演自动触发") + '</label>'
             + '<label>自动触发间隔</label>'
@@ -4604,7 +4624,7 @@
 
             if (id === "adr044-" + type + "-save") {
                 adrDForceSaveSettings(type);
-                status(type, "设置已保存 ✓", "#8ed99d");
+                status(type, "当前使用已保存 ✓", "#8ed99d");
                 return true;
             }
 
