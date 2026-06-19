@@ -1873,10 +1873,10 @@
             + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
             + '<div class="adr044-template-mini-actions">'
             + '<button type="button" id="adr044-api-profile-load-' + type + '">切换</button>'
-            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存/改名</button>'
+            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前</button>'
             + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
             + '</div>'
-            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">选预设点「切换」；改下方 API 后点「保存/改名」。</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">切换会套用；保存当前可新建/覆盖同名。</div>'
             + '</div>'
             + '<label>API 地址</label><input type="text" id="adr044-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
             + '<label>API 密钥</label><input type="password" id="adr044-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
@@ -2680,7 +2680,7 @@
         var prompted = null;
 
         try {
-            prompted = rootWin().prompt("API 预设名：", defaultName || "DS / Claude");
+            prompted = rootWin().prompt("保存为预设名：", defaultName || "DS / Claude");
         } catch (e) {
             prompted = defaultName || "";
         }
@@ -2709,14 +2709,9 @@
             if (String(it.name || "").toLowerCase() === name.toLowerCase()) found = idx;
         });
 
-        if (selected && selectedIdx >= 0) {
-            if (found >= 0 && found !== selectedIdx) {
-                arr[found] = item;
-                arr.splice(selectedIdx, 1);
-            } else {
-                arr[selectedIdx] = item;
-            }
-        } else if (found >= 0) {
+        // 保存语义：同名覆盖，不同名新建；不因为当前下拉选中了旧预设就自动改名/吞掉旧预设。
+        // 这样用户可以选中 A 作为模板，改 URL/key/model 后保存为 B，A 会继续保留。
+        if (found >= 0) {
             arr[found] = item;
         } else {
             arr.push(item);
@@ -3187,10 +3182,10 @@
             + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
             + '<div class="adr044-template-mini-actions">'
             + '<button type="button" id="adr044-api-profile-load-' + type + '">切换</button>'
-            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存/改名</button>'
+            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前</button>'
             + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
             + '</div>'
-            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">选预设点「切换」；改下方 API 后点「保存/改名」。</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">切换会套用；保存当前可新建/覆盖同名。</div>'
             + '</div>'
             + '<label>API 地址</label><input type="text" id="adr044-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
             + '<label>API 密钥</label><input type="password" id="adr044-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
