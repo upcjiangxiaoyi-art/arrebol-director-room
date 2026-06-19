@@ -933,3 +933,7 @@
     color: #ffd6ae !important;
     -webkit-text-fill-color: #ffd6ae !important;
 }
+
+.adr044-api-profile-compact .adr044-template-mini-actions {
+  grid-template-columns: 1fr 1fr 0.72fr;
+}

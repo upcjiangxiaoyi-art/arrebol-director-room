@@ -1875,15 +1875,12 @@
             + '<div class="adr044-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
             + '<div class="adr044-template-compact adr044-api-profile-compact">'
             + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
-            + '<input id="adr044-api-profile-name-' + type + '" placeholder="新档案名，如 DS / Claude">'
             + '<div class="adr044-template-mini-actions">'
-            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前 API</button>'
-            + '<button type="button" id="adr044-api-profile-load-' + type + '">切换档案</button>'
+            + '<button type="button" id="adr044-api-profile-load-' + type + '">确认</button>'
+            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前</button>'
+            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
             + '</div>'
-            + '<div class="adr044-template-mini-actions">'
-            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除档案</button>'
-            + '</div>'
-            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">当前导演独立保存，可存多组；情感/剧情互不影响。</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">下拉选档案后点「确认」；点「保存当前」会询问名称。</div>'
             + '</div>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "启用剧情导演自动触发" : "启用情感导演自动触发") + '</label>'
@@ -2668,20 +2665,28 @@
         type = type === "plot" ? "plot" : "emotion";
         adrDResetConfirmAction("delete-api-profile-" + type);
 
-        var nameBox = adrDActiveField(type, "adr044-api-profile-name-" + type);
-        var name = nameBox ? String(nameBox.value || "").trim() : "";
         var fields = adrDCurrentApiFields(type);
-
-        if (!name) {
-            adrDApiProfileStatus(type, "请先写新档案名，例如 DS / Claude", "#e28a9c");
-            return;
-        }
         if (!fields.endpoint && !fields.apiKey && !fields.model) {
             adrDApiProfileStatus(type, "请先填写 API 地址、密钥或模型", "#e28a9c");
             return;
         }
 
         var arr = adrDLoadApiProfiles(type);
+        var selected = adrDSelectedApiProfileItem(type);
+        var defaultName = selected && selected.name ? String(selected.name) : "";
+        var name = "";
+        try {
+            name = rw.prompt("保存当前 API 为档案：", defaultName || "DS / Claude") || "";
+        } catch (e) {
+            name = defaultName || "";
+        }
+        name = String(name || "").trim();
+
+        if (!name || name === "DS / Claude") {
+            adrDApiProfileStatus(type, "请输入档案名，例如 DS / Claude", "#e28a9c");
+            return;
+        }
+
         var found = -1;
         arr.forEach(function (it, idx) {
             if (String(it.name || "").toLowerCase() === name.toLowerCase()) found = idx;
@@ -2702,7 +2707,7 @@
         adrDSaveSelectedApiProfile(type, name);
         adrDRefreshApiProfileSelects(type, name);
         adrDSetCurrentApiFields(type, item);
-        adrDApiProfileStatus(type, found >= 0 ? "已保存：" + name : "已保存：" + name, "#8ed99d");
+        adrDApiProfileStatus(type, "已保存：" + name, "#8ed99d");
     }
 
     function adrDApplyApiProfile(type) {
@@ -2715,9 +2720,6 @@
             return;
         }
 
-        Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + type)).forEach(function (el) {
-            el.value = String(item.name || "");
-        });
         adrDSaveSelectedApiProfile(type, item.name || "");
         adrDRefreshApiProfileSelects(type, item.name || "");
         adrDSetCurrentApiFields(type, item);
@@ -2768,12 +2770,9 @@
                         var arr = adrDLoadApiProfiles(type);
                         var item = arr[Number(sel.value)];
                         var name = item ? String(item.name || "") : "";
-                        Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + type)).forEach(function (el) {
-                            if (el) el.value = name;
-                        });
                         adrDSaveSelectedApiProfile(type, name);
                         adrDRefreshApiProfileSelects(type, name);
-                        adrDApiProfileStatus(type, item ? "已选择：" + name + "，点「切换档案」" : "", item ? "#8ed99d" : "#d989a1");
+                        adrDApiProfileStatus(type, item ? "已选择：" + name + "，点「确认」" : "", item ? "#8ed99d" : "#d989a1");
                     }, true);
                 });
             });
@@ -3171,15 +3170,12 @@
             + '<div class="adr048-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存设置</button></div>'
             + '<div class="adr044-template-compact adr044-api-profile-compact">'
             + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileOptions(type) + '</select>'
-            + '<input id="adr044-api-profile-name-' + type + '" placeholder="新档案名，如 DS / Claude">'
             + '<div class="adr044-template-mini-actions">'
-            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前 API</button>'
-            + '<button type="button" id="adr044-api-profile-load-' + type + '">切换档案</button>'
+            + '<button type="button" id="adr044-api-profile-load-' + type + '">确认</button>'
+            + '<button type="button" id="adr044-api-profile-save-' + type + '">保存当前</button>'
+            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
             + '</div>'
-            + '<div class="adr044-template-mini-actions">'
-            + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除档案</button>'
-            + '</div>'
-            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">当前导演独立保存，可存多组；情感/剧情互不影响。</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">下拉选档案后点「确认」；点「保存当前」会询问名称。</div>'
             + '</div>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "启用剧情导演自动触发" : "启用情感导演自动触发") + '</label>'
