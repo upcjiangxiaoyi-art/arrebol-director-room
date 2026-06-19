@@ -1868,15 +1868,15 @@
 
         return '<div class="adr044-page" id="adr044-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
             + '<details open><summary>' + title + '配置</summary>'
-            + '<label>当前 API 预设</label>'
+            + '<label>API 预设</label>'
             + '<div class="adr044-template-compact adr044-api-profile-compact">'
-            + '<input type="text" id="adr044-api-profile-name-' + type + '" list="adr044-api-profile-list-' + type + '" value="' + esc(adrDSelectedApiProfileName(type) || "") + '" placeholder="输入或选择预设名，如 DS / Claude">'
-            + '<datalist id="adr044-api-profile-list-' + type + '">' + adrDApiProfileDatalistOptions(type) + '</datalist>'
+            + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileSelectOptions(type, adrDSelectedApiProfileName(type) || "") + '</select>'
+            + '<input type="text" id="adr044-api-profile-name-' + type + '" value="' + esc(adrDSelectedApiProfileName(type) || "") + '" placeholder="预设名，如 DS / Claude">'
             + '<div class="adr044-template-mini-actions">'
             + '<button type="button" id="adr044-api-profile-save-' + type + '">保存</button>'
             + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
             + '</div>'
-            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">选择已有预设会立即套用；输入新名字后点保存。</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">下拉选择会立即切换；改名后保存会新增/更新预设。</div>'
             + '</div>'
             + '<label>API 地址</label><input type="text" id="adr044-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
             + '<label>API 密钥</label><input type="password" id="adr044-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
@@ -2562,21 +2562,25 @@
         }
     }
 
-    function adrDApiProfileDatalistOptions(type) {
+    function adrDApiProfileSelectOptions(type, selectedName) {
         var arr = adrDLoadApiProfiles(type);
-        return arr.map(function (it, idx) {
+        selectedName = String(selectedName || "");
+        var html = '<option value="">选择已有预设</option>';
+        html += arr.map(function (it, idx) {
             var name = String(it.name || ("API 预设 " + (idx + 1)));
-            return '<option value="' + esc(name) + '"></option>';
+            return '<option value="' + esc(name) + '"' + (name === selectedName ? " selected" : "") + '>' + esc(name) + '</option>';
         }).join("");
+        return html;
     }
 
     function adrDRefreshApiProfileSelects(type, selectedName) {
         try {
             if (selectedName === undefined || selectedName === null) selectedName = adrDSelectedApiProfileName(type);
             selectedName = String(selectedName || "");
-            var html = adrDApiProfileDatalistOptions(type);
-            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-list-" + type)).forEach(function (list) {
-                list.innerHTML = html;
+            var html = adrDApiProfileSelectOptions(type, selectedName);
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-select-" + type)).forEach(function (sel) {
+                sel.innerHTML = html;
+                sel.value = selectedName;
             });
             Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + type)).forEach(function (input) {
                 input.value = selectedName;
@@ -2644,6 +2648,10 @@
         };
     }
 
+    function adrDApiProfileSelect(type) {
+        return adrDActiveField(type === "plot" ? "plot" : "emotion", "adr044-api-profile-select-" + (type === "plot" ? "plot" : "emotion"));
+    }
+
     function adrDApiProfileNameInput(type) {
         return adrDActiveField(type === "plot" ? "plot" : "emotion", "adr044-api-profile-name-" + (type === "plot" ? "plot" : "emotion"));
     }
@@ -2652,6 +2660,12 @@
         type = type === "plot" ? "plot" : "emotion";
         var input = adrDApiProfileNameInput(type);
         return String(input ? input.value || "" : adrDSelectedApiProfileName(type) || "").trim();
+    }
+
+    function adrDSelectedApiProfileSelectName(type) {
+        type = type === "plot" ? "plot" : "emotion";
+        var sel = adrDApiProfileSelect(type);
+        return String(sel ? sel.value || "" : adrDSelectedApiProfileName(type) || "").trim();
     }
 
     function adrDFindApiProfileIndexByName(type, name) {
@@ -2666,7 +2680,7 @@
 
     function adrDSelectedApiProfileItem(type) {
         type = type === "plot" ? "plot" : "emotion";
-        var name = adrDActiveApiProfileName(type) || adrDSelectedApiProfileName(type);
+        var name = adrDSelectedApiProfileSelectName(type) || adrDActiveApiProfileName(type) || adrDSelectedApiProfileName(type);
         var idx = adrDFindApiProfileIndexByName(type, name);
         var arr = adrDLoadApiProfiles(type);
         return idx >= 0 ? arr[idx] : null;
@@ -2712,10 +2726,10 @@
         type = type === "plot" ? "plot" : "emotion";
         adrDResetConfirmAction("delete-api-profile-" + type);
 
-        var name = adrDActiveApiProfileName(type);
+        var name = adrDSelectedApiProfileSelectName(type) || adrDActiveApiProfileName(type);
         var item = adrDSelectedApiProfileItem(type);
         if (!item) {
-            adrDApiProfileStatus(type, name ? "未保存的新预设名；填好 API 后点「保存」" : "请输入或选择预设名", "#d989a1");
+            adrDApiProfileStatus(type, name ? "未保存的新预设名；填好 API 后点「保存」" : "请选择已有预设，或输入新名字后保存", "#d989a1");
             return false;
         }
 
@@ -2762,21 +2776,35 @@
     function adrDBindApiProfileControls() {
         try {
             ["emotion", "plot"].forEach(function (type) {
+                Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-select-" + type)).forEach(function (sel) {
+                    if (!sel) return;
+                    if (sel.__adrDApiProfileSelectBound) return;
+                    sel.__adrDApiProfileSelectBound = true;
+                    sel.addEventListener("change", function () {
+                        var name = String(sel.value || "").trim();
+                        if (!name) {
+                            adrDSaveSelectedApiProfile(type, "");
+                            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + type)).forEach(function (input) { input.value = ""; });
+                            adrDApiProfileStatus(type, "输入新名字后点「保存」即可新增预设", "#d989a1");
+                            return;
+                        }
+                        adrDApplyApiProfile(type);
+                    }, true);
+                });
+
                 Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + type)).forEach(function (input) {
                     if (!input) return;
                     if (input.__adrDApiProfileNameBound) return;
                     input.__adrDApiProfileNameBound = true;
-                    input.addEventListener("change", function () {
+                    input.addEventListener("input", function () {
                         var name = String(input.value || "").trim();
+                        adrDResetConfirmAction("delete-api-profile-" + type);
                         if (!name) {
-                            adrDSaveSelectedApiProfile(type, "");
-                            adrDApiProfileStatus(type, "", "#d989a1");
-                            return;
-                        }
-                        if (adrDFindApiProfileIndexByName(type, name) >= 0) {
-                            adrDApplyApiProfile(type);
+                            adrDApiProfileStatus(type, "输入新名字后点「保存」即可新增预设", "#d989a1");
+                        } else if (adrDFindApiProfileIndexByName(type, name) >= 0) {
+                            adrDApiProfileStatus(type, "同名保存会更新该预设", "#d989a1");
                         } else {
-                            adrDApiProfileStatus(type, "新预设名；填好 API 后点「保存」", "#d989a1");
+                            adrDApiProfileStatus(type, "新名字保存会新增预设，不影响旧预设", "#d989a1");
                         }
                     }, true);
                 });
@@ -3167,15 +3195,15 @@
 
         return '<div class="adr048-page" id="adr048-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '配置</div>'
-            + '<label>当前 API 预设</label>'
+            + '<label>API 预设</label>'
             + '<div class="adr044-template-compact adr044-api-profile-compact">'
-            + '<input type="text" id="adr044-api-profile-name-' + type + '" list="adr044-api-profile-list-' + type + '" value="' + esc(adrDSelectedApiProfileName(type) || "") + '" placeholder="输入或选择预设名，如 DS / Claude">'
-            + '<datalist id="adr044-api-profile-list-' + type + '">' + adrDApiProfileDatalistOptions(type) + '</datalist>'
+            + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileSelectOptions(type, adrDSelectedApiProfileName(type) || "") + '</select>'
+            + '<input type="text" id="adr044-api-profile-name-' + type + '" value="' + esc(adrDSelectedApiProfileName(type) || "") + '" placeholder="预设名，如 DS / Claude">'
             + '<div class="adr044-template-mini-actions">'
             + '<button type="button" id="adr044-api-profile-save-' + type + '">保存</button>'
             + '<button type="button" id="adr044-api-profile-delete-' + type + '">删除</button>'
             + '</div>'
-            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">选择已有预设会立即套用；输入新名字后点保存。</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + type + '">下拉选择会立即切换；改名后保存会新增/更新预设。</div>'
             + '</div>'
             + '<label>API 地址</label><input type="text" id="adr044-' + type + '-endpoint" value="' + esc(st[p + "ApiEndpoint"] || "") + '" placeholder="https://openrouter.ai/api/v1">'
             + '<label>API 密钥</label><input type="password" id="adr044-' + type + '-key" value="' + esc(st[p + "ApiKey"] || "") + '" placeholder="sk-...">'
