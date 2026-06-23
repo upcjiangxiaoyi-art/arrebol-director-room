@@ -3096,6 +3096,18 @@
                 if (map[id] === "customRange") save(map[id], Number(el.value || 0));
                 else save(map[id], el.value || "");
             });
+            el.addEventListener("change", function () {
+                if (map[id] === "customRange") save(map[id], Number(el.value || 0));
+                else save(map[id], el.value || "");
+                try { adrDSaveLocalBackup(settings()); } catch (eBackup) {}
+                saveNow();
+            });
+            el.addEventListener("blur", function () {
+                if (map[id] === "customRange") save(map[id], Number(el.value || 0));
+                else save(map[id], el.value || "");
+                try { adrDSaveLocalBackup(settings()); } catch (eBackup2) {}
+                saveNow();
+            }, true);
         });
     }
 
@@ -3406,6 +3418,13 @@
 
     function adr048ClosePopupPanel() {
         try {
+            // 关闭浮窗前先强制同步一次表单，避免移动端输入框/长文本框的 debounced save 尚未落盘。
+            try {
+                syncAll();
+                adrDSaveLocalBackup(settings());
+                saveNow();
+            } catch (eSaveBeforeClose) {}
+
             var p = rootDoc().querySelector("#adr048-popup-panel");
             if (!p) return;
             p.setAttribute("data-open", "0");
