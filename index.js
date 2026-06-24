@@ -2893,6 +2893,37 @@
         );
     }
 
+    function adrDRequestDirectAnalysis(type, btn) {
+        type = type === "plot" ? "plot" : "emotion";
+        return adrDTwoStepConfirm(
+            "direct-analysis-" + type,
+            btn || qForm("adr044-" + type + "-generate"),
+            "确认分析？",
+            "再点一次开始直接分析",
+            function (msg) { status(type, msg, "#d6a26a"); },
+            function () {
+                syncAll();
+                run(type, "");
+            }
+        );
+    }
+
+    function adrDRequestExtraAnalysis(type, btn) {
+        type = type === "plot" ? "plot" : "emotion";
+        return adrDTwoStepConfirm(
+            "extra-analysis-" + type,
+            btn || qForm("adr044-" + type + "-reroll"),
+            "确认分析？",
+            "再点一次开始补充指令分析",
+            function (msg) { status(type, msg, "#d6a26a"); },
+            function () {
+                syncType(type);
+                var extra = qForm("adr044-" + type + "-extra");
+                run(type, extra ? extra.value : "");
+            }
+        );
+    }
+
     function bindDirect() {
         try {
             if (!rootWin().adrDStableAutoSaveBound) {
@@ -2932,11 +2963,8 @@
 
         ["emotion", "plot"].forEach(function (type) {
             ids["adr044-" + type + "-local"] = function () { localTest(type); };
-            ids["adr044-" + type + "-generate"] = function () { run(type, ""); };
-            ids["adr044-" + type + "-reroll"] = function () {
-                var extra = qForm("adr044-" + type + "-extra");
-                run(type, extra ? extra.value : "");
-            };
+            ids["adr044-" + type + "-generate"] = function () { adrDRequestDirectAnalysis(type, qForm("adr044-" + type + "-generate")); };
+            ids["adr044-" + type + "-reroll"] = function () { adrDRequestExtraAnalysis(type, qForm("adr044-" + type + "-reroll")); };
             ids["adr044-" + type + "-stop"] = function () { abortRun(type); };
             ids["adr044-" + type + "-copy"] = function () { copyText(type); };
             ids["adr044-" + type + "-load-models"] = function () { loadModels(type); };
@@ -4660,15 +4688,12 @@
             }
 
             if (id === "adr044-" + type + "-generate") {
-                syncAll();
-                run(type, "");
+                adrDRequestDirectAnalysis(type, btn);
                 return true;
             }
 
             if (id === "adr044-" + type + "-reroll") {
-                syncType(type);
-                var extra = qForm("adr044-" + type + "-extra");
-                run(type, extra ? extra.value : "");
+                adrDRequestExtraAnalysis(type, btn);
                 return true;
             }
 
