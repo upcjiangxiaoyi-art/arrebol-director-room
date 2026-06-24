@@ -2871,6 +2871,28 @@
         }
     }
 
+    function adrDRequestManualInject(type, btn) {
+        type = type === "plot" ? "plot" : "emotion";
+        return adrDTwoStepConfirm(
+            "manual-inject-" + type,
+            btn || qForm("adr044-" + type + "-inject"),
+            "确定注入？",
+            "再点一次确认注入",
+            function (msg) { status(type, msg, "#d6a26a"); },
+            function () {
+                syncType(type);
+                var pv = qForm("adr044-" + type + "-preview");
+                var text = pv ? pv.value : "";
+                if (!text) {
+                    status(type, "没有内容可注入", "#d4726a");
+                    return;
+                }
+                var ok = injectDirector(type, text);
+                status(type, ok ? "已注入当前聊天 ✓" : "注入失败", ok ? "#8ed99d" : "#d4726a");
+            }
+        );
+    }
+
     function bindDirect() {
         try {
             if (!rootWin().adrDStableAutoSaveBound) {
@@ -2926,15 +2948,7 @@
             ids["adr044-api-profile-delete-" + type] = function () { adrDRequestDeleteCurrentApiProfile(type); };
             ids["adr044-" + type + "-calibrate-auto"] = function () { adrDRequestCalibrateAutoBaseline(type); };
             ids["adr044-" + type + "-inject"] = function () {
-                syncType(type);
-                var pv = qForm("adr044-" + type + "-preview");
-                var text = pv ? pv.value : "";
-                if (!text) {
-                    status(type, "没有内容可注入", "#d4726a");
-                    return;
-                }
-                var ok = injectDirector(type, text);
-                status(type, ok ? "已注入当前聊天 ✓" : "注入失败", ok ? "#8ed99d" : "#d4726a");
+                adrDRequestManualInject(type);
             };
         });
 
@@ -4561,21 +4575,41 @@
             if (rootWin().__adrDTabFallbackOnlyInstalled) return;
             rootWin().__adrDTabFallbackOnlyInstalled = true;
 
-            function handle(ev) {
+            function findTabTarget(ev) {
                 try {
                     var t = ev.target;
                     while (t && t !== rootDoc()) {
-                        if (t.id === "adr044-tab-emotion" || t.id === "adr044-tab-plot") {
-                            ev.preventDefault();
-                            ev.stopPropagation();
-                            switchTab(t.id === "adr044-tab-plot" ? "plot" : "emotion");
-                            return false;
-                        }
+                        if (t.id === "adr044-tab-emotion" || t.id === "adr044-tab-plot") return t;
                         t = t.parentNode;
                     }
                 } catch (e) {}
+                return null;
             }
 
+            function markStart(ev) {
+                var hit = findTabTarget(ev);
+                if (hit) adrDMarkButtonTouchStart(hit, ev);
+            }
+
+            function markMove(ev) {
+                var hit = findTabTarget(ev);
+                if (hit) adrDMarkButtonTouchMove(hit, ev);
+            }
+
+            function handle(ev) {
+                try {
+                    var hit = findTabTarget(ev);
+                    if (!hit) return;
+                    if (adrDShouldIgnoreButtonTap(hit, ev)) return;
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    switchTab(hit.id === "adr044-tab-plot" ? "plot" : "emotion");
+                    return false;
+                } catch (e) {}
+            }
+
+            rootDoc().addEventListener("touchstart", markStart, true);
+            rootDoc().addEventListener("touchmove", markMove, true);
             rootDoc().addEventListener("click", handle, true);
             rootDoc().addEventListener("touchend", handle, true);
         } catch (e2) {
@@ -4591,7 +4625,7 @@
         return settings().activeTab || "emotion";
     }
 
-    function adrDHandleAnyButtonId(id) {
+    function adrDHandleAnyButtonId(id, btn) {
         try {
             if (!id || id.indexOf("adr044-") !== 0) return false;
 
@@ -4677,15 +4711,7 @@
             }
 
             if (id === "adr044-" + type + "-inject") {
-                syncType(type);
-                var pv = qForm("adr044-" + type + "-preview");
-                var text = pv ? pv.value : "";
-                if (!text) {
-                    status(type, "没有内容可注入", "#d4726a");
-                    return true;
-                }
-                var ok = injectDirector(type, text);
-                status(type, ok ? "已注入当前聊天 ✓" : "注入失败", ok ? "#8ed99d" : "#d4726a");
+                adrDRequestManualInject(type, btn);
                 return true;
             }
         } catch (e) {
@@ -4705,29 +4731,50 @@
             if (rootWin().__adrDAllButtonFallbackInstalled) return;
             rootWin().__adrDAllButtonFallbackInstalled = true;
 
-            function handle(ev) {
+            function findButtonTarget(ev) {
                 try {
                     var t = ev.target;
                     while (t && t !== rootDoc()) {
                         if (t.id && t.id.indexOf("adr044-") === 0) {
                             var tag = String(t.tagName || "").toLowerCase();
                             // 输入框/选择框不拦截，否则会影响输入。
-                            if (tag === "input" || tag === "textarea" || tag === "select" || tag === "option") return;
-
-                            var ok = adrDHandleAnyButtonId(t.id);
-                            if (ok) {
-                                ev.preventDefault();
-                                ev.stopPropagation();
-                                return false;
-                            }
+                            if (tag === "input" || tag === "textarea" || tag === "select" || tag === "option") return null;
+                            return t;
                         }
                         t = t.parentNode;
+                    }
+                } catch (e) {}
+                return null;
+            }
+
+            function markStart(ev) {
+                var hit = findButtonTarget(ev);
+                if (hit) adrDMarkButtonTouchStart(hit, ev);
+            }
+
+            function markMove(ev) {
+                var hit = findButtonTarget(ev);
+                if (hit) adrDMarkButtonTouchMove(hit, ev);
+            }
+
+            function handle(ev) {
+                try {
+                    var hit = findButtonTarget(ev);
+                    if (!hit) return;
+                    if (adrDShouldIgnoreButtonTap(hit, ev)) return;
+                    var ok = adrDHandleAnyButtonId(hit.id, hit);
+                    if (ok) {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        return false;
                     }
                 } catch (e) {
                     console.warn("[Arrebol D] all-button fallback listener failed", e);
                 }
             }
 
+            rootDoc().addEventListener("touchstart", markStart, true);
+            rootDoc().addEventListener("touchmove", markMove, true);
             rootDoc().addEventListener("click", handle, true);
             rootDoc().addEventListener("touchend", handle, true);
         } catch (e2) {
