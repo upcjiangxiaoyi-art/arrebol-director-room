@@ -937,3 +937,44 @@
 .adr044-api-profile-compact .adr044-template-mini-actions {
   grid-template-columns: 1fr 0.72fr;
 }
+
+/* v1.9.26 mobile anti-mistouch UI gutter: action buttons stay left, right side remains empty for thumb scrolling. UI-only. */
+#adr044-drawer {
+    --adr044-action-safe-gutter: 56px;
+}
+
+#adr048-popup-body {
+    --adr048-action-safe-gutter: 56px;
+}
+
+#adr044-drawer .adr044-actions,
+#adr044-drawer .adr044-template-mini-actions {
+    width: calc(100% - var(--adr044-action-safe-gutter)) !important;
+    margin-right: var(--adr044-action-safe-gutter) !important;
+    box-sizing: border-box !important;
+}
+
+#adr048-popup-body .adr048-actions,
+#adr048-popup-body .adr044-template-mini-actions {
+    width: calc(100% - var(--adr048-action-safe-gutter)) !important;
+    margin-right: var(--adr048-action-safe-gutter) !important;
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 430px) {
+    #adr044-drawer {
+        --adr044-action-safe-gutter: 48px;
+    }
+    #adr048-popup-body {
+        --adr048-action-safe-gutter: 48px;
+    }
+}
+
+@media (max-width: 360px) {
+    #adr044-drawer {
+        --adr044-action-safe-gutter: 40px;
+    }
+    #adr048-popup-body {
+        --adr048-action-safe-gutter: 40px;
+    }
+}
