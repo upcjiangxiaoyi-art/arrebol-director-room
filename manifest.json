@@ -6,6 +6,6 @@
   "js": "index.js",
   "css": "style.css",
   "author": "ripple & GPT",
-  "version": "1.9.26",
-  "description": "Arrebol D 小红霞导演插件｜1.9.26 trigger retry strict success：自动触发严格成功语义、失败首报、保拍退避重试｜ripple & GPT"
+  "version": "1.9.28",
+  "description": "Arrebol D 小红霞导演插件｜1.9.28 master switch：一键启停总开关（关自动留手动、启动重校准不补拍）+ 1.9.27 双导演同拍共存修复｜ripple & GPT & Claude"
 }

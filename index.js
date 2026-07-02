@@ -19,6 +19,7 @@
 
     var DEFAULTS = {
         activeTab: "emotion",
+        masterEnabled: true,
         autoInjectEmotion: true,
         autoInjectPlot: true,
         injectMode: "visible",
@@ -382,6 +383,69 @@
         return st.activeTab === "plot" ? "plot" : "emotion";
     }
 
+    // ===== v1.9.28 总开关 =====
+    function adrDMasterEnabled() {
+        try { return settings().masterEnabled !== false; }
+        catch (e) { return true; }
+    }
+
+    function adrDMasterToggleLabel() {
+        return adrDMasterEnabled()
+            ? "🌸 小红霞：运行中｜点击一键关闭"
+            : "⏸️ 小红霞：已暂停｜点击一键启动";
+    }
+
+    function adrDRefreshMasterToggleUI() {
+        try {
+            var nodes = Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-master-toggle"));
+            var on = adrDMasterEnabled();
+            nodes.forEach(function (el) {
+                if (!el) return;
+                el.textContent = adrDMasterToggleLabel();
+                el.setAttribute("data-master-on", on ? "1" : "0");
+            });
+        } catch (e) {}
+    }
+
+    async function adrDToggleMaster() {
+        try {
+            var next = !adrDMasterEnabled();
+            save("masterEnabled", next);
+            saveNow();
+            try { adrDSaveLocalBackup(settings()); } catch (eBk) {}
+            adrDRefreshMasterToggleUI();
+
+            if (!next) {
+                adrDToast("小红霞已暂停：自动分析与重试全部停止，手动按钮不受影响");
+                adrDUpdateAutoCounters();
+                return;
+            }
+
+            // 一键启动：baseline 校准到当前进度，关闭期间积累的楼层不补拍，从零重新累积。
+            adrDToast("小红霞已启动：从当前进度重新计数");
+            try {
+                var count = await adrDRefreshFullAssistantRoundCount("master-on");
+                if (adrDCountReady() && adrDChatKeyReady()) {
+                    adrDSetAutoBaseline("emotion", count);
+                    adrDSetAutoBaseline("plot", count);
+                    var st = settings();
+                    st.lastAutoTriggerChatKey = adrDChatKey();
+                    st.lastAutoTriggerEmotionCount = count;
+                    st.lastAutoTriggerPlotCount = count;
+                    st.lastAutoTriggerEmotionAt = Date.now();
+                    st.lastAutoTriggerPlotAt = Date.now();
+                    saveNow();
+                    try { adrDPersistAutoBaselineFields(st); } catch (ePersist) {}
+                }
+                // count/chatKey 未就绪时不强写 baseline；首次被动检查的脏 gap 安全网会静默对齐。
+            } catch (eCal) {}
+            adrDUpdateAutoCounters();
+        } catch (e) {
+            console.error("[Arrebol D] master toggle failed", e);
+        }
+    }
+    // ===== 总开关结束 =====
+
     function labelOf(type) {
         return type === "plot" ? "剧情导演" : "情感导演";
     }
@@ -454,7 +518,7 @@
         text = text.replace(/<!--\s*ARREBOL_D_START:(?:emotion|plot)\s*-->[\s\S]*?<!--\s*ARREBOL_D_END:(?:emotion|plot)\s*-->/g, "").trim();
         text = text.replace(/<!--\s*ARREBOL_D_START:(?:emotion|plot)[\s\S]*?ARREBOL_D_END:(?:emotion|plot)\s*-->/g, "").trim();
         text = text.replace(/<details[^>]*class=["']arrebol-d-(?:injection|card)["'][^>]*>[\s\S]*?<\/details>/g, "").trim();
-        text = text.replace(/\n?arrebol_d(?:_visible)?###[\s\S]*?###/g, "").trim();
+        text = text.replace(/\n?arrebol_d(?:_visible)?(?::(?:emotion|plot))?###[\s\S]*?###/g, "").trim();
         return text;
     }
 
@@ -1132,25 +1196,34 @@
             .replace(/>/g, "&gt;");
     }
 
+    function adrDSanitizeInjectionBody(body) {
+        // v1.9.27：正文消毒。导演输出若自带 "###"，会提前闭合标记块并干扰清理正则。
+        // 全部替换为全角 "＃＃＃"，语义可读，永不与标记冲突。
+        return String(body || "").trim().replace(/###/g, "＃＃＃");
+    }
+
     function plainMarkerInjection(type, title, body) {
         // 像生图 image###...### 一样的纯文本包裹。
         // 不使用任何 HTML 标签/注释，避免干扰酒馆美化正则。
-        return "\n\narrebol_d###\n"
+        // v1.9.27：标记带类型（arrebol_d:emotion### / arrebol_d:plot###）。
+        // 情感/剧情各删各的旧块，双导演同拍注入不再互删。
+        var t = type === "plot" ? "plot" : "emotion";
+        return "\n\narrebol_d:" + t + "###\n"
             + "【暗河红霞 Arrebol D｜" + title + "】\n"
-            + String(body || "").trim()
+            + adrDSanitizeInjectionBody(body)
             + "\n###";
     }
 
     function injectionText(type, text) {
         var title = type === "plot" ? "剧情导演" : "情感导演";
         var mode = settings().injectMode || "visible";
-        var body = String(text || "").trim();
+        var t = type === "plot" ? "plot" : "emotion";
 
         if (mode === "hidden" || mode === "folded") {
-            return plainMarkerInjection(type, title, body);
+            return plainMarkerInjection(type, title, text);
         }
 
-        return "\n\narrebol_d_visible###\n【暗河红霞 Arrebol D｜" + title + "】\n" + body + "\n###";
+        return "\n\narrebol_d_visible:" + t + "###\n【暗河红霞 Arrebol D｜" + title + "】\n" + adrDSanitizeInjectionBody(text) + "\n###";
     }
 
     function findLastMessageIndex(chat) {
@@ -1362,7 +1435,13 @@
             var reOldVisible = new RegExp("\\n\\n【(?:红霞导演室|暗河红霞 Arrebol D)(?:｜|\\|)" + visibleName + "】[\\s\\S]*$", "m");
             mes = mes.replace(reOldVisible, "");
 
-            // 移除旧版纯文本标记注入，避免堆叠。
+            // v1.9.27：只移除“本类型”的带类型标记旧注入。另一类型的块原地保留，双导演同拍共存。
+            var t = type === "plot" ? "plot" : "emotion";
+            var reTypedOwn = new RegExp("\\n?arrebol_d(?:_visible)?:" + t + "###[\\s\\S]*?###", "g");
+            mes = mes.replace(reTypedOwn, "");
+
+            // 迁移兜底：≤1.9.26 的无类型旧标记（arrebol_d### / arrebol_d_visible###）一律清除。
+            // 旧格式因互删缺陷至多存活一块，清掉后由各导演在各自下一拍以带类型格式重建。
             mes = mes.replace(/\n?arrebol_d(?:_visible)?###[\s\S]*?###/g, "").trimEnd();
 
             chat[idx].mes = mes.trimEnd() + add;
@@ -1931,6 +2010,7 @@
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">小红霞在线｜ripple & GPT</div>'
+            + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
 
             + '<details open><summary>共享设置</summary>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -2060,6 +2140,7 @@
                 adrDSetAllById("adr044-auto-trigger-range-" + type, st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"] || (type === "plot" ? "10" : "20"));
                 adrDSetAllById("adr044-auto-trigger-custom-" + type, st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "");
             });
+            adrDRefreshMasterToggleUI();
             adrDUpdateAutoCounters();
         } catch (e) {
             console.warn("[Arrebol D] refresh fields failed", e);
@@ -2960,6 +3041,7 @@
         ids["adr044-probe-context"] = function () { runContextProbe(); };
         ids["adr044-probe-content"] = function () { runContentProbe(); };
         ids["adr044-preview-precise"] = function () { runPrecisePreview(); };
+        ids["adr044-master-toggle"] = function () { adrDToggleMaster(); };
 
         ["emotion", "plot"].forEach(function (type) {
             ids["adr044-" + type + "-local"] = function () { localTest(type); };
@@ -3314,6 +3396,7 @@
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
+            + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
             + '<div class="adr048-note">小红霞已就绪。自动触发、手动导演、纯文本注入与本地设置保存均已启用。<br>由 ripple & GPT 收尾维护。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
@@ -4287,6 +4370,10 @@
             var count = adrDAssistantRoundCount();
             var n = autoTriggerRange(type);
 
+            if (!adrDMasterEnabled()) {
+                return label + "：总开关已关闭（一键启动后从当前进度重新计数）";
+            }
+
             if (!enabled) {
                 return label + "：自动触发未开启";
             }
@@ -4342,6 +4429,7 @@
         // v1.9.26：楼层尾长不变时，也要给“已到 N 但失败保拍”的待触发拍子一次退避重试机会。
         // 只读检查，不创建/下拉 baseline，不参与 dirty-gap/no-shrink 数学。
         try {
+            if (!adrDMasterEnabled()) return false;
             if (adrDAutoTriggerRunning || processing) return false;
             if (!adrDCountReady() || !adrDChatKeyReady()) return false;
             if (adrDInStartupAutoGrace && adrDInStartupAutoGrace()) return false;
@@ -4437,6 +4525,10 @@
 
         try {
             var st = settings();
+            if (!adrDMasterEnabled()) {
+                adrDUpdateAutoCounters();
+                return;
+            }
             if (!st.autoTriggerEmotion && !st.autoTriggerPlot) {
                 adrDUpdateAutoCounters();
                 return;
@@ -4680,6 +4772,12 @@
                 return true;
             }
 
+            // v1.9.28：总开关。必须注册在兜底表里，否则重蹈模板按钮被防抖吞掉的覆辙。
+            if (id === "adr044-master-toggle") {
+                adrDToggleMaster();
+                return true;
+            }
+
             var type = adrDTypeFromButtonId(id);
 
             if (id === "adr044-" + type + "-local") {
@@ -4737,6 +4835,18 @@
 
             if (id === "adr044-" + type + "-inject") {
                 adrDRequestManualInject(type, btn);
+                return true;
+            }
+
+            // v1.9.27：模板按钮补进兜底表。此前兜底先盖防抖时间戳、又不认识这两个 id，
+            // 元素自身监听器随后被 450ms 防抖吞掉，导致按钮永久失灵。
+            if (id === "adr044-template-save-" + type) {
+                adrDSaveCurrentTemplate(type);
+                return true;
+            }
+
+            if (id === "adr044-template-delete-" + type) {
+                adrDRequestDeleteCurrentTemplate(type, btn);
                 return true;
             }
         } catch (e) {
