@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.9.26｜ripple & GPT
+ * Arrebol D 暗河红霞导演系统 v1.9.29｜ripple & GPT & Claude
  * 抽屉内嵌稳定版：
  * - 情感导演 / 剧情导演 双页面
  * - 双 API / 双模型 / 双预设 / 双侧独立 API 档案
@@ -171,6 +171,8 @@
         }
         if (!st.emotionPreset) st.emotionPreset = EMOTION_PRESET;
         if (!st.plotPreset) st.plotPreset = PLOT_PRESET;
+        // v1.9.29：注入方式化石合并。hidden 与 folded 自统一以来行为完全一致，存量值就地迁移。
+        if (st.injectMode === "hidden") st.injectMode = "folded";
         return st;
     }
 
@@ -192,12 +194,35 @@
         } catch (e) {}
     }
 
+    // v1.9.29：状态行内存暂存。浮窗每次打开都会拆除重建 DOM，
+    // 分析中/完成/失败的状态文字与按钮禁用态原本只活在旧 DOM 里，重建即失忆。
+    var adrDLastStatus = { emotion: null, plot: null };
+
     function status(type, text, color) {
+        try {
+            adrDLastStatus[type === "plot" ? "plot" : "emotion"] = { text: String(text || ""), color: color || "" };
+        } catch (eStore) {}
         var el = qForm("adr044-" + type + "-status");
         if (el) {
             el.textContent = text;
             if (color) el.style.color = color;
         }
+    }
+
+    function adrDRestorePanelRuntimeState() {
+        // 重建面板后回灌：状态行文字 + 按钮禁用态（processing 是全局真值，直接重放即可）。
+        try {
+            ["emotion", "plot"].forEach(function (t) {
+                var s = adrDLastStatus[t];
+                if (!s || !s.text) return;
+                Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-" + t + "-status")).forEach(function (el) {
+                    if (!el) return;
+                    el.textContent = s.text;
+                    if (s.color) el.style.color = s.color;
+                });
+            });
+        } catch (e1) {}
+        try { setButtons(currentType()); } catch (e2) {}
     }
 
     function adrDToast(msg) {
@@ -2006,10 +2031,10 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.25</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.29</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">小红霞在线｜ripple & GPT</div>'
+            + '<div class="adr044-note">小红霞在线｜ripple & GPT & Claude</div>'
             + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
 
             + '<details open><summary>共享设置</summary>'
@@ -2028,7 +2053,6 @@
             + '<label>注入方式</label><select id="adr044-inject-mode">'
             + opt(st.injectMode, "visible", "可见文本注入（直接显示）")
             + opt(st.injectMode, "folded", "纯文本标记注入（推荐外挂正则）")
-            + opt(st.injectMode, "hidden", "纯文本标记注入（推荐外挂正则）")
             + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 自动分析前显示提示</label>'
@@ -2096,6 +2120,7 @@
             });
 
             adrDRefreshAllFieldsFromSettings();
+            adrDRestorePanelRuntimeState();
         } catch (e) {
             console.warn("[Arrebol D] switchTab failed", e);
         }
@@ -3392,12 +3417,12 @@
         return '<div id="adr048-popup-panel" data-open="0">'
             + '<div id="adr048-popup-shell">'
             + '<div id="adr048-popup-head">'
-            + '<div><b>🎬 Arrebol D 暗河红霞导演系统</b><div id="adr048-popup-sub">小红霞在线｜ripple & GPT</div></div>'
+            + '<div><b>🎬 Arrebol D 暗河红霞导演系统</b><div id="adr048-popup-sub">小红霞在线｜ripple & GPT & Claude</div></div>'
             + '<button type="button" id="adr048-popup-close">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
             + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
-            + '<div class="adr048-note">小红霞已就绪。自动触发、手动导演、纯文本注入与本地设置保存均已启用。<br>由 ripple & GPT 收尾维护。</div>'
+            + '<div class="adr048-note">小红霞已就绪。自动触发、手动导演、纯文本注入与本地设置保存均已启用。<br>由 ripple & GPT & Claude 收尾维护。</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
             + '<label>复盘范围</label><select id="adr044-range">'
@@ -3415,7 +3440,6 @@
             + '<label>注入方式</label><select id="adr044-inject-mode">'
             + opt(st.injectMode, "visible", "可见文本注入（直接显示）")
             + opt(st.injectMode, "folded", "纯文本标记注入（推荐外挂正则）")
-            + opt(st.injectMode, "hidden", "纯文本标记注入（推荐外挂正则）")
             + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 自动分析前显示提示</label>'
@@ -3533,6 +3557,7 @@
 
             adr048BindPopupPanel();
             bindDirect();
+            adrDRestorePanelRuntimeState();
 
             try { if (body) body.scrollTop = 0; } catch (e1) {}
         } catch (e) {
