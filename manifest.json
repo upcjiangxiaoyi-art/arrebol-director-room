@@ -6,6 +6,6 @@
   "js": "index.js",
   "css": "style.css",
   "author": "ripple & GPT & Claude",
-  "version": "1.9.29",
-  "description": "Arrebol D 小红霞导演插件｜1.9.29 panel state restore：浮窗重开状态回灌、注入方式化石合并、总开关+双导演同拍共存｜ripple & GPT & Claude"
+  "version": "1.9.30",
+  "description": "Arrebol D 小红霞导演插件｜1.9.30 account-bound storage：模板与API档案迁至服务器侧跟账号走（自动搬家存量+双写灾备），换浏览器/设备不再丢失｜ripple & GPT & Claude"
 }

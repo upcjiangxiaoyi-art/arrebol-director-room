@@ -2031,7 +2031,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.29</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.9.30</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">小红霞在线｜ripple & GPT & Claude</div>'
@@ -2178,11 +2178,22 @@
     var ADR_D_API_PROFILE_KEY = "arrebol_d_api_profiles_v1";
     var ADR_D_SELECTED_API_PROFILE_KEY = "arrebol_d_selected_api_profiles_v1";
 
+    // v1.9.30：模板/API 档案四把钥匙全部迁到 extensionSettings（跟账号走）。
+    // 读取优先服务器侧；首次载入自动从 localStorage 搬家存量；写入双写 localStorage 做灾备。
     function adrDLoadSelectedTemplates() {
         try {
-            var s = rootWin().localStorage.getItem(ADR_D_SELECTED_TEMPLATE_KEY) || "";
-            if (!s) return {};
-            return JSON.parse(s) || {};
+            var st = settings();
+            if (st.selectedPromptTemplates && typeof st.selectedPromptTemplates === "object") {
+                return st.selectedPromptTemplates;
+            }
+            var migrated = {};
+            try {
+                var s = rootWin().localStorage.getItem(ADR_D_SELECTED_TEMPLATE_KEY) || "";
+                if (s) migrated = JSON.parse(s) || {};
+            } catch (e1) {}
+            st.selectedPromptTemplates = migrated;
+            saveNow();
+            return migrated;
         } catch (e) {
             return {};
         }
@@ -2192,7 +2203,9 @@
         try {
             var obj = adrDLoadSelectedTemplates();
             obj[type] = String(name || "");
-            rootWin().localStorage.setItem(ADR_D_SELECTED_TEMPLATE_KEY, JSON.stringify(obj));
+            settings().selectedPromptTemplates = obj;
+            saveNow();
+            try { rootWin().localStorage.setItem(ADR_D_SELECTED_TEMPLATE_KEY, JSON.stringify(obj)); } catch (eLs) {}
         } catch (e) {}
     }
 
@@ -2249,6 +2262,14 @@
             var rw = rootWin();
             if (rw.__adrDPromptTemplatesCache) return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
 
+            // 优先服务器侧存储。
+            var st = settings();
+            if (st.promptTemplatesStore && typeof st.promptTemplatesStore === "object") {
+                rw.__adrDPromptTemplatesCache = adrDNormalizeTemplates(st.promptTemplatesStore);
+                return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
+            }
+
+            // 服务器侧为空：从 localStorage 搬家存量（老浏览器里的模板由此救回）。
             var s = "";
             try { s = rw.localStorage.getItem(ADR_D_TEMPLATE_KEY) || ""; } catch (e1) {}
 
@@ -2258,8 +2279,10 @@
                 return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
             }
 
-            rw.__adrDPromptTemplatesCache = adrDNormalizeTemplates(JSON.parse(s));
-            return adrDNormalizeTemplates(rw.__adrDPromptTemplatesCache);
+            var parsed = adrDNormalizeTemplates(JSON.parse(s));
+            rw.__adrDPromptTemplatesCache = parsed;
+            adrDSaveTemplates(parsed);
+            return adrDNormalizeTemplates(parsed);
         } catch (e) {
             return adrDDefaultTemplates();
         }
@@ -2270,7 +2293,9 @@
             var rw = rootWin();
             var normalized = adrDNormalizeTemplates(obj);
             rw.__adrDPromptTemplatesCache = normalized;
-            rw.localStorage.setItem(ADR_D_TEMPLATE_KEY, JSON.stringify(normalized));
+            settings().promptTemplatesStore = normalized;
+            saveNow();
+            try { rw.localStorage.setItem(ADR_D_TEMPLATE_KEY, JSON.stringify(normalized)); } catch (eLs) {}
             return true;
         } catch (e) {
             console.warn("[Arrebol D] save templates failed", e);
@@ -2606,6 +2631,14 @@
             var rw = rootWin();
             if (rw.__adrDApiProfilesCache) return adrDNormalizeApiProfileStore(rw.__adrDApiProfilesCache);
 
+            // 优先服务器侧存储。
+            var st = settings();
+            if (st.apiProfilesStore && typeof st.apiProfilesStore === "object") {
+                rw.__adrDApiProfilesCache = adrDNormalizeApiProfileStore(st.apiProfilesStore);
+                return adrDNormalizeApiProfileStore(rw.__adrDApiProfilesCache);
+            }
+
+            // 服务器侧为空：从 localStorage 搬家存量。
             var s = "";
             try { s = rw.localStorage.getItem(ADR_D_API_PROFILE_KEY) || ""; } catch (e1) {}
             if (!s) {
@@ -2613,8 +2646,11 @@
                 return { emotion: [], plot: [] };
             }
 
-            rw.__adrDApiProfilesCache = adrDNormalizeApiProfileStore(JSON.parse(s));
-            return adrDNormalizeApiProfileStore(rw.__adrDApiProfilesCache);
+            var parsed = adrDNormalizeApiProfileStore(JSON.parse(s));
+            rw.__adrDApiProfilesCache = parsed;
+            st.apiProfilesStore = parsed;
+            saveNow();
+            return adrDNormalizeApiProfileStore(parsed);
         } catch (e) {
             return { emotion: [], plot: [] };
         }
@@ -2633,7 +2669,9 @@
             var store = adrDLoadApiProfileStore();
             store[t] = adrDNormalizeApiProfiles(arr);
             rw.__adrDApiProfilesCache = adrDNormalizeApiProfileStore(store);
-            rw.localStorage.setItem(ADR_D_API_PROFILE_KEY, JSON.stringify(rw.__adrDApiProfilesCache));
+            settings().apiProfilesStore = rw.__adrDApiProfilesCache;
+            saveNow();
+            try { rw.localStorage.setItem(ADR_D_API_PROFILE_KEY, JSON.stringify(rw.__adrDApiProfilesCache)); } catch (eLs) {}
             return true;
         } catch (e) {
             console.warn("[Arrebol D] save api profiles failed", e);
@@ -2643,9 +2681,18 @@
 
     function adrDLoadSelectedApiProfiles() {
         try {
-            var s = rootWin().localStorage.getItem(ADR_D_SELECTED_API_PROFILE_KEY) || "";
-            if (!s) return {};
-            return JSON.parse(s) || {};
+            var st = settings();
+            if (st.selectedApiProfiles && typeof st.selectedApiProfiles === "object") {
+                return st.selectedApiProfiles;
+            }
+            var migrated = {};
+            try {
+                var s = rootWin().localStorage.getItem(ADR_D_SELECTED_API_PROFILE_KEY) || "";
+                if (s) migrated = JSON.parse(s) || {};
+            } catch (e1) {}
+            st.selectedApiProfiles = migrated;
+            saveNow();
+            return migrated;
         } catch (e) {
             return {};
         }
@@ -2655,7 +2702,9 @@
         try {
             var obj = adrDLoadSelectedApiProfiles();
             obj[type === "plot" ? "plot" : "emotion"] = String(name || "");
-            rootWin().localStorage.setItem(ADR_D_SELECTED_API_PROFILE_KEY, JSON.stringify(obj));
+            settings().selectedApiProfiles = obj;
+            saveNow();
+            try { rootWin().localStorage.setItem(ADR_D_SELECTED_API_PROFILE_KEY, JSON.stringify(obj)); } catch (eLs) {}
         } catch (e) {}
     }
 
