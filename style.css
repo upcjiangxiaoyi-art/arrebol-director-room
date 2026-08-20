@@ -2463,32 +2463,34 @@
    ============================================================ */
 
 #adr048-popup-panel {
-    --arb-pearl: #fbf8fb;
-    --arb-ink: #edf1f7;
-    --arb-ink-rgb: 237, 241, 247;
-    --arb-muted: rgba(225, 231, 241, .68);
-    --arb-faint: rgba(213, 222, 235, .43);
-    --arb-line: rgba(214, 222, 236, .14);
-    --arb-line-strong: rgba(214, 222, 236, .24);
-    --arb-rose: #d4a8bd;
-    --arb-lilac: #b7afd8;
-    --arb-sky: #9fcde1;
-    --arb-gold: #d8bc85;
-    --arb-card: rgba(255, 255, 255, .045);
-    --arb-card-strong: rgba(255, 255, 255, .075);
-    --arb-field: rgba(255, 255, 255, .075);
-    --arb-field-focus: rgba(255, 255, 255, .105);
-    --arb-shadow: rgba(7, 12, 25, .22);
-    --arb-tab: rgba(255, 255, 255, .055);
-    --arb-tab-active: linear-gradient(135deg, rgba(212, 168, 189, .24), rgba(159, 205, 225, .18));
+    --arb-pearl: #f7effb;
+    --arb-ink: #f3edf8;
+    --arb-ink-rgb: 243, 237, 248;
+    --arb-muted: rgba(229, 218, 240, .72);
+    --arb-faint: rgba(215, 202, 231, .48);
+    --arb-line: rgba(222, 196, 245, .15);
+    --arb-line-strong: rgba(222, 196, 245, .27);
+    --arb-rose: #dcbfe9;
+    --arb-lilac: #b49bd5;
+    --arb-sky: #8f88c7;
+    --arb-gold: #eadcf2;
+    --arb-card: rgba(128, 105, 166, .18);
+    --arb-card-strong: rgba(145, 120, 183, .24);
+    --arb-field: rgba(224, 207, 241, .095);
+    --arb-field-focus: rgba(230, 214, 245, .14);
+    --arb-shadow: rgba(12, 7, 35, .30);
+    --arb-tab: rgba(117, 94, 154, .16);
+    --arb-tab-active: linear-gradient(135deg, rgba(220, 191, 233, .23), rgba(143, 136, 199, .20));
     --arb-surface:
-        radial-gradient(circle at 8% -3%, rgba(212, 168, 189, .16), transparent 32%),
-        radial-gradient(circle at 100% 0%, rgba(159, 205, 225, .14), transparent 30%),
-        linear-gradient(168deg, #303a4d 0%, #283246 52%, #222b3d 100%);
-    --arb-head: rgba(24, 31, 45, .76);
+        radial-gradient(circle at 7% -4%, rgba(222, 196, 245, .15), transparent 33%),
+        radial-gradient(circle at 100% 2%, rgba(143, 136, 199, .13), transparent 32%),
+        radial-gradient(circle at 76% 108%, rgba(100, 79, 151, .13), transparent 35%),
+        linear-gradient(168deg, #34275f 0%, #2e2455 52%, #231a44 100%);
+    --arb-head: rgba(32, 24, 66, .84);
     --arb-backdrop:
-        radial-gradient(circle at 16% 10%, rgba(212, 168, 189, .10), transparent 30%),
-        radial-gradient(circle at 86% 16%, rgba(159, 205, 225, .09), transparent 28%);
+        radial-gradient(circle at 14% 9%, rgba(222, 196, 245, .12), transparent 31%),
+        radial-gradient(circle at 87% 15%, rgba(143, 136, 199, .10), transparent 29%),
+        linear-gradient(135deg, rgba(46, 36, 85, .12), rgba(35, 26, 68, .08));
 }
 
 #adr048-popup-panel[data-arb-theme="dawn"] {
@@ -3312,6 +3314,53 @@
 #adr048-popup-panel[data-arb-theme="dawn"] #adr048-popup-body .arb-ct-label,
 #adr048-popup-panel[data-arb-theme="dawn"] #adr048-popup-body .adr044-template-status {
     color: var(--arb-rose) !important;
+}
+
+/* v1.19.2 月夜靛紫：只覆盖 dusk，朝霞变量与规则保持原样。 */
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-head::after {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(220, 191, 233, .50) 27%,
+        rgba(180, 155, 213, .46) 55%,
+        rgba(143, 136, 199, .48) 79%,
+        transparent 100%) !important;
+}
+
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(220, 191, 233, .34), rgba(143, 136, 199, .30)) !important;
+}
+
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body select option {
+    background: #2e2455 !important;
+    color: #f3edf8 !important;
+}
+
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body input:focus,
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body select:focus,
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body textarea:focus {
+    border-color: rgba(220, 191, 233, .56) !important;
+    box-shadow: 0 0 0 3px rgba(180, 155, 213, .12) !important;
+}
+
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body button:hover {
+    border-color: rgba(220, 191, 233, .44) !important;
+}
+
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-plot-generate,
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-emotion-generate,
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-plot-inject,
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-emotion-inject {
+    border-color: rgba(220, 191, 233, .38) !important;
+    background: linear-gradient(135deg, rgba(220, 191, 233, .30), rgba(180, 155, 213, .25) 55%, rgba(143, 136, 199, .22)) !important;
+}
+
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-master-toggle::before {
+    background: radial-gradient(circle at 5px 50%, var(--arb-rose) 0 3px, rgba(220, 191, 233, .18) 3.5px 6px, transparent 6.5px);
+}
+
+#adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body .adr044-cd-chip.on {
+    border-color: rgba(220, 191, 233, .40) !important;
+    background: linear-gradient(135deg, rgba(220, 191, 233, .17), rgba(143, 136, 199, .16)) !important;
 }
 
 /* 直系布尔项为开关；进阶抽屉仍为方形勾。 */
