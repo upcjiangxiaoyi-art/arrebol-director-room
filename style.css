@@ -1704,6 +1704,86 @@
         linear-gradient(135deg, var(--arb-rose), var(--arb-lilac)) !important;
 }
 
+/* ============================================================
+   v1.19.3 「暮夜深紫」· dusk UI-only
+   为高亮度 / OLED 屏压低暗色主题的紫光亮度与大面积明度；
+   保留靛紫层次、文字对比和珠光点，不影响 dawn 与任何功能。
+   ============================================================ */
+#adr048-popup-panel[data-arb-theme="dusk"] {
+    --arb-ink: #eee8f4;
+    --arb-ink-rgb: 238, 232, 244;
+    --arb-muted: rgba(224, 215, 234, .74);
+    --arb-faint: rgba(204, 193, 220, .50);
+    --arb-line: rgba(216, 196, 238, .13);
+    --arb-line-strong: rgba(216, 196, 238, .23);
+    --arb-rose: #d4b5e1;
+    --arb-lilac: #a98dca;
+    --arb-sky: #817bbb;
+    --arb-gold: #e2d4eb;
+    --arb-card: rgba(116, 91, 157, .15);
+    --arb-card-strong: rgba(127, 99, 171, .20);
+    --arb-field: rgba(218, 202, 237, .075);
+    --arb-field-focus: rgba(224, 208, 241, .105);
+    --arb-shadow: rgba(7, 4, 24, .38);
+    --arb-tab: rgba(90, 68, 132, .16);
+    --arb-tab-active: linear-gradient(135deg, rgba(207, 178, 224, .18), rgba(126, 116, 184, .16));
+    --arb-surface:
+        radial-gradient(circle at 7% -4%, rgba(211, 181, 232, .10), transparent 33%),
+        radial-gradient(circle at 100% 2%, rgba(126, 116, 184, .08), transparent 32%),
+        radial-gradient(circle at 76% 108%, rgba(85, 61, 133, .08), transparent 35%),
+        linear-gradient(168deg, #291f50 0%, #231a46 52%, #1a1336 100%);
+    --arb-head: rgba(23, 17, 49, .93);
+    --arb-backdrop:
+        radial-gradient(circle at 14% 9%, rgba(207, 178, 224, .075), transparent 31%),
+        radial-gradient(circle at 87% 15%, rgba(126, 116, 184, .065), transparent 29%),
+        linear-gradient(135deg, rgba(30, 22, 62, .14), rgba(18, 13, 42, .11));
+}
+
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-shell {
+    background: linear-gradient(172deg, #24243f 0%, #1d1d35 42%, #17172b 100%) !important;
+    border-color: rgba(205, 188, 228, .14) !important;
+    box-shadow: 0 22px 60px rgba(5, 4, 20, .64), 0 0 0 1px rgba(166, 139, 204, .05) !important;
+}
+
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-shell::before {
+    border-color: rgba(235, 226, 246, .24) !important;
+}
+
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-head::after {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(212, 181, 227, .34) 27%,
+        rgba(165, 139, 201, .31) 55%,
+        rgba(126, 116, 184, .33) 79%,
+        transparent 100%) !important;
+}
+
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(212, 181, 227, .24), rgba(126, 116, 184, .22)) !important;
+}
+
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body select option {
+    background: #21183f !important;
+    color: #eee8f4 !important;
+}
+
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-plot-generate,
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-emotion-generate,
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-plot-inject,
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-emotion-inject {
+    border-color: rgba(212, 181, 227, .30) !important;
+    background: linear-gradient(135deg, rgba(212, 181, 227, .22), rgba(165, 139, 201, .18) 55%, rgba(126, 116, 184, .16)) !important;
+}
+
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body #adr044-master-toggle::before {
+    background: radial-gradient(circle at 5px 50%, var(--arb-rose) 0 3px, rgba(212, 181, 227, .12) 3.5px 6px, transparent 6.5px);
+}
+
+html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body .adr044-cd-chip.on {
+    border-color: rgba(212, 181, 227, .32) !important;
+    background: linear-gradient(135deg, rgba(212, 181, 227, .13), rgba(126, 116, 184, .12)) !important;
+}
+
 /* Toast 不在面板 DOM 内，使用独立的同源调色。 */
 #adr044-auto-trigger-popup {
     --arb-line-strong: rgba(214, 222, 236, .24);
