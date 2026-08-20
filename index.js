@@ -19,6 +19,15 @@
  * v1.18.0 归属制：概念纠偏——"挂入"从"点亮启用"改为"放进箱子"。每副库有账号级永久归属，只出现在自家仓库格；
  *          点亮/熄灭降级为"这局用不用"的聊天级开关，熄灭不流放；未分箱库虚线显示、点亮即认箱，落点保存/导入即入住/搬家；
  *          老存档首次读取自动按当前点亮认箱（概念设计：ripple；施工：波哥 Claude Fable 5）
+ * v1.19.2 小风铃不打断：日常剧情莫名冒 NSFW 卡，根因是防惯性——DS 连点同一池第 3 次即被强制踢去
+ *          全仓库盲抽，三仓库均等下 1/3 落 NSFW（实测复现 33.1%）。三处修：
+ *          ① 择池提示词加 NSFW 双向硬门（菜单无 NSFW 池则整段不注入）——不满足条件当它不在名单上；
+ *             满足则必须选它，其余池一律不选（打断进行中的场面比选错池更严重），转场后退出；
+ *          ② 防惯性由"全仓库盲抽"收为"同仓库内换池"，不再推翻 DS 的仓库判断，单池仓库自动空转；
+ *          ③ 择池静态语境截断 4000→8000，让 DS 读得到角色卡/世界书里的准入调性（仅抽卡调用点，
+ *             buildPreciseContext 本体与导演侧一字未动）。
+ *          已知未堵：DS 抛错降级仍走全仓库盲抽（自检 mode 显示"择池降级盲抽"）；
+ *          未开 NSFW 格时无"本拍不投"出口，场面仍可能被通用卡打断（报告：ripple；施工：五哥 Claude Opus 5）
  * 抽屉内嵌稳定版：
  * - 情感导演 / 统筹 双页面
  * - 双 API / 双模型 / 双预设 / 双侧独立 API 档案
@@ -2909,14 +2918,27 @@
         var menu = slotPools.map(function (p) { return p.menuName; });
         var recentPools = (state.history || []).slice(-3).map(function (h) { return h && h.pool; }).filter(Boolean);
 
+        // v1.19.2：NSFW 双向硬门。菜单里没有 NSFW 池时整段不注入——省 token，也不把概念平白种进去。
+        var hasNsfw = menu.some(function (m) { return String(m).indexOf("NSFW·") === 0; });
+
         var sys = "你是抽卡助手的选池器。你只能看到卡池名单，看不到任何卡面内容。"
-            + "你的唯一任务：根据当前剧情氛围，从名单中选出此刻最适合投放一张事件卡的卡池。"
-            + "只准回复名单中的一个卡池名，一字不差；不加标点、不加解释、不加任何其他文字。多一个字视为无效。";
+            + "你的任务：读【最近正文（节选）】判断此刻的剧情氛围，从名单中选出最适合此刻投放一张事件卡的卡池。"
+            + "此刻氛围一律以最近正文为准；角色卡与世界书只用来了解这个故事的整体调性，不作为此刻氛围的依据。";
+
+        if (hasNsfw) {
+            sys += "名单中以「NSFW·」开头的卡池是例外通道，不参与上述常规判断，改用下面这条双向规则。"
+                + "先判断最近正文是否同时满足两条：一、已经出现明确的情欲流动或强烈性暗示，且这股张力仍在持续，没有被打断、没有转场；二、这个故事的整体调性允许此类情节发生。"
+                + "两条都满足时，必须从以「NSFW·」开头的卡池中选（有多个就选最贴合此刻的那一个），其余卡池此刻一律不选——此时投入无关事件会打断正在进行的场面，这是比选错卡池更严重的错误。"
+                + "任何一条不满足时，就当以「NSFW·」开头的卡池不在名单上，哪怕其余卡池都不够贴合，也宁可选一个次贴合的。"
+                + "剧情平淡、需要推进、想制造转折，都不构成选它的理由；场面已经明确结束或转场之后，也不再算满足。";
+        }
+
+        sys += "只准回复名单中的一个卡池名，一字不差；不加标点、不加解释、不加思考过程、不加前缀后缀、不加任何其他文字。多一个字视为无效。";
 
         var parts = [];
         var precise = "";
         try { precise = buildPreciseContext(); } catch (ePc) {}
-        if (precise) parts.push(adrCdTruncate(precise, 4000));
+        if (precise) parts.push(adrCdTruncate(precise, 8000));
         var recent = "";
         var pickRounds = adrCdPickReadRounds();
         try { recent = await recentContentBlocks(pickRounds); } catch (eRc) {}
@@ -3018,20 +3040,22 @@
             try {
                 var pick = await adrCdPickPoolViaDS(slotPools, state);
                 console.log("[抽卡小能手] DS 点池：" + pick + "（耗时 " + (Date.now() - t0) + "ms）");
+                var poolObj = null;
+                for (var i = 0; i < slotPools.length; i++) { if (slotPools[i].menuName === pick) { poolObj = slotPools[i]; break; } }
                 var streakN = (state.streak && state.streak.pool === pick) ? state.streak.n + 1 : 1;
-                if (streakN >= 3) {
-                    console.log("[抽卡小能手] 卡池「" + pick + "」被连点第 3 次，强制从其余卡池盲抽");
+                if (poolObj && streakN >= 3) {
+                    // v1.19.2：防惯性只在同一仓库内换池。旧写法踢去全仓库盲抽会推翻 DS 的仓库判断——
+                    // 情欲场面里连点同一个 NSFW 池正是新规则所要求的，旧写法反而拿无关卡打断场面。
+                    // 该仓库只有这一个池时，adrCdRollPool 的 others 保护会让候选原样保留，等于自动空转。
+                    var sameSlot = slotPools.filter(function (p) { return p.slot === poolObj.slot; });
+                    console.log("[抽卡小能手] 卡池「" + pick + "」被连点第 3 次，改在同仓库（" + ADR_CD_SLOT_FULL[poolObj.slot] + "）内换池");
                     state.streak = { pool: "", n: 0 };
-                    usedMode = "择池·防惯性盲抽";
-                    result = adrCdDrawBlind(slotPools, state, pick);
-                } else {
+                    usedMode = "择池·防惯性换池";
+                    result = adrCdDrawBlind(sameSlot, state, pick);
+                } else if (poolObj) {
                     state.streak = { pool: pick, n: streakN };
-                    var poolObj = null;
-                    for (var i = 0; i < slotPools.length; i++) { if (slotPools[i].menuName === pick) { poolObj = slotPools[i]; break; } }
-                    if (poolObj) {
-                        var cardP = adrCdPickFromPool(poolObj.cards, state.recent, adrCdCooldown());
-                        if (cardP) { result = { slot: poolObj.slot, pool: pick, card: cardP }; usedMode = "择池"; }
-                    }
+                    var cardP = adrCdPickFromPool(poolObj.cards, state.recent, adrCdCooldown());
+                    if (cardP) { result = { slot: poolObj.slot, pool: pick, card: cardP }; usedMode = "择池"; }
                 }
             } catch (ePick) {
                 console.warn("[抽卡小能手] 择池降级盲抽：" + (ePick && ePick.message ? ePick.message : ePick));
@@ -6566,6 +6590,12 @@
     // 换聊天后旧缓存一律视为"未就绪"，粘滞保护只在同一聊天内生效，
     // 杜绝"旧聊天的 count 给新聊天写 baseline"的跨聊天污染。
     var adrDFullCountCache = { count: null, source: "window", lastMessageId: -1, updatedAt: 0, loading: false, messages: [], everFull: false, chatKey: "" };
+    // v1.19.3 启动热修：全量读取必须 single-flight。
+    // 旧版在 loading 时立刻返回一个已兑现 Promise；计数 UI 的 then() 又会重画计数，
+    // 重画时再发起读取，最终形成永不让出主线程的微任务闭环。
+    var adrDFullCountRefreshWaiters = [];
+    var adrDFullCountQueueBusy = false;
+    var adrDFullCountQueueAgainReason = "";
 
     function adrDFullCacheMatchesCurrentChat() {
         try {
@@ -6623,8 +6653,11 @@
             adrDFullCountCache.chatKey === keyNow;
 
         if (adrDFullCountCache.loading) {
-            if (stickyOk) return Number(adrDFullCountCache.count) || 0;
-            return adrDWindowAssistantRoundCount();
+            // 不再用“立即返回旧数”伪装成一次已完成的刷新。
+            // 所有并发调用共等当前读取结束，既不重复拉历史，也不会制造 Promise 自激链。
+            return new Promise(function (resolve) {
+                adrDFullCountRefreshWaiters.push(resolve);
+            });
         }
 
         var th = adrDGetTavernHelper();
@@ -6694,15 +6727,47 @@
             return adrDFullCountCache.count;
         } finally {
             adrDFullCountCache.loading = false;
+            // 唤醒同一航班上的调用者；刷新函数自身已把异常降级成可靠的缓存/window 计数。
+            var settledCount = Number.isFinite(Number(adrDFullCountCache.count))
+                ? Number(adrDFullCountCache.count)
+                : adrDWindowAssistantRoundCount();
+            var waiters = adrDFullCountRefreshWaiters.splice(0, adrDFullCountRefreshWaiters.length);
+            waiters.forEach(function (resolve) {
+                try { resolve(settledCount); } catch (eWaiter) {}
+            });
         }
     }
 
     function adrDQueueFullAssistantRoundCountRefresh(reason) {
+        var why = reason || "queued";
         try {
-            adrDRefreshFullAssistantRoundCount(reason || "queued").then(function () {
+            // UI/事件在同一段时间内可能同时要求刷新。只保留一班在飞；期间若又有变化，
+            // 当前班落地后补最后一班，避免丢掉换聊/删楼等真正需要重读的信号。
+            if (adrDFullCountQueueBusy) {
+                adrDFullCountQueueAgainReason = why;
+                return;
+            }
+
+            adrDFullCountQueueBusy = true;
+            adrDRefreshFullAssistantRoundCount(why).then(function () {
                 try { adrDUpdateAutoCounters(); } catch (e) {}
+            }, function (eRefresh) {
+                try { console.warn("[Arrebol D] queued full history refresh failed", eRefresh); } catch (eLog) {}
+            }).then(function () {
+                adrDFullCountQueueBusy = false;
+                var again = adrDFullCountQueueAgainReason;
+                adrDFullCountQueueAgainReason = "";
+                if (again) {
+                    setTimeout(function () {
+                        adrDQueueFullAssistantRoundCountRefresh(again);
+                    }, 0);
+                }
+            }, function () {
+                adrDFullCountQueueBusy = false;
             });
-        } catch (e) {}
+        } catch (e) {
+            adrDFullCountQueueBusy = false;
+        }
     }
 
     async function adrDGetFullChatMessagesForRead(reason) {
@@ -6737,11 +6802,11 @@
     }
 
     function adrDAssistantRoundCount() {
-        // 同步入口保留：UI/旧函数可继续调用。优先返回全量缓存；未就绪/换聊天后回退当前窗口并异步刷新。
+        // v1.19.3 启动热修：同步计数入口必须是纯读取，绝不能在 UI 渲染过程中反向排队刷新。
+        // 真正需要重读历史的时机由 init / 聊天事件 / 轮询显式触发；未就绪时只回退当前窗口。
         if (adrDFullCountCache && adrDFullCountCache.source === "full" && adrDFullCacheMatchesCurrentChat() && Number.isFinite(Number(adrDFullCountCache.count))) {
             return Number(adrDFullCountCache.count);
         }
-        adrDQueueFullAssistantRoundCountRefresh("lazy-count");
         return adrDWindowAssistantRoundCount();
     }
 
