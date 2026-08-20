@@ -3316,6 +3316,529 @@
     color: var(--arb-rose) !important;
 }
 
+/* ============================================================
+   v1.19.2 「珍珠内页」· inline drawer UI-only
+   酒馆内嵌抽屉使用独立纸面，避免聊天壁纸穿透；布局、ID、事件、
+   右侧滑动安全区与全部功能保持不变。
+   ============================================================ */
+#adr044-drawer {
+    --adrx-paper: #faf7fb;
+    --adrx-ink: #404b60;
+    --adrx-muted: rgba(64, 75, 96, .67);
+    --adrx-faint: rgba(64, 75, 96, .44);
+    --adrx-line: rgba(87, 101, 127, .14);
+    --adrx-line-strong: rgba(87, 101, 127, .23);
+    --adrx-rose: #c884a0;
+    --adrx-lilac: #aa9dcc;
+    --adrx-sky: #91c5dd;
+    --adrx-card: rgba(255, 255, 255, .70);
+    --adrx-field: rgba(255, 255, 255, .92);
+    --adrx-shadow: rgba(68, 69, 96, .075);
+    color: var(--adrx-ink) !important;
+    color-scheme: light !important;
+}
+
+#adr044-drawer > .inline-drawer {
+    overflow: hidden !important;
+    border: 1px solid var(--adrx-line) !important;
+    border-radius: 18px !important;
+    background:
+        radial-gradient(circle at 5% -5%, rgba(246, 181, 208, .22), transparent 31%),
+        radial-gradient(circle at 98% 1%, rgba(154, 211, 236, .18), transparent 32%),
+        linear-gradient(180deg, rgba(252, 249, 252, .985), rgba(245, 247, 251, .985)) !important;
+    box-shadow: 0 12px 34px rgba(68, 69, 96, .09) !important;
+}
+
+#adr044-drawer .inline-drawer-toggle.inline-drawer-header {
+    min-height: 50px !important;
+    padding: 10px 13px !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--adrx-line) !important;
+    background: rgba(255, 255, 255, .72) !important;
+    box-shadow: none !important;
+}
+
+#adr044-drawer .inline-drawer-toggle b {
+    display: flex !important;
+    align-items: baseline !important;
+    min-width: 0 !important;
+    padding-left: 21px !important;
+    background:
+        radial-gradient(circle at 6px 50%, rgba(255,255,255,.98) 0 1.5px, transparent 2px),
+        radial-gradient(circle at 6px 50%, var(--adrx-rose) 0 5px, transparent 5.5px) !important;
+    font-size: 0 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+}
+
+#adr044-drawer .inline-drawer-toggle b::before {
+    content: "Arrebol D";
+    color: var(--adrx-ink);
+    font-size: 15px;
+    font-weight: 720;
+    letter-spacing: .025em;
+}
+
+#adr044-drawer .inline-drawer-toggle b::after {
+    content: "小红霞导演系统";
+    margin-left: 8px;
+    color: var(--adrx-muted);
+    font-size: 10.5px;
+    font-weight: 560;
+    letter-spacing: .11em;
+}
+
+#adr044-drawer .inline-drawer-icon {
+    color: var(--adrx-muted) !important;
+    opacity: .72 !important;
+    text-shadow: none !important;
+}
+
+#adr044-drawer .inline-drawer-content {
+    padding: 0 !important;
+    background:
+        radial-gradient(circle at 3% -2%, rgba(246, 181, 208, .16), transparent 30%),
+        radial-gradient(circle at 100% 0%, rgba(154, 211, 236, .13), transparent 31%),
+        linear-gradient(180deg, rgba(250, 247, 251, .985), rgba(244, 247, 251, .985)) !important;
+}
+
+#adr044-drawer .adr044-box {
+    padding: 12px 12px 18px !important;
+    color: var(--adrx-ink) !important;
+}
+
+#adr044-drawer .adr044-note {
+    margin: 1px 2px 10px !important;
+    color: var(--adrx-faint) !important;
+    font-size: 10.5px !important;
+    line-height: 1.5 !important;
+    letter-spacing: .025em !important;
+}
+
+/* 抽屉内的运行状态条与浮窗同源。 */
+#adr044-drawer #adr044-master-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    min-height: 42px !important;
+    margin: 0 0 10px !important;
+    padding: 0 13px !important;
+    border: 1px solid var(--adrx-line-strong) !important;
+    border-radius: 14px !important;
+    background: var(--adrx-card) !important;
+    box-shadow: 0 6px 20px var(--adrx-shadow) !important;
+    font-size: 0 !important;
+}
+
+#adr044-drawer #adr044-master-toggle::before {
+    content: "小红霞正在运行";
+    padding-left: 16px;
+    color: var(--adrx-ink);
+    font-size: 13px;
+    font-weight: 680;
+    letter-spacing: .02em;
+    background: radial-gradient(circle at 5px 50%, var(--adrx-rose) 0 3px, rgba(200,132,160,.18) 3.5px 6px, transparent 6.5px);
+}
+
+#adr044-drawer #adr044-master-toggle::after {
+    content: "轻触暂停";
+    color: var(--adrx-faint);
+    font-size: 10.5px;
+    font-weight: 560;
+    letter-spacing: .045em;
+}
+
+#adr044-drawer #adr044-master-toggle[data-master-on="0"] {
+    background: rgba(87, 101, 127, .045) !important;
+    box-shadow: none !important;
+}
+
+#adr044-drawer #adr044-master-toggle[data-master-on="0"]::before {
+    content: "小红霞已暂停";
+    color: var(--adrx-muted);
+    background: radial-gradient(circle at 5px 50%, var(--adrx-faint) 0 3px, transparent 3.5px);
+}
+
+#adr044-drawer #adr044-master-toggle[data-master-on="0"]::after {
+    content: "轻触唤醒";
+}
+
+/* 顶层分区：一张卡承载一组设置。 */
+#adr044-drawer .adr044-box > details,
+#adr044-drawer .adr044-page > details {
+    margin: 10px 0 !important;
+    padding: 0 13px 13px !important;
+    border: 1px solid var(--adrx-line) !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, .54) !important;
+    box-shadow: 0 6px 20px var(--adrx-shadow) !important;
+}
+
+#adr044-drawer .adr044-box > details > summary,
+#adr044-drawer .adr044-page > details > summary {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 40px !important;
+    margin: 0 !important;
+    padding: 10px 0 9px !important;
+    list-style: none !important;
+    color: var(--adrx-muted) !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    line-height: 1.3 !important;
+    letter-spacing: .08em !important;
+}
+
+#adr044-drawer .adr044-box > details > summary::-webkit-details-marker,
+#adr044-drawer .adr044-page > details > summary::-webkit-details-marker {
+    display: none !important;
+}
+
+#adr044-drawer .adr044-box > details > summary::before,
+#adr044-drawer .adr044-page > details > summary::before {
+    content: "›";
+    display: inline-block;
+    margin-right: 7px;
+    color: var(--adrx-rose);
+    font-size: 15px;
+    font-weight: 600;
+    transform: rotate(0deg);
+    transition: transform .15s ease;
+}
+
+#adr044-drawer .adr044-box > details[open] > summary::before,
+#adr044-drawer .adr044-page > details[open] > summary::before {
+    transform: rotate(90deg);
+}
+
+#adr044-drawer .adr044-box > details[open] > summary,
+#adr044-drawer .adr044-page > details[open] > summary {
+    border-bottom: 1px solid var(--adrx-line) !important;
+    margin-bottom: 10px !important;
+}
+
+/* 字段：清晰白纸，取消旧版发光与壁纸穿透。 */
+#adr044-drawer label {
+    margin-top: 10px !important;
+    color: var(--adrx-muted) !important;
+    font-size: 11.5px !important;
+    font-weight: 560 !important;
+    line-height: 1.4 !important;
+    letter-spacing: .015em !important;
+    opacity: 1 !important;
+}
+
+#adr044-drawer input,
+#adr044-drawer select,
+#adr044-drawer textarea {
+    margin-top: 5px !important;
+    padding: 9px 11px !important;
+    border: 1px solid var(--adrx-line-strong) !important;
+    border-radius: 12px !important;
+    background-color: var(--adrx-field) !important;
+    color: var(--adrx-ink) !important;
+    -webkit-text-fill-color: var(--adrx-ink) !important;
+    caret-color: var(--adrx-rose) !important;
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#adr044-drawer textarea {
+    line-height: 1.56 !important;
+}
+
+#adr044-drawer #adr044-memory {
+    min-height: 116px !important;
+}
+
+#adr044-drawer input:focus,
+#adr044-drawer select:focus,
+#adr044-drawer textarea:focus {
+    outline: none !important;
+    border-color: rgba(200, 132, 160, .56) !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(200, 132, 160, .10) !important;
+}
+
+#adr044-drawer input::placeholder,
+#adr044-drawer textarea::placeholder {
+    color: var(--adrx-faint) !important;
+    -webkit-text-fill-color: var(--adrx-faint) !important;
+    opacity: 1 !important;
+}
+
+#adr044-drawer select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, var(--adrx-faint) 50%),
+        linear-gradient(135deg, var(--adrx-faint) 50%, transparent 50%) !important;
+    background-position: calc(100% - 17px) 54%, calc(100% - 12px) 54% !important;
+    background-size: 5px 5px, 5px 5px !important;
+    background-repeat: no-repeat !important;
+    padding-right: 32px !important;
+}
+
+#adr044-drawer select option {
+    background: #faf7fb !important;
+    color: var(--adrx-ink) !important;
+}
+
+/* 常用布尔项改为开关；进阶层仍使用方形勾选。 */
+#adr044-drawer .adr044-check {
+    display: inline-flex !important;
+    align-items: center !important;
+    min-height: 28px !important;
+    color: var(--adrx-ink) !important;
+    font-size: 12px !important;
+}
+
+#adr044-drawer .adr044-check input[type="checkbox"] {
+    width: 34px !important;
+    min-width: 34px !important;
+    max-width: 34px !important;
+    height: 20px !important;
+    min-height: 20px !important;
+    flex: 0 0 34px !important;
+    margin: 0 8px 0 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--adrx-line-strong) !important;
+    border-radius: 999px !important;
+    background:
+        radial-gradient(circle at 9px 50%, rgba(255,255,255,.98) 0 6px, transparent 6.6px),
+        rgba(87, 101, 127, .13) !important;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.12) !important;
+}
+
+#adr044-drawer .adr044-check input[type="checkbox"]:checked {
+    border-color: rgba(200, 132, 160, .52) !important;
+    background:
+        radial-gradient(circle at calc(100% - 9px) 50%, rgba(255,255,255,.98) 0 6px, transparent 6.6px),
+        linear-gradient(90deg, var(--adrx-rose), var(--adrx-lilac) 54%, var(--adrx-sky)) !important;
+    box-shadow: none !important;
+}
+
+#adr044-drawer .adr044-check input[type="checkbox"]::after {
+    content: none !important;
+    display: none !important;
+}
+
+#adr044-drawer .adrx-drawer .adr044-check input[type="checkbox"] {
+    width: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    height: 18px !important;
+    min-height: 18px !important;
+    flex: 0 0 18px !important;
+    border-radius: 5px !important;
+    background: var(--adrx-field) !important;
+}
+
+#adr044-drawer .adrx-drawer .adr044-check input[type="checkbox"]:checked {
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px 12px no-repeat,
+        linear-gradient(135deg, var(--adrx-rose), var(--adrx-lilac)) !important;
+}
+
+/* 进阶与诊断退为安静列表。 */
+#adr044-drawer .adrx-drawer {
+    margin: 10px 0 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--adrx-line) !important;
+    border-radius: 13px !important;
+    background: rgba(87, 101, 127, .025) !important;
+    box-shadow: none !important;
+}
+
+#adr044-drawer .adrx-drawer > summary {
+    min-height: 38px !important;
+    margin: 0 !important;
+    padding: 10px 11px !important;
+    color: var(--adrx-faint) !important;
+    font-size: 11.5px !important;
+    font-weight: 620 !important;
+    line-height: 1.4 !important;
+    letter-spacing: .015em !important;
+}
+
+#adr044-drawer .adrx-drawer > summary::before {
+    color: var(--adrx-rose) !important;
+    font-size: 11px !important;
+}
+
+#adr044-drawer .adrx-drawer[open] {
+    background: rgba(255, 255, 255, .50) !important;
+}
+
+#adr044-drawer .adrx-drawer[open] > summary {
+    border-bottom: 1px solid var(--adrx-line) !important;
+}
+
+#adr044-drawer .adrx-drawer[data-drawer-id="shared-adv"] > summary,
+#adr044-drawer .adrx-drawer[data-drawer-id="shared-diag"] > summary {
+    font-size: 0 !important;
+}
+
+#adr044-drawer .adrx-drawer[data-drawer-id="shared-adv"] > summary::after {
+    content: "进阶设置 · 通常无需调整";
+    font-size: 11.5px;
+}
+
+#adr044-drawer .adrx-drawer[data-drawer-id="shared-diag"] > summary::after {
+    content: "校对与诊断 · 排查问题时使用";
+    font-size: 11.5px;
+}
+
+/* 分段页签。宽度仍由旧规则保留右侧滑动安全缝。 */
+#adr044-drawer .adr044-tabs {
+    gap: 3px !important;
+    margin-top: 12px !important;
+    margin-bottom: 10px !important;
+    padding: 4px !important;
+    border: 1px solid var(--adrx-line) !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, .44) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.55) !important;
+}
+
+#adr044-drawer .adr044-tabs button {
+    min-height: 32px !important;
+    padding: 5px 8px !important;
+    border: 0 !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    color: var(--adrx-faint) !important;
+    -webkit-text-fill-color: var(--adrx-faint) !important;
+    font-size: 12.5px !important;
+    font-weight: 620 !important;
+    box-shadow: none !important;
+}
+
+#adr044-drawer .adr044-tabs button.active {
+    background: rgba(255, 255, 255, .92) !important;
+    color: var(--adrx-ink) !important;
+    -webkit-text-fill-color: var(--adrx-ink) !important;
+    box-shadow: 0 3px 12px var(--adrx-shadow) !important;
+}
+
+#adr044-drawer #adr044-tab-cd {
+    font-size: 0 !important;
+}
+
+#adr044-drawer #adr044-tab-cd::after {
+    content: "抽卡";
+    font-size: 12.5px;
+}
+
+/* 按钮与次级卡片。 */
+#adr044-drawer button {
+    min-height: 35px !important;
+    padding: 7px 11px !important;
+    border: 1px solid var(--adrx-line-strong) !important;
+    border-radius: 11px !important;
+    background: rgba(255, 255, 255, .78) !important;
+    color: var(--adrx-ink) !important;
+    -webkit-text-fill-color: var(--adrx-ink) !important;
+    font-size: 12px !important;
+    font-weight: 620 !important;
+    letter-spacing: .012em !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+#adr044-drawer button:hover {
+    border-color: rgba(200, 132, 160, .46) !important;
+    background: #ffffff !important;
+}
+
+#adr044-drawer #adr044-plot-generate,
+#adr044-drawer #adr044-emotion-generate,
+#adr044-drawer #adr044-plot-inject,
+#adr044-drawer #adr044-emotion-inject {
+    border-color: rgba(200, 132, 160, .36) !important;
+    background: linear-gradient(135deg, rgba(228, 200, 208, .54), rgba(162, 175, 196, .42)) !important;
+    font-weight: 700 !important;
+}
+
+#adr044-drawer button[id*="-delete"] {
+    color: var(--adrx-faint) !important;
+    -webkit-text-fill-color: var(--adrx-faint) !important;
+    background: rgba(255, 255, 255, .48) !important;
+}
+
+#adr044-drawer button:disabled {
+    opacity: .38 !important;
+}
+
+#adr044-drawer .adr044-template-compact,
+#adr044-drawer .adr044-auto-counter,
+#adr044-drawer .adr044-cd-slot-row,
+#adr044-drawer .adr044-cd-life-history {
+    border: 1px solid var(--adrx-line) !important;
+    border-radius: 14px !important;
+    background: rgba(255, 255, 255, .62) !important;
+    color: var(--adrx-ink) !important;
+    box-shadow: none !important;
+}
+
+#adr044-drawer .adr044-template-status,
+#adr044-drawer .arb-ct-label {
+    color: var(--adrx-rose) !important;
+}
+
+#adr044-drawer .arb-ct-nums,
+#adr044-drawer .arb-ct-msg,
+#adr044-drawer .arb-ct-tech,
+#adr044-drawer .arb-ct-line,
+#adr044-drawer #adr044-emotion-status,
+#adr044-drawer #adr044-plot-status {
+    color: var(--adrx-muted) !important;
+}
+
+#adr044-drawer .arb-ct-bar {
+    background: rgba(87, 101, 127, .09) !important;
+}
+
+#adr044-drawer .arb-ct-bar i {
+    background: linear-gradient(90deg, var(--adrx-rose), var(--adrx-lilac), var(--adrx-sky)) !important;
+}
+
+#adr044-drawer .adr044-cd-chip {
+    border-color: var(--adrx-line-strong) !important;
+    background: rgba(255, 255, 255, .66) !important;
+    color: var(--adrx-muted) !important;
+}
+
+#adr044-drawer .adr044-cd-chip.on {
+    border-color: rgba(200, 132, 160, .42) !important;
+    background: linear-gradient(135deg, rgba(228, 200, 208, .35), rgba(162, 175, 196, .24)) !important;
+    color: var(--adrx-ink) !important;
+}
+
+@media (max-width: 430px) {
+    #adr044-drawer .adr044-box {
+        padding: 10px 10px 16px !important;
+    }
+
+    #adr044-drawer .adr044-box > details,
+    #adr044-drawer .adr044-page > details {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        border-radius: 15px !important;
+    }
+}
+
+@media (max-width: 360px) {
+    #adr044-drawer .inline-drawer-toggle b::after {
+        display: none !important;
+    }
+}
+
 /* v1.19.2 月夜靛紫：只覆盖 dusk，朝霞变量与规则保持原样。 */
 #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-head::after {
     background: linear-gradient(90deg,
