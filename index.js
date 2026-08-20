@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.10.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.19.4｜ripple & GPT & Claude
  * v1.12.0 卡的生命周期：专属／通用／NSFW 三格各自勾选，三段抽；择池 API 并入预设机器；刷新不再覆盖编辑区（施工：波哥 Claude Fable 5）
  * v1.13.0 放养模式：手动放养自动归队——一键撕下当前导演稿，轮换照常走，到下个换稿点自动生成归队；双导演各自独立放养（施工：波哥 Claude Fable 5）
  * v1.13.1 DS 视野随节奏走：兑现判定回看范围挂钩半衰期、择池挂钩投卡间隔，不再钉死 4/6 轮；下限不缩水，上限 12 轮/8000 字（提议：ripple；施工：波哥 Claude Fable 5）
@@ -28,6 +28,9 @@
  *             buildPreciseContext 本体与导演侧一字未动）。
  *          已知未堵：DS 抛错降级仍走全仓库盲抽（自检 mode 显示"择池降级盲抽"）；
  *          未开 NSFW 格时无"本拍不投"出口，场面仍可能被通用卡打断（报告：ripple；施工：五哥 Claude Opus 5）
+ * v1.19.4 双导演分账热修：情感／统筹的开关与间隔变更只初始化本类型 baseline；
+ *          修复全新状态下先操作一侧会顺手给另一侧落起点、导致另一侧晚开启却偷跑进度的问题。
+ *          全量楼数、触发阈值、成功／失败结算、启动热修与剧情小风铃均不改。（排查与施工：ripple & GPT）
  * 抽屉内嵌稳定版：
  * - 情感导演 / 统筹 双页面
  * - 双 API / 双模型 / 双预设 / 双侧独立 API 档案
@@ -4455,7 +4458,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.14.5</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.19.4</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<div class="adr044-note">小红霞在线｜ripple & GPT & Claude</div>'
@@ -5719,7 +5722,7 @@
                 autoTrigger.addEventListener("change", function () {
                     save(type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion", !!autoTrigger.checked);
                     saveNow();
-                    adrDResetAutoTriggerBaseline("toggle-" + type);
+                    adrDResetAutoTriggerBaseline(type, "toggle-" + type);
                     adrDScheduleAutoTriggerCheck("toggle-" + type);
                 });
             }
@@ -5732,7 +5735,7 @@
                     var custom = qForm("adr044-auto-trigger-custom-" + type);
                     if (custom) custom.style.display = autoRange.value === "custom" ? "block" : "none";
                     saveNow();
-                    adrDResetAutoTriggerBaseline("range-" + type);
+                    adrDResetAutoTriggerBaseline(type, "range-" + type);
                     adrDScheduleAutoTriggerCheck("range-" + type);
                 });
             }
@@ -5745,7 +5748,7 @@
                     saveNow();
                 });
                 autoCustom.addEventListener("change", function () {
-                    adrDResetAutoTriggerBaseline("custom-" + type);
+                    adrDResetAutoTriggerBaseline(type, "custom-" + type);
                     adrDScheduleAutoTriggerCheck("custom-" + type);
                 });
             }
@@ -7259,27 +7262,31 @@
         }
     }
 
-    function adrDResetAutoTriggerBaseline(reason) {
+    function adrDResetAutoTriggerBaseline(type, reason) {
         try {
+            type = type === "plot" ? "plot" : "emotion";
             var st = settings();
             var key = adrDChatKey();
             var count = adrDAssistantRoundCount();
 
             st.lastAutoTriggerChatKey = key;
 
-            if (!Number.isFinite(Number(st.lastAutoTriggerEmotionCount)) || Number(st.lastAutoTriggerEmotionCount) < 0) {
+            // v1.19.4：开关／间隔属于单导演操作。只初始化被操作的那本账，
+            // 绝不能因为情感侧第一次落账就替统筹提前开表，反之亦然。
+            if (type === "plot") {
+                if (!Number.isFinite(Number(st.lastAutoTriggerPlotCount)) || Number(st.lastAutoTriggerPlotCount) < 0) {
+                    st.lastAutoTriggerPlotCount = count;
+                    adrDAdvanceAutoBaseline("plot", count);
+                }
+            } else if (!Number.isFinite(Number(st.lastAutoTriggerEmotionCount)) || Number(st.lastAutoTriggerEmotionCount) < 0) {
                 st.lastAutoTriggerEmotionCount = count;
                 adrDAdvanceAutoBaseline("emotion", count);
-            }
-            if (!Number.isFinite(Number(st.lastAutoTriggerPlotCount)) || Number(st.lastAutoTriggerPlotCount) < 0) {
-                st.lastAutoTriggerPlotCount = count;
-                adrDAdvanceAutoBaseline("plot", count);
             }
 
             saveNow();
             adrDPersistAutoBaselineFields(st);
             adrDUpdateAutoCounters();
-            console.log("[Arrebol D] auto trigger baseline", reason, key, count);
+            console.log("[Arrebol D] auto trigger baseline", type, reason, key, count);
         } catch (e) {}
     }
 
