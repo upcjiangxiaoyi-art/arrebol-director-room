@@ -2819,6 +2819,7 @@
             history: Array.isArray(o.history) ? o.history.slice(-ADR_CD_HISTORY_MAX) : [],
             recent: Array.isArray(o.recent) ? o.recent.slice(-ADR_CD_RECENT_MAX) : [],
             paused: o.paused === true,
+            passUntil: Number(o.passUntil) > 0 ? Number(o.passUntil) : 0,
             streak: o.streak && typeof o.streak === "object"
                 ? { pool: String(o.streak.pool || ""), n: Math.max(0, Number(o.streak.n) || 0) }
                 : { pool: "", n: 0 },
@@ -2950,6 +2951,25 @@
         return s.length > max ? s.slice(0, max) + "…" : s;
     }
 
+    // v1.22.0 弃权位。此前名单里没有"什么都不投"这一项，DS 被逼着每次必须选一个池，
+    // 哪怕正在进行的场面根本不该被任何外来事件打断。
+    var ADR_CD_PICK_PASS = "此刻不投卡";
+
+    // v1.22.0：把"此刻"和"背景"分开喂。
+    // recentContentBlocks 用 \n\n---\n\n 连接各楼，按时间正序。
+    // 此前十几轮糊成一团丢给 DS，它分不清哪段是现在、哪段是三楼前已经收场的戏——
+    // "莫名其妙来了"和"该来的没来"都有这一份。
+    function adrCdSplitRecent(recent) {
+        var sep = "\n\n---\n\n";
+        var chunks = String(recent || "").split(sep).filter(function (s) { return s.trim(); });
+        if (!chunks.length) return { now: "", before: "" };
+        var nowN = Math.min(2, chunks.length);   // 最后一问一答＝此刻
+        return {
+            now: chunks.slice(chunks.length - nowN).join(sep),
+            before: chunks.slice(0, chunks.length - nowN).join(sep)
+        };
+    }
+
     async function adrCdPickPoolViaDS(slotPools, state) {
         var st = settings();
         var endpoint = st.cdApiEndpoint || "";
@@ -2966,30 +2986,52 @@
         var hasNsfw = menu.some(function (m) { return String(m).indexOf("NSFW·") === 0; });
 
         var sys = "你是抽卡助手的选池器。你只能看到卡池名单，看不到任何卡面内容。"
-            + "你的任务：读【最近正文（节选）】判断此刻的剧情氛围，从名单中选出最适合此刻投放一张事件卡的卡池。"
-            + "此刻氛围一律以最近正文为准；角色卡与世界书只用来了解这个故事的整体调性，不作为此刻氛围的依据。";
+            + "你的任务：判断此刻的剧情氛围，从名单中选出最适合此刻投放一张事件卡的卡池。"
+            + "【刚刚这一楼】就是此刻，氛围一律以它为准。"
+            + "【再往前几楼】只用来看这股势头是仍在持续、还是已经收场，不要拿它当此刻。"
+            + "【这个故事的整体调性】只用来判断某类情节允不允许发生，绝不作为此刻氛围的依据。";
 
         if (hasNsfw) {
             sys += "名单中以「NSFW·」开头的卡池是例外通道，不参与上述常规判断，改用下面这条双向规则。"
-                + "先判断最近正文是否同时满足两条：一、已经出现明确的情欲流动或强烈性暗示，且这股张力仍在持续，没有被打断、没有转场；二、这个故事的整体调性允许此类情节发生。"
+                + "先判断【刚刚这一楼】是否同时满足两条：一、已经出现明确的情欲流动或强烈性暗示，且这股张力此刻仍在持续，没有被打断、没有转场；二、这个故事的整体调性允许此类情节发生。"
                 + "两条都满足时，必须从以「NSFW·」开头的卡池中选（有多个就选最贴合此刻的那一个），其余卡池此刻一律不选——此时投入无关事件会打断正在进行的场面，这是比选错卡池更严重的错误。"
                 + "任何一条不满足时，就当以「NSFW·」开头的卡池不在名单上，哪怕其余卡池都不够贴合，也宁可选一个次贴合的。"
-                + "剧情平淡、需要推进、想制造转折，都不构成选它的理由；场面已经明确结束或转场之后，也不再算满足。";
+                + "剧情平淡、需要推进、想制造转折，都不构成选它的理由；场面已经明确结束或转场之后，也不再算满足。"
+                + "判断依据只看【刚刚这一楼】：【再往前几楼】里出现过的情欲内容，如果到【刚刚这一楼】已经收场，就不算满足。";
         }
 
-        sys += "只准回复名单中的一个卡池名，一字不差；不加标点、不加解释、不加思考过程、不加前缀后缀、不加任何其他文字。多一个字视为无效。";
+        sys += "名单里还有一项「" + ADR_CD_PICK_PASS + "」。"
+            + "当此刻正在进行的场面不该被任何外来事件打断（一场戏正到紧要处、一段对峙刚起势、情绪正在收束），"
+            + "或者名单里没有一个卡池贴合此刻时，就选它。"
+            + "宁可这一楼什么都不投，也好过塞一张打断场面的卡——空一楼没有代价，打断有。";
 
+        sys += "只准回复名单中的一个卡池名或「" + ADR_CD_PICK_PASS + "」，一字不差；不加标点、不加解释、不加思考过程、不加前缀后缀、不加任何其他文字。多一个字视为无效。";
+
+        // v1.22.0 语境顺序倒过来。旧版把角色卡＋世界书＋Persona（最多 8000 字）压在最前面，
+        // 真正决定"此刻"的最近正文排在它后面——提示词嘴上说"以最近正文为准"，
+        // 结构上却把最重的位置给了静态设定。成人向角色卡里本就有大量情欲描写，
+        // 这一大团持续把 DS 往 NSFW 推，正是"莫名其妙抽到 NSFW"的来源之一。
+        // 现在：此刻 → 前情 → 名单 → 近期已投 → 调性（压到最后并大幅缩短）。
         var parts = [];
-        var precise = "";
-        try { precise = buildPreciseContext(); } catch (ePc) {}
-        if (precise) parts.push(adrCdTruncate(precise, 8000));
         var recent = "";
         var pickRounds = adrCdPickReadRounds();
         try { recent = await recentContentBlocks(pickRounds); } catch (eRc) {}
-        if (recent) parts.push("【最近正文（节选）】\n" + adrCdTruncate(recent, adrCdReadCharCap(pickRounds)));
-        parts.push("【卡池名单】\n" + menu.join("\n"));
+        var splitR = adrCdSplitRecent(recent);
+        if (splitR.now) {
+            parts.push("【刚刚这一楼 · 此刻的氛围只看这里】\n" + adrCdTruncate(splitR.now, 2000));
+        }
+        if (splitR.before) {
+            parts.push("【再往前几楼 · 仅用来看这股势头是在持续还是已经收场】\n" + adrCdTruncate(splitR.before, 2500));
+        }
+        parts.push("【卡池名单】\n" + menu.join("\n") + "\n" + ADR_CD_PICK_PASS);
         if (recentPools.length) parts.push("【最近 3 张已投卡来自的卡池】\n" + recentPools.join("、"));
-        parts.push("请从【卡池名单】中回复一个卡池名。");
+        var precise = "";
+        try { precise = buildPreciseContext(); } catch (ePc) {}
+        if (precise) {
+            parts.push("【这个故事的整体调性 · 只用来判断某类情节允不允许发生，不是此刻的依据】\n"
+                + adrCdTruncate(precise, 2000));
+        }
+        parts.push("请回复一个卡池名，或「" + ADR_CD_PICK_PASS + "」。");
 
         var aborterCd = typeof AbortController !== "undefined" ? new AbortController() : null;
         var timeoutId = null;
@@ -3034,21 +3076,34 @@
         var data;
         try { data = JSON.parse(raw); } catch (eJson) { throw new Error("择池返回非 JSON"); }
         var out = parseResponse(data);
-        var pick = adrCdSanitizePickResponse(out, menu);
+        var pick = adrCdSanitizePickResponse(out, menu.concat([ADR_CD_PICK_PASS]));
         if (!pick) throw new Error("点池答复无效：" + adrCdTruncate(out, 40));
         return pick;
     }
 
     // ---- 三段抽 ----
 
+    // NSFW 唯一保留的闸：择池失败降级成盲抽时，整格不参与。
+    // DS 挂了＝此刻没人判准入条件，默认"不准入"才是安全侧。
+    // 这是 v1.19.2 自己标记的「已知未堵」，也是"莫名其妙抽到 NSFW"最可能的来源——
+    // 降级是静默发生的，用户根本不知道那一张是随机给的。
+    // （v1.21 另外两条闸只作用于盲抽路径，与这批反馈无关，v1.22 已撤除。）
+    function adrCdNsfwGate(degraded) {
+        return degraded ? { hardExclude: ["nsfw"] } : null;
+    }
+
     // 前两段（掷仓库 → 掷卡池）抽成纯函数：仓库均等是本版核心承诺，必须可验证。
-    function adrCdRollPool(slotPools, excludeMenuName, rng) {
+    function adrCdRollPool(slotPools, excludeMenuName, rng, gate) {
         rng = typeof rng === "function" ? rng : Math.random;
+        gate = gate || {};
         var cand = slotPools || [];
         if (excludeMenuName) {
             var others = cand.filter(function (p) { return p.menuName !== excludeMenuName; });
             if (others.length) cand = others;
         }
+        // 硬闸：这一格此刻没有准入资格。排空了就不抽——耳边空一轮，好过硬塞。
+        var hard = gate.hardExclude || [];
+        if (hard.length) cand = cand.filter(function (p) { return hard.indexOf(p.slot) < 0; });
         if (!cand.length) return null;
         // 第一段：掷仓库（启用且有卡的仓库之间均等——仓库数即权重，专属库池少也不会被淹）
         var slotsPresent = [];
@@ -3059,8 +3114,8 @@
         return inSlot[Math.floor(rng() * inSlot.length)] || null;
     }
 
-    function adrCdDrawBlind(slotPools, state, excludeMenuName) {
-        var pool = adrCdRollPool(slotPools, excludeMenuName);
+    function adrCdDrawBlind(slotPools, state, excludeMenuName, gate) {
+        var pool = adrCdRollPool(slotPools, excludeMenuName, null, gate);
         if (!pool) return null;
         // 第三段：掷卡（冷却区不复用）
         var card = adrCdPickFromPool(pool.cards, state.recent, adrCdCooldown());
@@ -3078,12 +3133,28 @@
 
         var result = null;
         var usedMode = "盲抽";
+        var degraded = false;   // 择池失败降级过来的？降级时 NSFW 一律不参与
+
+        var floorNow = Number.isFinite(Number(opts.count)) ? Number(opts.count) : adrDAssistantRoundCount();
 
         if (st.cdMode === "pick" && !opts.preview) {
             var t0 = Date.now();
             try {
                 var pick = await adrCdPickPoolViaDS(slotPools, state);
                 console.log("[抽卡小能手] DS 点池：" + pick + "（耗时 " + (Date.now() - t0) + "ms）");
+
+                // v1.22.0：DS 判此刻不该投。空一楼没有代价，打断有。
+                // 不推进 lastDrawAt，改用 passUntil 节流——否则下一楼又问一次，白花钱。
+                if (pick === ADR_CD_PICK_PASS) {
+                    var retryIn = Math.max(1, Math.min(3, adrCdN()));
+                    var stPass = adrCdChatState();
+                    stPass.passUntil = floorNow + retryIn;
+                    adrCdSaveChatState(stPass);
+                    console.log("[抽卡小能手] DS 弃权：此刻不投卡，" + retryIn + " 楼后再问");
+                    adrCdUpdateStatusLine();
+                    return { ok: false, passed: true, reason: "DS 判断此刻不适合投卡，空过（" + retryIn + " 楼后再问）" };
+                }
+
                 var poolObj = null;
                 for (var i = 0; i < slotPools.length; i++) { if (slotPools[i].menuName === pick) { poolObj = slotPools[i]; break; } }
                 var streakN = (state.streak && state.streak.pool === pick) ? state.streak.n + 1 : 1;
@@ -3104,11 +3175,19 @@
             } catch (ePick) {
                 console.warn("[抽卡小能手] 择池降级盲抽：" + (ePick && ePick.message ? ePick.message : ePick));
                 usedMode = "择池降级盲抽";
+                degraded = true;
             }
         }
 
-        if (!result) result = adrCdDrawBlind(slotPools, state, "");
-        if (!result || !result.card) return { ok: false, reason: "无可抽卡面" };
+        if (!result) result = adrCdDrawBlind(slotPools, state, "", adrCdNsfwGate(degraded));
+        if (!result || !result.card) {
+            // 空手而归时说清是哪道闸拦的，别让人对着"无可抽卡面"猜。
+            var onlyNsfw = slotPools.length > 0 && slotPools.every(function (p) { return p.slot === "nsfw"; });
+            if (onlyNsfw && degraded) {
+                return { ok: false, reason: "择池没成功，而此刻只有 NSFW 库可抽——没人判准入条件时不投，这一轮空过" };
+            }
+            return { ok: false, reason: "无可抽卡面" };
+        }
 
         if (opts.preview) {
             return { ok: true, pool: result.pool, card: result.card, mode: "试抽（盲抽）", preview: true };
@@ -3118,6 +3197,7 @@
         state.recent = (state.recent || []).concat([result.card]).slice(-ADR_CD_RECENT_MAX);
         state.history = (state.history || []).concat([{
             pool: result.pool,
+            slot: result.slot,   // v1.21：连抽闸要按仓库判，菜单名前缀不够稳（用户可改池名）
             card: adrCdTruncate(result.card, 200),
             floor: floor,
             mode: usedMode,
@@ -3125,6 +3205,7 @@
             status: "live" // live 挂载中 / done 已兑现 / faded 已退为背景
         }]).slice(-ADR_CD_HISTORY_MAX);
         state.lastDrawAt = floor;
+        state.passUntil = 0;   // 投出去了，弃权节流作废
         state.floatCard = result.card;
         state.floatStage = "active";
         state.floatText = adrCdBuildEnvelope(adrCdEnvelopePair().active, result.card);
@@ -3156,6 +3237,13 @@
 
         if (count - base < n) {
             // 还没到投卡点，但可能到了这张卡的半衰期
+            await adrCdAdvanceLifecycle(count, state);
+            adrCdUpdateStatusLine();
+            return;
+        }
+
+        // v1.22.0：DS 上次弃权后的节流窗口。到点了也先不问，省一次调用。
+        if (Number(state.passUntil) > 0 && count < Number(state.passUntil)) {
             await adrCdAdvanceLifecycle(count, state);
             adrCdUpdateStatusLine();
             return;
@@ -3464,6 +3552,14 @@
         var left = (Number.isFinite(base) && base >= 0) ? Math.max(0, n - (count - base)) : n;
         var head = libPart + " · " + mode + " · " + ADR_CD_LIFE_MODE_LABEL[adrCdLifeMode()]
             + (state.paused ? " · 已暂停投卡" : " · 距下张还有 " + left + " 楼");
+        // v1.22.0：降级是静默发生的，用户对着一张莫名其妙的卡根本不知道 DS 那次没应答。
+        var lastRec = ((state.history || []).slice(-1)[0]) || null;
+        if (lastRec && String(lastRec.mode || "").indexOf("降级") >= 0) {
+            head += " · ⚠ 上一张是 DS 没应答时随机给的";
+        }
+        if (Number(state.passUntil) > 0) {
+            head += " · DS 判此刻不投，空过中";
+        }
         var h = (state.history || []).slice(-1)[0];
         if (h) head += "\n最近一张：" + (h.pool || "?") + "｜" + String(h.card || "");
         return head;
@@ -3728,6 +3824,10 @@
             var fl = adrCdCurrentFloatLength();
             lines.push("耳机通道：" + (fl < 0 ? "读不到（旧版酒馆）" : (fl > 0 ? "已挂载 " + fl + " 字" : "空（未投卡或已暂停）")));
             lines.push("模式：" + (st.cdMode === "pick" ? "择池" : "盲抽") + "　注入深度：" + adrCdDepth() + "　冷却：" + adrCdCooldown());
+            var lastH = ((state.history || []).slice(-1)[0]) || null;
+            lines.push("上一张怎么来的：" + (lastH ? String(lastH.mode || "未知") : "（还没投过）")
+                + (lastH && String(lastH.mode || "").indexOf("降级") >= 0
+                    ? "　⚠ DS 那次没应答，这张是随机给的（降级时 NSFW 已被排除）" : ""));
             lines.push("卡的阶段：" + (state.floatCard ? (ADR_CD_STAGE_LABEL[state.floatStage] || state.floatStage) : "耳边无卡")
                 + "　生命节奏：" + ADR_CD_LIFE_MODE_LABEL[adrCdLifeMode()]
                 + (adrCdLifeMode() === "half" ? "（" + adrCdHalfLifeFloors() + " 楼）" : "")
