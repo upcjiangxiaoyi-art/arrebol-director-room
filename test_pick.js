@@ -171,9 +171,7 @@ section("喂给 DS 的语境：顺序与配额");
     const tone = u.slice(iTone);
     ok(tone.length < 2300, "静态调性截到 2000 上下（旧版 8000）", "长度 " + tone.length);
     ok(/只用来判断某类情节允不允许发生/.test(tone), "并且明说了它不是此刻的依据");
-    ok(u.indexOf("此刻不投卡") > 0, "名单里带上了弃权位");
     ok(/【刚刚这一楼】就是此刻/.test(s), "系统提示词把此刻锚定在最后一楼");
-    ok(/宁可这一楼什么都不投/.test(s), "系统提示词讲清了弃权的取舍");
     ok(/判断依据只看【刚刚这一楼】/.test(s), "NSFW 硬门也改成只看此刻（前几楼收场的不算数）");
     e.stop();
 }
@@ -185,49 +183,49 @@ section("没有 NSFW 池时，那段硬门整段不注入");
     for (let i = 0; i < 2; i++) await beat(e);
     const s = e.calls[e.calls.length - 1].sys;
     ok(!/NSFW/.test(s), "菜单里没有 NSFW 池就不提这个概念（省 token，也不平白种进去）");
-    ok(/此刻不投卡/.test(s), "弃权位照常在");
     e.stop();
 }
 
-section("弃权 · DS 说此刻不投，就真的不投");
+section("不许弃权 · 名单里不再有出口");
+{
+    const e = await bootPick({ n: 1 });
+    e.setScript(() => "通用·乙");
+    for (let i = 0; i < 2; i++) await beat(e);
+    const u = e.calls[e.calls.length - 1].user;
+    const s2 = e.calls[e.calls.length - 1].sys;
+    ok(!/此刻不投卡/.test(u), "卡池名单里没有弃权项了", (u.match(/此刻不投卡/g) || []).join());
+    ok(!/此刻不投卡/.test(s2), "系统提示词里也不再提弃权");
+    ok(/必须从名单中选出一个卡池/.test(s2) && /不存在「都不选」/.test(s2),
+        "改成明说必须选一个", s2.slice(s2.indexOf("你必须"), s2.indexOf("你必须") + 40));
+    ok(/最不打断当下/.test(s2),
+        "并给出选不出时怎么办——挑最不打断当下的那个，而不是撂挑子");
+    e.stop();
+}
+
+section("不许弃权 · 旧答复「此刻不投卡」现在算无效，降级但不停摆");
 {
     const e = await bootPick({ n: 1 });
     e.setScript(() => "此刻不投卡");
-    for (let i = 0; i < 3; i++) await beat(e);
-    ok(e.draws.length === 0, "一张都没投", "投出 " + e.draws.length + " 张");
-    ok(Number(e.meta().passUntil) > 0, "记下了节流窗口", "passUntil=" + e.meta().passUntil);
-    ok(e.logs.some(l => /弃权/.test(l)), "日志里说清了是 DS 弃权，不是出错");
-    const line = e.doc.querySelector("#adr044-cd-status-line");
-    ok(line && /空过中/.test(line.textContent), "状态行明说正在空过", line && line.textContent);
+    for (let i = 0; i < 4; i++) await beat(e);
+    ok(e.draws.length > 0, "照样有卡投出来（这正是上一版一路空过的病）",
+        "投出 " + e.draws.length + " 张");
+    ok(e.draws.every(x => String(x["模式"] || "").indexOf("降级") >= 0),
+        "答复不在名单里就当无效答复，降级盲抽", e.draws.map(x => x["模式"]).join("/"));
     e.stop();
 }
 
-section("弃权节流 · 不该每楼都去问一次");
+section("旧存档 · 升级后立刻解除未走完的空过窗口");
 {
-    // N=4 → 弃权后隔 3 楼再问。第一拍只对齐基准线，第五拍才到投卡点。
-    const e = await bootPick({ n: 4 });
-    e.setScript(() => "此刻不投卡");
-    for (let i = 0; i < 5; i++) await beat(e);
-    const after1 = e.calls.length;
-    ok(after1 === 1, "到投卡点问了 DS 一次，得到弃权", "调用 " + after1 + " 次");
-    await beat(e); await beat(e);
-    ok(e.calls.length === after1, "空过期间没有再问（每楼都问就是白烧钱）",
-        "累计 " + e.calls.length + " 次");
+    const e = await bootPick({ n: 1 });
+    e.setScript(() => "专属·甲");
     await beat(e);
-    ok(e.calls.length > after1, "节流窗口过后会重新问", "累计 " + e.calls.length + " 次");
-    e.stop();
-}
-
-section("弃权后恢复 · 一旦 DS 改口就照常投卡，节流作废");
-{
-    const e = await bootPick({ n: 1 });
-    let turn = 0;
-    e.setScript(() => (++turn <= 1 ? "此刻不投卡" : "专属·甲"));
-    for (let i = 0; i < 6; i++) await beat(e);
-    ok(e.draws.length > 0, "后来投出来了", "投出 " + e.draws.length + " 张");
-    ok(Number(e.meta().passUntil) === 0, "投出后节流窗口清零", "passUntil=" + e.meta().passUntil);
-    ok(e.draws.every(x => String(x["卡池"]) === "专属·甲"), "投的正是 DS 点的池",
-        e.draws.map(x => x["卡池"]).join("、"));
+    // 手动伪造一个 1.23.0 遗留的空过窗口
+    const m = e.meta();
+    m.passUntil = 9999;
+    for (let i = 0; i < 3; i++) await beat(e);
+    ok(e.draws.length > 0, "老存档里遗留的 passUntil 不再拦住投卡",
+        "投出 " + e.draws.length + " 张");
+    ok(Number(e.meta().passUntil || 0) === 0, "读出来就归零", "passUntil=" + e.meta().passUntil);
     e.stop();
 }
 
@@ -255,17 +253,19 @@ section("降级 · DS 挂掉时排除 NSFW，并且要出声");
         (Math.pow(2 / 3, drew) * 100).toFixed(2) + "%）",
         e.draws.map(x => x["卡池"]).join("、"));
     const line = e.doc.querySelector("#adr044-cd-status-line");
-    ok(line && /DS 没应答时随机给的/.test(line.textContent),
+    ok(line && /小眼睛没应答时随机给的/.test(line.textContent),
         "状态行主动说明这张是降级随机给的（旧版降级完全静默）", line && line.textContent);
     e.stop();
 }
 
 section("答复清洗 · 弃权位也要认得出，垃圾答复照旧作废");
 {
+    // 弃权取消后，这条答复不在名单里 → 按无效答复降级，而不是被认成弃权
     const e = await bootPick({ n: 1 });
     e.setScript(() => "「此刻不投卡」");
-    await beat(e); await beat(e);
-    ok(Number(e.meta().passUntil) > 0, "带引号的弃权答复照样认", "passUntil=" + e.meta().passUntil);
+    for (let i = 0; i < 4; i++) await beat(e);
+    ok(e.draws.length > 0, "旧的弃权说法现在一律无效，照常降级投卡",
+        "投出 " + e.draws.length + " 张");
     e.stop();
 }
 {
@@ -303,7 +303,7 @@ section("择卡 · 候选按仓库均摊");
     ok(e.calls.length >= 1, "择卡调用了 DS", "调用 " + e.calls.length + " 次");
     const u = e.calls[e.calls.length - 1].user;
     const lines = (u.split("【候选卡】\n")[1] || "").split("\n").filter(l => /^\d+\./.test(l));
-    ok(lines.length >= 6, "候选数量按仓库数算出来（三格 → 6 张）", "共 " + lines.length + " 行");
+    ok(lines.length >= 5, "候选数量按仓库数算出来（不含已取消的 0 号出口）", "共 " + lines.length + " 行");
     const bySlot = { 专属: 0, 通用: 0, NSFW: 0 };
     lines.forEach(l => { Object.keys(bySlot).forEach(k => { if (l.indexOf("【" + k + "·") > 0) bySlot[k]++; }); });
     // 真正的契约不是"三格数量相等"：NSFW 候选不带卡面，同一个池给两行一模一样的
@@ -317,7 +317,7 @@ section("择卡 · 候选按仓库均摊");
         JSON.stringify(bySlot));
     const seen = lines.map(l => l.replace(/^\d+\.\s*/, ""));
     ok(new Set(seen).size === seen.length, "候选之间不重复");
-    ok(/0\. 此刻不投卡/.test(u), "弃权位也在候选表里");
+    ok(!/此刻不投卡/.test(u), "候选表里没有弃权出口");
     e.stop();
 }
 
@@ -351,13 +351,16 @@ section("择卡 · 选中哪张就投哪张");
     e.stop();
 }
 
-section("择卡 · 弃权与降级");
+section("择卡 · 不许弃权与降级");
 {
     const e = await bootPick({ n: 1, mode: "pickcard" });
     e.setScript(() => "0");
-    for (let i = 0; i < 3; i++) await beat(e);
-    ok(e.draws.length === 0, "答 0 就真的不投", "投出 " + e.draws.length + " 张");
-    ok(Number(e.meta().passUntil) > 0, "走的是和择池同一套节流", "passUntil=" + e.meta().passUntil);
+    for (let i = 0; i < 4; i++) await beat(e);
+    ok(e.draws.length > 0, "答 0 不再是弃权，照样投卡", "投出 " + e.draws.length + " 张");
+    ok(e.draws.every(x => String(x["模式"] || "").indexOf("降级") >= 0),
+        "0 号越界，按无效答复降级盲抽", e.draws.map(x => x["模式"]).join("/"));
+    const u = e.calls[0].user;
+    ok(!/0\. 此刻不投卡/.test(u), "候选末尾不再有 0 号出口");
     e.stop();
 }
 {
@@ -376,7 +379,7 @@ section("择卡 · 弃权与降级");
     for (let i = 0; i < 3; i++) await beat(e);
     ok(e.draws.length > 0, "DS 挂掉时降级盲抽", "投出 " + e.draws.length + " 张");
     const line = e.doc.querySelector("#adr044-cd-status-line");
-    ok(line && /DS 没应答时随机给的/.test(line.textContent), "状态行照样出声");
+    ok(line && /小眼睛没应答时随机给的/.test(line.textContent), "状态行照样出声");
     e.stop();
 }
 

@@ -168,7 +168,8 @@ section("请求体 · 候选构成与顺序");
     const block = u.slice(iCand, iTone);
     const nums = block.match(/^\d+\. /gm) || [];
     ok(nums.length >= 4, "候选有若干张", nums.join("").trim());
-    ok(/0\. 此刻不投卡/.test(block), "弃权位以 0 号出现在候选末尾");
+    ok(!/此刻不投卡/.test(block), "候选里没有弃权出口了");
+    ok(/只准回复一个数字/.test(s) && !/或 0/.test(s), "只准回编号，不给 0 这条退路");
     ok(/专属·/.test(block) && /通用·/.test(block), "候选跨仓库摊开，不是全挤在一格",
         block.slice(0, 120).replace(/\n/g, " | "));
     ok(/只准回复一个数字/.test(s), "系统提示词要求只回数字");
@@ -214,17 +215,17 @@ section("选中 · DS 报几号就投几号");
     e.stop();
 }
 
-section("弃权 · DS 回 0 就空过");
+section("不许弃权 · 回 0 也照样投卡");
 {
     const e = await bootCard({ n: 1 });
     e.setScript(() => "0");
-    for (let i = 0; i < 3; i++) await beat(e);
-    ok(e.draws.length === 0, "一张都没投", "投出 " + e.draws.length + " 张");
-    ok(Number(e.meta().passUntil) > 0, "记下了节流窗口", "passUntil=" + e.meta().passUntil);
-    ok(e.logs.some(l => /弃权/.test(l) && /没有一张贴合/.test(l)),
-        "日志说清是「候选没有一张贴合此刻」", e.logs.filter(l => /弃权/.test(l)).slice(-1)[0]);
+    for (let i = 0; i < 4; i++) await beat(e);
+    ok(e.draws.length > 0, "答 0 不再空过（上一版就是一路空过，一张都不投）",
+        "投出 " + e.draws.length + " 张");
+    ok(e.draws.every(x => String(x["模式"] || "").indexOf("降级") >= 0),
+        "0 号按越界处理，降级盲抽", e.draws.map(x => x["模式"]).join("/"));
     const line = e.doc.querySelector("#adr044-cd-status-line");
-    ok(line && /空过中/.test(line.textContent), "状态行明说正在空过");
+    ok(!/空过中/.test(line.textContent || ""), "状态行不再有空过字样");
     e.stop();
 }
 

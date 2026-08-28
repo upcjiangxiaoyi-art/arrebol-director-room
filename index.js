@@ -108,7 +108,7 @@
         cdHalfLife: true,           // 旧字段：v1.20 起由 cdLifeMode 统辖，仅作镜像保留给旧读法
         // 注意：cdLifeMode 故意不写进 DEFAULTS。settings() 会给任何缺失字段补默认值，
         // 一补上就盖住了"老存档没有这个字段 → 看 cdHalfLife 迁移"这条路。缺省值由 adrCdLifeMode() 现算。
-        cdAutoDone: false,          // 到半衰期时问一次 DS「兑现没」，默认关（要花钱）
+        cdAutoDone: false,          // 到半衰期时问一次小眼睛「兑现没」，默认关（要花钱）
         cdApiEndpoint: "",
         cdApiKey: "",
         cdModel: "deepseek-chat"
@@ -2840,7 +2840,9 @@
             history: Array.isArray(o.history) ? o.history.slice(-ADR_CD_HISTORY_MAX) : [],
             recent: Array.isArray(o.recent) ? o.recent.slice(-ADR_CD_RECENT_MAX) : [],
             paused: o.paused === true,
-            passUntil: Number(o.passUntil) > 0 ? Number(o.passUntil) : 0,
+            // v1.23.1：弃权已取消。旧存档里可能还留着未走完的空过窗口，
+            // 一律归零，免得升级后那几楼继续被拦着不投。
+            passUntil: 0,
             streak: o.streak && typeof o.streak === "object"
                 ? { pool: String(o.streak.pool || ""), n: Math.max(0, Number(o.streak.n) || 0) }
                 : { pool: "", n: 0 },
@@ -2972,9 +2974,6 @@
         return s.length > max ? s.slice(0, max) + "…" : s;
     }
 
-    // v1.22.0 弃权位。此前名单里没有"什么都不投"这一项，DS 被逼着每次必须选一个池，
-    // 哪怕正在进行的场面根本不该被任何外来事件打断。
-    var ADR_CD_PICK_PASS = "此刻不投卡";
     var ADR_CD_MODES = ["blind", "pick", "pickcard"];
     var ADR_CD_MODE_LABEL = { blind: "盲抽", pick: "择池", pickcard: "择卡" };
 
@@ -3023,12 +3022,13 @@
                 + "判断依据只看【刚刚这一楼】：【再往前几楼】里出现过的情欲内容，如果到【刚刚这一楼】已经收场，就不算满足。";
         }
 
-        sys += "名单里还有一项「" + ADR_CD_PICK_PASS + "」。"
-            + "当此刻正在进行的场面不该被任何外来事件打断（一场戏正到紧要处、一段对峙刚起势、情绪正在收束），"
-            + "或者名单里没有一个卡池贴合此刻时，就选它。"
-            + "宁可这一楼什么都不投，也好过塞一张打断场面的卡——空一楼没有代价，打断有。";
+        // v1.23.1：取消弃权位。上一版给了「此刻不投卡」这个出口，还写了
+        // "空一楼没有代价，打断有"——角色扮演里几乎每一楼都能算"正到紧要处"，
+        // 于是模型一路走出口，一张卡都不投。判断题不能配一个比判断更省事的选项。
+        sys += "你必须从名单中选出一个卡池，不存在「都不选」这个选项。"
+            + "即使此刻没有哪个卡池特别贴合，也要挑出最不打断当下、最容易被自然带过去的那一个。";
 
-        sys += "只准回复名单中的一个卡池名或「" + ADR_CD_PICK_PASS + "」，一字不差；不加标点、不加解释、不加思考过程、不加前缀后缀、不加任何其他文字。多一个字视为无效。";
+        sys += "只准回复名单中的一个卡池名，一字不差；不加标点、不加解释、不加思考过程、不加前缀后缀、不加任何其他文字。多一个字视为无效。";
 
         // v1.22.0 语境顺序倒过来。旧版把角色卡＋世界书＋Persona（最多 8000 字）压在最前面，
         // 真正决定"此刻"的最近正文排在它后面——提示词嘴上说"以最近正文为准"，
@@ -3046,7 +3046,7 @@
         if (splitR.before) {
             parts.push("【再往前几楼 · 仅用来看这股势头是在持续还是已经收场】\n" + adrCdTruncate(splitR.before, 2500));
         }
-        parts.push("【卡池名单】\n" + menu.join("\n") + "\n" + ADR_CD_PICK_PASS);
+        parts.push("【卡池名单】\n" + menu.join("\n"));
         if (recentPools.length) parts.push("【最近 3 张已投卡来自的卡池】\n" + recentPools.join("、"));
         var precise = "";
         try { precise = buildPreciseContext(); } catch (ePc) {}
@@ -3054,7 +3054,7 @@
             parts.push("【这个故事的整体调性 · 只用来判断某类情节允不允许发生，不是此刻的依据】\n"
                 + adrCdTruncate(precise, 2000));
         }
-        parts.push("请回复一个卡池名，或「" + ADR_CD_PICK_PASS + "」。");
+        parts.push("请回复一个卡池名。");
 
         var aborterCd = typeof AbortController !== "undefined" ? new AbortController() : null;
         var timeoutId = null;
@@ -3099,7 +3099,7 @@
         var data;
         try { data = JSON.parse(raw); } catch (eJson) { throw new Error("择池返回非 JSON"); }
         var out = parseResponse(data);
-        var pick = adrCdSanitizePickResponse(out, menu.concat([ADR_CD_PICK_PASS]));
+        var pick = adrCdSanitizePickResponse(out, menu);
         if (!pick) throw new Error("点池答复无效：" + adrCdTruncate(out, 40));
         return pick;
     }
@@ -3188,11 +3188,11 @@
                 + "剧情平淡、需要推进、想制造转折，都不构成选它的理由；场面已经明确结束或转场之后，也不再算满足。";
         }
 
-        sys += "如果此刻正在进行的场面不该被任何外来事件打断（一场戏正到紧要处、一段对峙刚起势、情绪正在收束），"
-            + "或者这几张候选没有一张贴合此刻，就回复 0。"
-            + "宁可这一楼什么都不投，也好过塞一张打断场面的卡——空一楼没有代价，打断有。";
+        // v1.23.1：取消 0 号弃权，理由同择池——出口比判断省事，模型就会一直走出口。
+        sys += "你必须从候选里选出一张，不存在「都不选」这个选项。"
+            + "即使没有哪一张特别贴合，也要挑出最不打断当下、最容易被自然带过去的那一张。";
 
-        sys += "只准回复一个数字：选中候选的编号，或 0 表示此刻不投卡。"
+        sys += "只准回复一个数字：选中候选的编号。"
             + "不加标点、不加解释、不加思考过程、不加任何其他文字。多一个字视为无效。";
 
         var parts = [];
@@ -3202,15 +3202,14 @@
         var splitR = adrCdSplitRecent(recent);
         if (splitR.now) parts.push("【刚刚这一楼 · 此刻的氛围只看这里】\n" + adrCdTruncate(splitR.now, 2000));
         if (splitR.before) parts.push("【再往前几楼 · 仅用来看这股势头是在持续还是已经收场】\n" + adrCdTruncate(splitR.before, 2500));
-        parts.push("【候选卡】\n" + cands.map(function (c, i) { return adrCdCandidateLine(i, c); }).join("\n")
-            + "\n0. " + ADR_CD_PICK_PASS);
+        parts.push("【候选卡】\n" + cands.map(function (c, i) { return adrCdCandidateLine(i, c); }).join("\n"));
         var precise = "";
         try { precise = buildPreciseContext(); } catch (ePc) {}
         if (precise) {
             parts.push("【这个故事的整体调性 · 只用来判断某类情节允不允许发生，不是此刻的依据】\n"
                 + adrCdTruncate(precise, 2000));
         }
-        parts.push("请只回复一个数字（1-" + cands.length + "，或 0）。");
+        parts.push("请只回复一个数字（1-" + cands.length + "）。");
 
         var aborterC = typeof AbortController !== "undefined" ? new AbortController() : null;
         var timeoutC = null, didTimeoutC = false;
@@ -3257,7 +3256,6 @@
         var mNum = outC.match(/-?\d+/);
         if (!mNum) throw new Error("选卡答复无效：" + adrCdTruncate(outC, 40));
         var n = Number(mNum[0]);
-        if (n === 0) return 0;
         if (!(n >= 1 && n <= cands.length)) throw new Error("选卡编号越界：" + outC);
         return n;
     }
@@ -3318,16 +3316,6 @@
 
         var floorNow = Number.isFinite(Number(opts.count)) ? Number(opts.count) : adrDAssistantRoundCount();
 
-        function passThisFloor(why) {
-            var retryIn = Math.max(1, Math.min(3, adrCdN()));
-            var stPass = adrCdChatState();
-            stPass.passUntil = floorNow + retryIn;
-            adrCdSaveChatState(stPass);
-            console.log("[抽卡小能手] DS 弃权：" + why + "，" + retryIn + " 楼后再问");
-            adrCdUpdateStatusLine();
-            return { ok: false, passed: true, reason: "DS 判断此刻不适合投卡，空过（" + retryIn + " 楼后再问）" };
-        }
-
         // v1.23.0 择卡：候选按仓库均摊摸出来，连卡面一起给 DS 挑一张，或弃权。
         // 治的是"池选对了，池内那张不贴合"——择池只解决了前半段。
         if (st.cdMode === "pickcard" && !opts.preview) {
@@ -3336,9 +3324,8 @@
                 var cands = adrCdBuildCandidates(slotPools, state, adrCdCandidateCount(slotPools));
                 if (!cands.length) throw new Error("没有可用候选卡");
                 var idxC = await adrCdPickCardViaDS(cands, state);
-                console.log("[抽卡小能手] DS 选卡：" + (idxC === 0 ? "弃权" : "第 " + idxC + " 张")
+                console.log("[抽卡小能手] 小眼睛选卡：" + (idxC === 0 ? "弃权" : "第 " + idxC + " 张")
                     + "（候选 " + cands.length + " 张，耗时 " + (Date.now() - tC) + "ms）");
-                if (idxC === 0) return passThisFloor("这几张候选没有一张贴合此刻");
                 var chosen = cands[idxC - 1];
                 result = { slot: chosen.slot, pool: chosen.pool, card: chosen.card };
                 usedMode = "择卡";
@@ -3353,11 +3340,7 @@
             var t0 = Date.now();
             try {
                 var pick = await adrCdPickPoolViaDS(slotPools, state);
-                console.log("[抽卡小能手] DS 点池：" + pick + "（耗时 " + (Date.now() - t0) + "ms）");
-
-                // v1.22.0：DS 判此刻不该投。空一楼没有代价，打断有。
-                // 不推进 lastDrawAt，改用 passUntil 节流——否则下一楼又问一次，白花钱。
-                if (pick === ADR_CD_PICK_PASS) return passThisFloor("此刻不该被打断");
+                console.log("[抽卡小能手] 小眼睛点池：" + pick + "（耗时 " + (Date.now() - t0) + "ms）");
 
                 var poolObj = null;
                 for (var i = 0; i < slotPools.length; i++) { if (slotPools[i].menuName === pick) { poolObj = slotPools[i]; break; } }
@@ -3409,7 +3392,6 @@
             status: "live" // live 挂载中 / done 已兑现 / faded 已退为背景
         }]).slice(-ADR_CD_HISTORY_MAX);
         state.lastDrawAt = floor;
-        state.passUntil = 0;   // 投出去了，弃权节流作废
         state.floatCard = result.card;
         state.floatStage = "active";
         state.floatText = adrCdBuildEnvelope(adrCdEnvelopePair().active, result.card);
@@ -3441,13 +3423,6 @@
 
         if (count - base < n) {
             // 还没到投卡点，但可能到了这张卡的半衰期
-            await adrCdAdvanceLifecycle(count, state);
-            adrCdUpdateStatusLine();
-            return;
-        }
-
-        // v1.22.0：DS 上次弃权后的节流窗口。到点了也先不问，省一次调用。
-        if (Number(state.passUntil) > 0 && count < Number(state.passUntil)) {
             await adrCdAdvanceLifecycle(count, state);
             adrCdUpdateStatusLine();
             return;
@@ -3610,11 +3585,11 @@
                 try {
                     var done = await adrCdAskFulfilled(state.floatCard);
                     if (done) {
-                        console.log("[抽卡小能手] DS 判定已兑现，自动结案");
-                        adrCdCloseCard("DS 自动判定", true);
+                        console.log("[抽卡小能手] 小眼睛判定已兑现，自动结案");
+                        adrCdCloseCard("小眼睛自动判定", true);
                         return;
                     }
-                    console.log("[抽卡小能手] DS 判定尚未兑现，降级为背景");
+                    console.log("[抽卡小能手] 小眼睛判定尚未兑现，降级为背景");
                 } catch (eAsk) {
                     // 判不了就按未兑现处理，安全降级，绝不误撤
                     console.warn("[抽卡小能手] 兑现检查失败，按未兑现降级：" + (eAsk && eAsk.message ? eAsk.message : eAsk));
@@ -3759,11 +3734,9 @@
         // v1.22.0：降级是静默发生的，用户对着一张莫名其妙的卡根本不知道 DS 那次没应答。
         var lastRec = ((state.history || []).slice(-1)[0]) || null;
         if (lastRec && String(lastRec.mode || "").indexOf("降级") >= 0) {
-            head += " · ⚠ 上一张是 DS 没应答时随机给的";
+            head += " · ⚠ 上一张是小眼睛没应答时随机给的";
         }
-        if (Number(state.passUntil) > 0) {
-            head += " · DS 判此刻不投，空过中";
-        }
+
         var h = (state.history || []).slice(-1)[0];
         if (h) head += "\n最近一张：" + (h.pool || "?") + "｜" + String(h.card || "");
         return head;
@@ -4031,11 +4004,11 @@
             var lastH = ((state.history || []).slice(-1)[0]) || null;
             lines.push("上一张怎么来的：" + (lastH ? String(lastH.mode || "未知") : "（还没投过）")
                 + (lastH && String(lastH.mode || "").indexOf("降级") >= 0
-                    ? "　⚠ DS 那次没应答，这张是随机给的（降级时 NSFW 已被排除）" : ""));
+                    ? "　⚠ 小眼睛那次没应答，这张是随机给的（降级时 NSFW 已被排除）" : ""));
             lines.push("卡的阶段：" + (state.floatCard ? (ADR_CD_STAGE_LABEL[state.floatStage] || state.floatStage) : "耳边无卡")
                 + "　生命节奏：" + ADR_CD_LIFE_MODE_LABEL[adrCdLifeMode()]
                 + (adrCdLifeMode() === "half" ? "（" + adrCdHalfLifeFloors() + " 楼）" : "")
-                + "　DS 兑现判定：" + (st.cdAutoDone ? "开" : "关"));
+                + "　小眼睛兑现判定：" + (st.cdAutoDone ? "开" : "关"));
             lines.push("信封预设：" + adrCdCurrentEnvelopeName() + (String(st.cdEnvelope || "").trim() ? "（已被手改覆盖）" : ""));
             var h = (state.history || []).slice(-1)[0];
             lines.push("最近一张：" + (h ? (h.pool + "｜" + h.card + "（第 " + h.floor + " 楼 · " + h.mode + " · " + (h.status || "live") + "）") : "无"));
@@ -4758,8 +4731,8 @@
             + '<label>抽卡模式</label>'
             + '<select id="adr044-cd-mode">'
             + opt(mode, "blind", "盲抽（零 API · 天马行空档）")
-            + opt(mode, "pick", "择池（DS 只看池名点池，池内仍盲抽）")
-            + opt(mode, "pickcard", "择卡（DS 看得见卡面，从几张候选里挑一张，或弃权）")
+            + opt(mode, "pick", "择池（小眼睛只看池名点池，池内仍盲抽）")
+            + opt(mode, "pickcard", "择卡（小眼睛看得见卡面，从几张候选里挑一张）")
             + '</select>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-paused"> 暂停投卡（只停这个聊天；关键场景不打扰）</label>'
             + '<div class="adr044-template-status" id="adr044-cd-pause-status"></div>'
@@ -4776,7 +4749,7 @@
             + opt(lifeMode, "stay", "常驻：一直挂到下一张来换")
             + '</select>'
             + '<div class="adr044-template-status" id="adr044-cd-lifemode-note">' + esc(adrCdLifeModeNote()) + '</div>'
-            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-autodone"' + (st.cdAutoDone ? " checked" : "") + '> 到半衰期时问一次 DS「兑现没」，答是就自动撤下（每张多一次调用，需填写择池 API；「只说一次」档跳过这一步，不产生费用）</label>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-autodone"' + (st.cdAutoDone ? " checked" : "") + '> 到半衰期时问一次小眼睛「兑现没」，答是就自动撤下（每张多一次调用，需填写择池 API；「只说一次」档跳过这一步，不产生费用）</label>'
             + '<label>投卡史</label>'
             + '<div class="adr044-cd-life-history" id="adr044-cd-life-history">还没投过卡。</div>'
             + secClose()
