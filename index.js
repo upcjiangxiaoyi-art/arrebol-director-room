@@ -105,7 +105,9 @@
         // v1.12 卡的生命周期
         cdEnvelopes: null,          // 信封预设仓库（懒初始化，避免 DEFAULTS 对象引用共享）
         cdEnvelopeCurrent: "标准",
-        cdHalfLife: true,           // 半衰期：挂过 N/2 楼自动降级为背景
+        cdHalfLife: true,           // 旧字段：v1.20 起由 cdLifeMode 统辖，仅作镜像保留给旧读法
+        // 注意：cdLifeMode 故意不写进 DEFAULTS。settings() 会给任何缺失字段补默认值，
+        // 一补上就盖住了"老存档没有这个字段 → 看 cdHalfLife 迁移"这条路。缺省值由 adrCdLifeMode() 现算。
         cdAutoDone: false,          // 到半衰期时问一次 DS「兑现没」，默认关（要花钱）
         cdApiEndpoint: "",
         cdApiKey: "",
@@ -2691,6 +2693,45 @@
 
     function adrCdHalfLifeFloors() { return Math.max(1, Math.ceil(adrCdN() / 2)); }
 
+    // v1.20.0 生命节奏三档。旧存档只有布尔 cdHalfLife：true→半衰期，false→常驻。
+    // 写入时同步镜像回 cdHalfLife（mode !== "stay"），任何旧读法都不会读到相反的意思。
+    var ADR_CD_LIFE_MODES = ["stay", "half", "once"];
+    var ADR_CD_LIFE_MODE_LABEL = { stay: "常驻", half: "半衰期", once: "只说一次" };
+
+    function adrCdLifeMode() {
+        try {
+            var st = settings();
+            var m = String(st.cdLifeMode || "");
+            if (ADR_CD_LIFE_MODES.indexOf(m) >= 0) return m;
+            return st.cdHalfLife === false ? "stay" : "half";
+        } catch (e) { return "half"; }
+    }
+
+    function adrCdSetLifeMode(mode) {
+        var m = ADR_CD_LIFE_MODES.indexOf(mode) >= 0 ? mode : "half";
+        save("cdLifeMode", m);
+        save("cdHalfLife", m !== "stay");
+        return m;
+    }
+
+    function adrCdLifeModeNote() {
+        var m = adrCdLifeMode();
+        var n = adrCdN();
+        if (m === "once") {
+            return "只说一次：卡只在下一层露一次面，之后自动撤下，耳边留白 "
+                + Math.max(0, n - 1) + " 楼，到第 " + n + " 楼再给新卡。"
+                + "那一层模型没接住就算了——治的正是同一段剧情被反复复述。";
+        }
+        if (m === "stay") {
+            return "常驻：这张卡一直挂在耳边，直到 " + n + " 楼后被下一张换掉。压得最狠，也最容易被复述。";
+        }
+        return "半衰期：前 " + adrCdHalfLifeFloors() + " 楼是「必须发生」，之后换成「已发生的背景」继续挂着，直到第 " + n + " 楼换新卡。";
+    }
+
+    function adrCdSyncLifeModeNote() {
+        try { adrCdSetTextAll("adr044-cd-lifemode-note", adrCdLifeModeNote()); } catch (e) {}
+    }
+
     // 账号级槽默认值：新聊天开局继承这一份
     function adrCdSlotDefaults() {
         var st = settings();
@@ -3237,14 +3278,41 @@
         } catch (e) { return false; }
     }
 
-    // 半衰期：挂过 N/2 楼后，先问一次是否兑现（若开启），未兑现则降级为背景
+    // 生命节奏推进：
+    //   常驻   —— 什么都不做，卡挂到下一张来换
+    //   半衰期 —— 挂过 N/2 楼后先问一次是否兑现（若开启），未兑现则降级为背景
+    //   只说一次 —— 只挂一层，说完就撤，耳边留白到下一张
     async function adrCdAdvanceLifecycle(count, state) {
         try {
             var st = settings();
-            if (!st.cdHalfLife) return;
+            var lifeMode = adrCdLifeMode();
+            if (lifeMode === "stay") return;
             if (!state.floatCard || state.floatStage !== "active") return;
             var age = count - Number(state.lastDrawAt);
-            if (!Number.isFinite(age) || age < adrCdHalfLifeFloors()) return;
+            if (!Number.isFinite(age)) return;
+
+            // v1.20.0「只说一次」：卡只在下一层露一次面就撤下，之后耳边空着等下一张。
+            // 贴耳注入每次生成都会把同一张卡再念一遍，这正是模型把一段剧情复述好几轮的来源；
+            // 这一档把"念几遍"直接压到一遍。DS 兑现判定在这一档没有意义，跳过不花钱。
+            if (lifeMode === "once") {
+                if (age < 1) return;
+                var one = adrCdChatState();
+                if (!one.floatCard || one.floatStage !== "active") return;
+                one.floatStage = "done";
+                one.floatText = "";
+                var listOne = one.history || [];
+                if (listOne.length && listOne[listOne.length - 1].status === "live") {
+                    listOne[listOne.length - 1].status = "once";
+                }
+                adrCdSaveChatState(one);
+                adrCdApplyFloat("");
+                console.log("[抽卡小能手] 只说一次：说完即撤，耳边留白等下一张：" + adrCdTruncate(one.floatCard, 30));
+                adrCdUpdateStatusLine();
+                adrCdRefreshLifePanel();
+                return;
+            }
+
+            if (age < adrCdHalfLifeFloors()) return;
 
             if (st.cdAutoDone) {
                 try {
@@ -3302,6 +3370,9 @@
             // v1.11.1：刚被点过的控件 1.5s 内免疫任何刷新。
             // iOS 上原生下拉弹出期间若被改写，选择器会当场关闭，表现为"点不开"。
             if (el.__adrCdTouchedAt && (Date.now() - el.__adrCdTouchedAt) < 1500) return true;
+            // v1.20.0：原生下拉从按下到选中可以停留十几秒，1.5s 的窗口盖不住。
+            // 选择器一被按下就长免疫，直到它自己 change/blur，或 25 秒保险丝到期。
+            if (el.__adrCdPickerOpenAt && (Date.now() - el.__adrCdPickerOpenAt) < 25000) return true;
             var d = rootDoc();
             if (d && d.activeElement === el) return true;
         } catch (e) {}
@@ -3391,7 +3462,8 @@
         var count = adrDAssistantRoundCount();
         var base = Number(state.lastDrawAt);
         var left = (Number.isFinite(base) && base >= 0) ? Math.max(0, n - (count - base)) : n;
-        var head = libPart + " · " + mode + (state.paused ? " · 已暂停投卡" : " · 距下张还有 " + left + " 楼");
+        var head = libPart + " · " + mode + " · " + ADR_CD_LIFE_MODE_LABEL[adrCdLifeMode()]
+            + (state.paused ? " · 已暂停投卡" : " · 距下张还有 " + left + " 楼");
         var h = (state.history || []).slice(-1)[0];
         if (h) head += "\n最近一张：" + (h.pool || "?") + "｜" + String(h.card || "");
         return head;
@@ -3411,7 +3483,9 @@
 
     // ---- 面板同步 ----
 
-    function adrCdRefreshSlotSelects() {
+    // force=true 表示这次刷新由用户自己的动作触发（点芯片/存库/改名/删库/导入），
+    // 此刻改写 DOM 是安全的；后台同步一律不带 force，手指在上面就不动它。
+    function adrCdRefreshSlotSelects(force) {
         try {
             var state = adrCdChatState();
             ADR_CD_SLOTS.forEach(function (slot) {
@@ -3419,6 +3493,10 @@
                 var html = adrCdSlotChipsHTML(slot, state);
                 var sig = adrCdSlotChipsSig(slot, state);
                 Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-cd-slot-" + slot)).forEach(function (el) {
+                    // v1.20.0：芯片行此前是全楼唯一没有忙保护的可点区域。
+                    // 手指按下到 click 之间整行被 innerHTML 重画，click 的 target 会退到容器，
+                    // 那一下点击就白丢了——"要点两三次"的元凶之一。
+                    if (!force && adrCdIsBusyEl(el)) return;
                     adrCdFillSelect(el, html, "", sig);
                 });
                 adrCdSetCheckedSafe("adr044-cd-slot-on-" + slot, state.slotOn[slot]);
@@ -3483,7 +3561,8 @@
             adrCdSetValueSafe("adr044-cd-envelope", envPair.active);
             adrCdSetValueSafe("adr044-cd-envelope-faded", envPair.faded);
             adrCdSetValueSafe("adr044-cd-env-name", adrCdCurrentEnvelopeName());
-            adrCdSetCheckedSafe("adr044-cd-halflife", !!st.cdHalfLife);
+            adrCdSetValueSafe("adr044-cd-lifemode", adrCdLifeMode());
+            adrCdSyncLifeModeNote();
             adrCdSetCheckedSafe("adr044-cd-autodone", !!st.cdAutoDone);
             adrCdRefreshEnvSelect(adrCdCurrentEnvelopeName());
             adrCdRefreshLifePanel();
@@ -3507,21 +3586,29 @@
             if (!state.floatCard) {
                 txt = "耳边暂无卡片。";
             } else if (state.floatStage === "done") {
-                txt = "已结案（耳边已空）：" + state.floatCard;
+                var lastDone = (state.history || []).slice(-1)[0];
+                txt = (lastDone && lastDone.status === "once" ? "只说了一次，已撤下" : "已结案")
+                    + "（耳边已空）：" + state.floatCard;
             } else {
                 var age = adrDAssistantRoundCount() - Number(state.lastDrawAt);
                 if (!Number.isFinite(age) || age < 0) age = 0;
-                var half = adrCdHalfLifeFloors();
+                var lifeMode = adrCdLifeMode();
                 var stage = ADR_CD_STAGE_LABEL[state.floatStage] || state.floatStage;
-                txt = "【" + stage + "】挂了 " + age + " 楼"
-                    + (state.floatStage === "active" ? "（再过 " + Math.max(0, half - age) + " 楼转为背景）" : "")
-                    + "\n" + state.floatCard;
+                var tail = "";
+                if (state.floatStage === "active") {
+                    if (lifeMode === "once") tail = "（只说一次：这一层过完就撤下）";
+                    else if (lifeMode === "stay") tail = "（常驻：挂到下一张来换）";
+                    else tail = "（再过 " + Math.max(0, adrCdHalfLifeFloors() - age) + " 楼转为背景）";
+                }
+                txt = "【" + stage + "】挂了 " + age + " 楼" + tail + "\n" + state.floatCard;
             }
             adrCdSetTextAll("adr044-cd-life-card", txt);
 
             var list = (state.history || []).slice().reverse();
             var lines = list.map(function (h, i) {
-                var mark = h.status === "done" ? "✓ 已兑现" : (h.status === "faded" ? "· 已退为背景" : "● 挂载中");
+                var mark = h.status === "done" ? "✓ 已兑现"
+                    : (h.status === "once" ? "○ 只说了一次，已撤下"
+                    : (h.status === "faded" ? "· 已退为背景" : "● 挂载中"));
                 return mark + "　第 " + (Number.isFinite(Number(h.floor)) ? h.floor : "?") + " 楼｜"
                     + (h.pool || "?") + "\n　　" + adrCdTruncate(String(h.card || ""), 40);
             });
@@ -3642,7 +3729,8 @@
             lines.push("耳机通道：" + (fl < 0 ? "读不到（旧版酒馆）" : (fl > 0 ? "已挂载 " + fl + " 字" : "空（未投卡或已暂停）")));
             lines.push("模式：" + (st.cdMode === "pick" ? "择池" : "盲抽") + "　注入深度：" + adrCdDepth() + "　冷却：" + adrCdCooldown());
             lines.push("卡的阶段：" + (state.floatCard ? (ADR_CD_STAGE_LABEL[state.floatStage] || state.floatStage) : "耳边无卡")
-                + "　半衰期：" + (st.cdHalfLife ? adrCdHalfLifeFloors() + " 楼" : "关闭")
+                + "　生命节奏：" + ADR_CD_LIFE_MODE_LABEL[adrCdLifeMode()]
+                + (adrCdLifeMode() === "half" ? "（" + adrCdHalfLifeFloors() + " 楼）" : "")
                 + "　DS 兑现判定：" + (st.cdAutoDone ? "开" : "关"));
             lines.push("信封预设：" + adrCdCurrentEnvelopeName() + (String(st.cdEnvelope || "").trim() ? "（已被手改覆盖）" : ""));
             var h = (state.history || []).slice(-1)[0];
@@ -3721,7 +3809,7 @@
 
             saveNow();
             adrCdRefreshEditSelect(name);
-            adrCdRefreshSlotSelects();
+            adrCdRefreshSlotSelects(true);
             adrCdUpdateStatusLine();
             adrCdLibStatus("卡库「" + name + "」" + (existed ? "已更新" : "已新建") + " ✓" + tail, "#8ed99d");
         } catch (e) {
@@ -3758,7 +3846,7 @@
             if (homeRn) adrCdSetLibHome(newName, homeRn); // 归属随新名迁移
             saveNow();
             adrCdRefreshEditSelect(newName);
-            adrCdRefreshSlotSelects();
+            adrCdRefreshSlotSelects(true);
             adrCdUpdateStatusLine();
             adrCdLibStatus("已重命名：「" + oldName + "」→「" + newName + "」✓（引用它的仓库已同步）", "#8ed99d");
         } catch (e) {
@@ -3789,7 +3877,7 @@
             saveNow();
             var rest = adrCdLibNames();
             adrCdLoadEditor(rest[0] || "");
-            adrCdRefreshSlotSelects();
+            adrCdRefreshSlotSelects(true);
             adrCdUpdateStatusLine();
             var tail = freed.length ? "；已从 " + freed.join("、") + " 摘下" : "";
             adrCdLibStatus("卡库「" + name + "」已删除" + tail
@@ -3889,7 +3977,7 @@
                     }
                     saveNow();
                     adrCdLoadEditor(name);
-                    adrCdRefreshSlotSelects();
+                    adrCdRefreshSlotSelects(true);
                     adrCdUpdateStatusLine();
                     var pools = adrCdParseLibraryText(text);
                     var cards = 0;
@@ -3905,6 +3993,74 @@
     }
 
     // 暂停：写入后回读校验，结果如实告诉住户（手机上没控制台，成败必须肉眼可见）
+    function adrCdSlotStatus(t, c) { adrCdSetTextAll("adr044-cd-slot-status", t, c || "#d6b177"); }
+
+    // v1.20.0：点亮/熄灭改成"写完回读"。沿用暂停投卡那套经过验证的做法——
+    // 写不进这个聊天的存档时自动重试一次，再不行就明说，
+    // 而不是让人对着一张没反应的芯片连点三下。
+    function adrCdToggleChip(slot, nm, retry) {
+        try {
+            if (!nm) return;
+            var state = adrCdChatState();
+            var arr = adrCdSlotArr(state.slots[slot]);
+            var idx = arr.indexOf(nm);
+            var want = idx < 0;
+            if (idx >= 0) {
+                arr.splice(idx, 1); // 熄灭＝这局不用了；归属不动，它还住这个箱
+            } else {
+                arr.push(nm);
+                if (!adrCdLibHome(nm)) adrCdSetLibHome(nm, slot); // 未分箱库点亮即认箱
+            }
+            state.slots[slot] = arr;
+            if (arr.length) state.slotOn[slot] = true;
+            adrCdSaveChatState(state);
+            var defs = adrCdSlotDefaults();
+            defs[slot] = arr.slice();
+            save("cdSlotDefaults", defs);
+            adrCdSaveSoon();
+            adrCdRefreshSlotSelects(true);
+            adrCdUpdateStatusLine();
+
+            var back = adrCdSlotArr(adrCdChatState().slots[slot]);
+            if ((back.indexOf(nm) >= 0) === want) {
+                adrCdSlotStatus(want
+                    ? "「" + nm + "」已点亮 ✓"
+                    : "「" + nm + "」已熄灭 ✓（仍住在" + ADR_CD_SLOT_FULL[slot] + "，没被流放）", "#8ed99d");
+            } else if (!retry) {
+                adrCdSlotStatus("存档尚未就绪，正在重试…", "#d6b177");
+                setTimeout(function () { adrCdToggleChip(slot, nm, true); }, 1200);
+            } else {
+                adrCdSlotStatus("这一下没能存进当前聊天，请退出聊天再进来重试", "#d4726a");
+                adrCdRefreshSlotSelects(true);
+            }
+        } catch (e) {}
+    }
+
+    function adrCdSetSlotOn(slot, want, retry) {
+        try {
+            want = !!want;
+            var state = adrCdChatState();
+            state.slotOn[slot] = want;
+            adrCdSaveChatState(state);
+            var defsOn = adrCdSlotOnDefaults();
+            defsOn[slot] = want;
+            save("cdSlotOnDefaults", defsOn);
+            adrCdSaveSoon();
+            adrCdUpdateStatusLine();
+
+            var back = adrCdChatState();
+            if (back.slotOn[slot] === want) {
+                adrCdSlotStatus(ADR_CD_SLOT_FULL[slot] + (want ? " 这局启用 ✓" : " 这局不用 ✓"), "#8ed99d");
+            } else if (!retry) {
+                adrCdSlotStatus("存档尚未就绪，正在重试…", "#d6b177");
+                setTimeout(function () { adrCdSetSlotOn(slot, want, true); }, 1200);
+            } else {
+                adrCdSlotStatus("这一下没能存进当前聊天，请退出聊天再进来重试", "#d4726a");
+                adrCdSetCheckedSafe("adr044-cd-slot-on-" + slot, back.slotOn[slot]);
+            }
+        } catch (e) {}
+    }
+
     function adrCdSetPaused(flag, retry) {
         try {
             var want = !!flag;
@@ -3995,16 +4151,37 @@
                     fn(el);
                 });
             }
+            // v1.20.0：勾选框只上"按下即 1.5s 短锁"，不上打字锁。
+            // guard() 的 focus 锁一旦挂到勾选框上，它拿到焦点后就再也刷不动了。
+            function tapLock(el) {
+                ["pointerdown", "touchstart", "mousedown"].forEach(function (evt) {
+                    el.addEventListener(evt, function () { adrCdTouch(el); }, { passive: true });
+                });
+            }
+
             // 打字保护：聚焦即上锁，失焦 400ms 后解锁，期间任何刷新都不覆盖它
             function guard(el) {
+                var isSelect = String(el.tagName || "").toLowerCase() === "select";
                 el.addEventListener("focus", function () { el.__adrCdTyping = true; });
                 el.addEventListener("blur", function () {
+                    el.__adrCdPickerOpenAt = 0;
                     setTimeout(function () { el.__adrCdTyping = false; }, 400);
                 });
+                // v1.20.0：下拉按下即长免疫，落定后交还给 1.5s 短窗口。
+                // 这一段 change 早于业务 change 注册，先解锁再让业务处理器重新上短锁。
+                if (isSelect) {
+                    el.addEventListener("change", function () {
+                        adrCdTouch(el);
+                        el.__adrCdPickerOpenAt = 0;
+                    });
+                }
                 // v1.11.2：手指按下就上锁。原生下拉是在按下那一刻弹出的，
                 // 等到 change 再上锁已经晚了半拍，中间的刷新会把选择器掐掉。
                 ["pointerdown", "touchstart", "mousedown"].forEach(function (evt) {
-                    el.addEventListener(evt, function () { adrCdTouch(el); }, { passive: true });
+                    el.addEventListener(evt, function () {
+                        adrCdTouch(el);
+                        if (isSelect) el.__adrCdPickerOpenAt = Date.now();
+                    }, { passive: true });
                 });
             }
 
@@ -4023,6 +4200,7 @@
                 el.addEventListener("input", function () {
                     save("cdN", Number(el.value) || 5);
                     adrCdSetTextAll("adr044-cd-n-val", String(adrCdN()));
+                    adrCdSyncLifeModeNote();
                     adrCdUpdateStatusLine();
                 });
                 el.addEventListener("change", function () { saveNow(); });
@@ -4048,47 +4226,39 @@
             ADR_CD_SLOTS.forEach(function (slot) {
                 each("adr044-cd-slot-" + slot, function (el) {
                     // v1.17.0：芯片点击委托挂容器上，innerHTML 重绘不掉监听
-                    el.addEventListener("click", function (ev) {
-                        var t = ev.target;
-                        var chip = null;
+                    function chipNameFrom(node) {
+                        var t = node;
                         while (t && t !== el) {
-                            if (t.getAttribute && t.getAttribute("data-adrcd-lib") != null) { chip = t; break; }
+                            if (t.getAttribute && t.getAttribute("data-adrcd-lib") != null) {
+                                return t.getAttribute("data-adrcd-lib") || "";
+                            }
                             t = t.parentNode;
                         }
-                        if (!chip) return;
-                        var nm = chip.getAttribute("data-adrcd-lib") || "";
+                        return "";
+                    }
+                    // v1.20.0：按下那一刻就记住手指落在哪张芯片上。
+                    // 万一这一行在按下与 click 之间被重画，click 的 target 会退到容器、
+                    // 名字取不到，整下点击白丢；这时用按下时记住的名字兜底。
+                    ["pointerdown", "touchstart", "mousedown"].forEach(function (evt) {
+                        el.addEventListener(evt, function (ev) {
+                            adrCdTouch(el);
+                            el.__adrCdPendingChip = chipNameFrom(ev && ev.target);
+                        }, { passive: true });
+                    });
+                    el.addEventListener("click", function (ev) {
+                        var nm = chipNameFrom(ev && ev.target) || String(el.__adrCdPendingChip || "");
+                        el.__adrCdPendingChip = "";
                         if (!nm) return;
-                        var state = adrCdChatState();
-                        var arr = adrCdSlotArr(state.slots[slot]);
-                        var idx = arr.indexOf(nm);
-                        if (idx >= 0) {
-                            arr.splice(idx, 1); // 熄灭＝这局不用了；归属不动，它还住这个箱
-                        } else {
-                            arr.push(nm);
-                            if (!adrCdLibHome(nm)) adrCdSetLibHome(nm, slot); // 未分箱库点亮即认箱
-                        }
-                        state.slots[slot] = arr;
-                        if (arr.length) state.slotOn[slot] = true;
-                        adrCdSaveChatState(state);
-                        var defs = adrCdSlotDefaults();
-                        defs[slot] = arr.slice();
-                        save("cdSlotDefaults", defs);
-                        adrCdSaveSoon();
-                        adrCdRefreshSlotSelects();
-                        adrCdUpdateStatusLine();
+                        adrCdToggleChip(slot, nm, false);
                     });
                 });
                 each("adr044-cd-slot-on-" + slot, function (el) {
+                    // v1.20.0：补上按下即上锁——此前这三个开关是本页唯一没有这层保护的勾选框，
+                    // 后台刷新落在手指抬起之前就会把它拨回去。
+                    tapLock(el);
                     el.addEventListener("change", function () {
                         adrCdTouch(el);
-                        var state = adrCdChatState();
-                        state.slotOn[slot] = !!el.checked;
-                        adrCdSaveChatState(state);
-                        var defsOn = adrCdSlotOnDefaults();
-                        defsOn[slot] = !!el.checked;
-                        save("cdSlotOnDefaults", defsOn);
-                        adrCdSaveSoon();
-                        adrCdUpdateStatusLine();
+                        adrCdSetSlotOn(slot, !!el.checked, false);
                     });
                 });
             });
@@ -4130,12 +4300,15 @@
                     adrCdApplyEnvelopePreset(String(el.value || ""));
                 });
             });
-            each("adr044-cd-halflife", function (el) {
+            each("adr044-cd-lifemode", function (el) {
+                guard(el);
                 el.addEventListener("change", function () {
                     adrCdTouch(el);
-                    save("cdHalfLife", !!el.checked);
+                    adrCdSetLifeMode(String(el.value || ""));
                     adrCdSaveSoon();
+                    adrCdSyncLifeModeNote();
                     adrCdRefreshLifePanel();
+                    adrCdUpdateStatusLine();
                 });
             });
             each("adr044-cd-autodone", function (el) {
@@ -4269,6 +4442,7 @@
         var st = settings();
         var noteClass = checkClass === "adr048-check" ? "adr048-note" : "adr044-note";
         var mode = st.cdMode === "pick" ? "pick" : "blind";
+        var lifeMode = adrCdLifeMode();
         return secOpen("剧情小风铃 🎐")
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-enabled"' + (st.cdEnabled ? " checked" : "") + '> 启用剧情小风铃</label>'
             + '<div class="adr044-cd-status-line" id="adr044-cd-status-line" title="点一下展开／收起">状态加载中…</div>'
@@ -4290,8 +4464,14 @@
             + '<div class="adr044-cd-life-card" id="adr044-cd-life-card">耳边暂无卡片。</div>'
             + '<div class="' + actionsClass + '"><button id="adr044-cd-close-card" type="button">✓ 这张已兑现，撤下</button></div>'
             + '<div class="adr044-template-status" id="adr044-cd-life-status">读到卡里的事已经落地了，点一下撤下它。下一张仍按原节奏来，中间那几楼留白，让剧情喘口气。</div>'
-            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-halflife"' + (st.cdHalfLife ? " checked" : "") + '> 半衰期：挂过一半楼数后自动退为背景（不再逼着推进）</label>'
-            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-autodone"' + (st.cdAutoDone ? " checked" : "") + '> 到半衰期时问一次 DS「兑现没」，答是就自动撤下（每张多一次调用，需填写择池 API）</label>'
+            + '<label>这张卡在耳边待多久</label>'
+            + '<select id="adr044-cd-lifemode">'
+            + opt(lifeMode, "half", "半衰期：挂过一半楼数退为背景（默认）")
+            + opt(lifeMode, "once", "只说一次：只挂一层，之后耳边留白等下一张")
+            + opt(lifeMode, "stay", "常驻：一直挂到下一张来换")
+            + '</select>'
+            + '<div class="adr044-template-status" id="adr044-cd-lifemode-note">' + esc(adrCdLifeModeNote()) + '</div>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-autodone"' + (st.cdAutoDone ? " checked" : "") + '> 到半衰期时问一次 DS「兑现没」，答是就自动撤下（每张多一次调用，需填写择池 API；「只说一次」档跳过这一步，不产生费用）</label>'
             + '<label>投卡史</label>'
             + '<div class="adr044-cd-life-history" id="adr044-cd-life-history">还没投过卡。</div>'
             + secClose()
@@ -4301,6 +4481,7 @@
             + adrCdSlotRowHTML("story", checkClass)
             + adrCdSlotRowHTML("common", checkClass)
             + adrCdSlotRowHTML("nsfw", checkClass)
+            + '<div class="adr044-template-status" id="adr044-cd-slot-status">点一下芯片＝这局用不用它；开关＝整格用不用。每次点完这里会回报存没存进去。</div>'
             + secClose()
 
             + secOpen("编辑卡库")

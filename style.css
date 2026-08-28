@@ -3997,3 +3997,64 @@ html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body .adr044-cd-ch
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px 12px no-repeat,
         linear-gradient(135deg, var(--arb-rose), var(--arb-lilac)) !important;
 }
+
+/* ============================================================
+   v1.20.0 「点得着」· 剧情小风铃触控命中区 · UI-only
+   三仓库开关与芯片此前的可点区只有 20~28px 高，iOS 上手指稍一滑动
+   就会被当成滚动而吞掉整下点击（表现为"要点两三次才挂上"）。
+   这里只放大命中区与去掉双击缩放延迟，颜色、布局语义一字未改。
+   ============================================================ */
+
+/* 整行都能点：开关不再只是那颗 34×20 的小胶囊 */
+#adr048-popup-shell .adr048-check.adr044-cd-slot-head,
+#adr044-drawer .adr044-check.adr044-cd-slot-head,
+.adrx-drawer .adr048-check.adr044-cd-slot-head,
+.adrx-drawer .adr044-check.adr044-cd-slot-head {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    min-height: 44px !important;
+    padding: 4px 2px !important;
+    margin-bottom: 2px !important;
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* 名字与张数允许换行，别把命中区挤没 */
+#adr048-popup-body .adr044-cd-slot-head,
+#adr044-drawer .adr044-cd-slot-head {
+    flex-flow: row wrap !important;
+    align-items: center !important;
+}
+
+/* 芯片：抬到 36px，指腹落得进去 */
+.adr044-cd-chip {
+    min-height: 36px !important;
+    padding: 9px 13px !important;
+    touch-action: manipulation !important;
+}
+
+.adr044-cd-chiprow {
+    gap: 8px !important;
+    padding: 2px 0 !important;
+}
+
+/* 小风铃这一页的下拉与勾选框统一给足高度，并关掉双击缩放的 300ms 延迟 */
+#adr048-popup-body select,
+#adr044-drawer select {
+    min-height: 44px !important;
+    touch-action: manipulation !important;
+}
+
+#adr048-popup-body input[type="checkbox"],
+#adr044-drawer input[type="checkbox"] {
+    touch-action: manipulation !important;
+}
+
+/* 三仓库回执行：写没写进这个聊天，点完就在这里说 */
+#adr048-popup-body #adr044-cd-slot-status,
+#adr044-drawer #adr044-cd-slot-status {
+    margin-top: 6px !important;
+    line-height: 1.5 !important;
+}
