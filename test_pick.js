@@ -14,7 +14,10 @@ function ok(c, name, extra) {
     else { FAIL++; failures.push(name); console.log("  ✗ " + name + (extra ? "  → " + extra : "")); }
 }
 function section(t) { console.log("\n── " + t + " ──"); }
-const tick = ms => new Promise(r => setTimeout(r, ms));
+// 时间加速：插件的事件防抖是 4.2s，逐楼真等会让整套跑好几分钟。
+// 这里只压缩测试环境的定时器，插件代码一字不改；楼层节奏由事件驱动，与真实时长无关。
+const SPEED = Number(process.env.SPEED || 1);
+const tick = ms => new Promise(r => setTimeout(r, Math.max(1, Math.round(ms / SPEED))));
 
 function build(opts) {
     opts = opts || {};
@@ -59,6 +62,11 @@ function build(opts) {
         eventSource: { on(t, f) { (handlers[t] = handlers[t] || []).push(f); } },
         event_types: { APP_READY: "app_ready", MESSAGE_RECEIVED: "message_received" }
     };
+    if (SPEED > 1) {
+        const rT = win.setTimeout.bind(win), rI = win.setInterval.bind(win);
+        win.setTimeout = (fn, ms, ...a) => rT(fn, Math.max(0, Math.round((ms || 0) / SPEED)), ...a);
+        win.setInterval = (fn, ms, ...a) => rI(fn, Math.max(1, Math.round((ms || 0) / SPEED)), ...a);
+    }
     win.eval(SRC);
 
     return {
@@ -67,6 +75,7 @@ function build(opts) {
         setFail(v) { failNext = v; },
         st: () => extensionSettings[SET_KEY],
         meta: () => chatMetadata[META_KEY],
+        float: () => (prompts["ARREBOL_D_CARD_DRAWER"] ? String(prompts["ARREBOL_D_CARD_DRAWER"].value || "") : ""),
         addRound() {
             chat.push({ is_user: true, mes: "用户回了一句。" });
             chat.push({ is_user: false, mes: "<content>第 " + (chat.length + 1) + " 段正文。</content>" });
@@ -122,7 +131,7 @@ async function bootPick(opts) {
 
     setInput(e.win, d.querySelector("#adr044-cd-endpoint"), "https://ds.example.org/v1/chat/completions");
     setInput(e.win, d.querySelector("#adr044-cd-model"), "deepseek-chat");
-    setSelect(e.win, d.querySelector("#adr044-cd-mode"), "pick");
+    setSelect(e.win, d.querySelector("#adr044-cd-mode"), opts.mode || "pick");
     setCheck(e.win, d.querySelector("#adr044-cd-enabled"), true);
     setInput(e.win, d.querySelector("#adr044-cd-n"), String(opts.n || 1));
     await tick(150);
@@ -266,6 +275,121 @@ section("答复清洗 · 弃权位也要认得出，垃圾答复照旧作废");
     ok(e.draws.length > 0, "答复不合法时降级盲抽，不停摆", "投出 " + e.draws.length + " 张");
     ok(e.draws.every(x => String(x["模式"] || "").indexOf("降级") >= 0),
         "并且如实记为降级", e.draws.map(x => x["模式"]).join("/"));
+    e.stop();
+}
+
+section("出厂信封「看时机」");
+{
+    const e = await bootPick({ n: 1 });
+    const sel = e.doc.querySelector("#adr044-cd-env-select");
+    const names = sel ? Array.from(sel.options).map(o => o.value) : [];
+    ok(names.indexOf("看时机") >= 0, "新出厂信封在下拉里", names.join("/"));
+    setSelect(e.win, sel, "看时机");
+    await tick(120);
+    const act = e.doc.querySelector("#adr044-cd-envelope").value;
+    ok(/等一个合适的时机再织入正文/.test(act), "前半程把时点决定权还给模型", act.slice(0, 40));
+    ok(/不得复述原文/.test(act) && /不得在单楼内全部兑现/.test(act), "两条家法仍在，没有因为放软而丢掉");
+    e.setScript(() => "通用·乙");
+    for (let i = 0; i < 2; i++) await beat(e);
+    ok(e.float().indexOf("等一个合适的时机") > 0, "真投出去的稿子用的就是这套信封", e.float().slice(0, 50));
+    e.stop();
+}
+
+section("择卡 · 候选按仓库均摊");
+{
+    const e = await bootPick({ n: 1, mode: "pickcard" });
+    e.setScript(() => "1");
+    for (let i = 0; i < 2; i++) await beat(e);
+    ok(e.calls.length >= 1, "择卡调用了 DS", "调用 " + e.calls.length + " 次");
+    const u = e.calls[e.calls.length - 1].user;
+    const lines = (u.split("【候选卡】\n")[1] || "").split("\n").filter(l => /^\d+\./.test(l));
+    ok(lines.length >= 6, "候选数量按仓库数算出来（三格 → 6 张）", "共 " + lines.length + " 行");
+    const bySlot = { 专属: 0, 通用: 0, NSFW: 0 };
+    lines.forEach(l => { Object.keys(bySlot).forEach(k => { if (l.indexOf("【" + k + "·") > 0) bySlot[k]++; }); });
+    // 真正的契约不是"三格数量相等"：NSFW 候选不带卡面，同一个池给两行一模一样的
+    // 「（卡面不外传）」，DS 根本分辨不了，等于白占位置。所以 NSFW 是一池一行、上限两行。
+    // "仓库数即权重"管的是盲抽掷仓库；择卡按贴合度挑，只要 NSFW 在名单上有一行、
+    // 门开时选得到就够了。
+    ok(bySlot["专属"] === bySlot["通用"] && bySlot["专属"] > 0,
+        "带卡面的两格在候选里均摊，谁都不被池多的一边淹掉", JSON.stringify(bySlot));
+    ok(bySlot["NSFW"] >= 1 && bySlot["NSFW"] <= 2,
+        "NSFW 一池一行占位（上限两行），门开时选得到，又不用重复的占位刷屏",
+        JSON.stringify(bySlot));
+    const seen = lines.map(l => l.replace(/^\d+\.\s*/, ""));
+    ok(new Set(seen).size === seen.length, "候选之间不重复");
+    ok(/0\. 此刻不投卡/.test(u), "弃权位也在候选表里");
+    e.stop();
+}
+
+section("择卡 · NSFW 卡面不出门");
+{
+    const e = await bootPick({ n: 1, mode: "pickcard" });
+    e.setScript(() => "1");
+    for (let i = 0; i < 2; i++) await beat(e);
+    const u = e.calls[e.calls.length - 1].user;
+    ok(!/N[1-5]/.test(u), "请求体里没有任何一张 NSFW 卡面（DeepSeek 审核会把整次调用打回）",
+        (u.match(/N[1-5]/g) || []).join(","));
+    ok(/【NSFW·丙】（这一格的卡面不外传/.test(u), "NSFW 候选以不透明占位出现，仍可被选中");
+    ok(/S[1-5]/.test(u) && /C[1-5]/.test(u), "非 NSFW 的卡面照常展示，DS 才挑得动");
+    const s = e.calls[e.calls.length - 1].sys;
+    ok(/双向|两条/.test(s) && /卡面不展示给你/.test(s), "系统提示词说明了这一格改用双向硬门判断");
+    e.stop();
+}
+
+section("择卡 · 选中哪张就投哪张");
+{
+    const e = await bootPick({ n: 1, mode: "pickcard" });
+    e.setScript(() => "2");
+    for (let i = 0; i < 3; i++) await beat(e);
+    ok(e.draws.length > 0, "投出来了", "投出 " + e.draws.length + " 张");
+    const u = e.calls[0].user;
+    const line2 = (u.split("【候选卡】\n")[1] || "").split("\n")[1] || "";
+    const wanted = line2.replace(/^2\.\s*【[^】]+】/, "").trim();
+    ok(String(e.draws[0]["卡面"]) === wanted, "投的正是第 2 张候选",
+        "答 2 → 投「" + e.draws[0]["卡面"] + "」，候选第 2 张是「" + wanted + "」");
+    ok(String(e.draws[0]["模式"]) === "择卡", "模式记为择卡", String(e.draws[0]["模式"]));
+    e.stop();
+}
+
+section("择卡 · 弃权与降级");
+{
+    const e = await bootPick({ n: 1, mode: "pickcard" });
+    e.setScript(() => "0");
+    for (let i = 0; i < 3; i++) await beat(e);
+    ok(e.draws.length === 0, "答 0 就真的不投", "投出 " + e.draws.length + " 张");
+    ok(Number(e.meta().passUntil) > 0, "走的是和择池同一套节流", "passUntil=" + e.meta().passUntil);
+    e.stop();
+}
+{
+    const e = await bootPick({ n: 1, mode: "pickcard" });
+    e.setScript(() => "99");
+    for (let i = 0; i < 3; i++) await beat(e);
+    ok(e.draws.length > 0, "编号越界时降级盲抽，不停摆", "投出 " + e.draws.length + " 张");
+    ok(e.draws.every(x => String(x["模式"]).indexOf("降级") >= 0), "如实记为降级",
+        e.draws.map(x => x["模式"]).join("/"));
+    ok(e.draws.every(x => String(x["卡池"]).indexOf("NSFW·") !== 0), "降级时照样不给 NSFW");
+    e.stop();
+}
+{
+    const e = await bootPick({ n: 1, mode: "pickcard" });
+    e.setFail(true);
+    for (let i = 0; i < 3; i++) await beat(e);
+    ok(e.draws.length > 0, "DS 挂掉时降级盲抽", "投出 " + e.draws.length + " 张");
+    const line = e.doc.querySelector("#adr044-cd-status-line");
+    ok(line && /DS 没应答时随机给的/.test(line.textContent), "状态行照样出声");
+    e.stop();
+}
+
+section("择卡 · 面板与自检");
+{
+    const e = await bootPick({ n: 1, mode: "pickcard" });
+    const opts2 = Array.from(e.doc.querySelector("#adr044-cd-mode").options).map(o => o.value);
+    ok(opts2.join(",") === "blind,pick,pickcard", "模式下拉三档齐全", opts2.join(","));
+    ok(e.st().cdMode === "pickcard", "档位落进设置", String(e.st().cdMode));
+    tapFast(e.win, e.doc.querySelector("#adr044-cd-selfcheck"));
+    await tick(300);
+    const sc = e.doc.querySelector("#adr044-cd-selfcheck-out").textContent || "";
+    ok(/模式：择卡/.test(sc), "自检报出择卡", sc.slice(0, 120));
     e.stop();
 }
 

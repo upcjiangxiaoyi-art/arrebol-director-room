@@ -2460,6 +2460,14 @@
         "轻柔": {
             active: "（场外，正在发生的一件事，你可以选择让它进入这一幕，也可以让它先在背景里发酵：{卡面}）",
             faded: "（这件事已经发生过了，余波还在：{卡面}）"
+        },
+        // v1.23.0「看时机」：把"这一楼就得用"改成"等一个合适的时机"。
+        // 标准信封说的是"已然发生，织入正文"，等于命令模型当楼兑现——
+        // 一张温情卡撞上正在吵架的一幕，崩就崩在这一句上。
+        // 这一套保留"必须发生"的分量，只把时点的决定权还给写故事的模型。
+        "看时机": {
+            active: "【场外事实】以下事件已经发生。若此刻场面不适合它进场，就让它先在背景里发酵，等一个合适的时机再织入正文；不得复述原文；不得在单楼内全部兑现：{卡面}",
+            faded: "【已发生的背景】此事已经发生过。可以被提及或延续余波，但不必再推进它：{卡面}"
         }
     };
 
@@ -2660,14 +2668,27 @@
         if (!st.cdEnvelopes || typeof st.cdEnvelopes !== "object" || Array.isArray(st.cdEnvelopes)) {
             st.cdEnvelopes = {};
         }
-        if (!Object.keys(st.cdEnvelopes).length) {
-            Object.keys(ADR_CD_FACTORY_ENVELOPES).forEach(function (k) {
-                st.cdEnvelopes[k] = {
-                    active: ADR_CD_FACTORY_ENVELOPES[k].active,
-                    faded: ADR_CD_FACTORY_ENVELOPES[k].faded
-                };
-            });
-        }
+        // v1.23.0：出厂信封改成"按名补齐一次"。
+        // 旧写法只在仓库整个为空时才铺——老用户早有三套，
+        // 此后新增的出厂信封（如「看时机」）永远到不了他们手上，等于没发。
+        // cdEnvSeeded 记账：每套只补一次；用户主动删掉的不会复活。
+        var seeded = Array.isArray(st.cdEnvSeeded) ? st.cdEnvSeeded.slice() : [];
+        var everSeeded = seeded.length > 0 || Object.keys(st.cdEnvelopes).length > 0;
+        var touched = false;
+        Object.keys(ADR_CD_FACTORY_ENVELOPES).forEach(function (k) {
+            if (st.cdEnvelopes[k]) {
+                if (seeded.indexOf(k) < 0) { seeded.push(k); touched = true; }
+                return;
+            }
+            if (everSeeded && seeded.indexOf(k) >= 0) return;   // 删过就尊重，不复活
+            st.cdEnvelopes[k] = {
+                active: ADR_CD_FACTORY_ENVELOPES[k].active,
+                faded: ADR_CD_FACTORY_ENVELOPES[k].faded
+            };
+            if (seeded.indexOf(k) < 0) seeded.push(k);
+            touched = true;
+        });
+        if (touched) st.cdEnvSeeded = seeded;
         return st.cdEnvelopes;
     }
 
@@ -2954,6 +2975,8 @@
     // v1.22.0 弃权位。此前名单里没有"什么都不投"这一项，DS 被逼着每次必须选一个池，
     // 哪怕正在进行的场面根本不该被任何外来事件打断。
     var ADR_CD_PICK_PASS = "此刻不投卡";
+    var ADR_CD_MODES = ["blind", "pick", "pickcard"];
+    var ADR_CD_MODE_LABEL = { blind: "盲抽", pick: "择池", pickcard: "择卡" };
 
     // v1.22.0：把"此刻"和"背景"分开喂。
     // recentContentBlocks 用 \n\n---\n\n 连接各楼，按时间正序。
@@ -3081,6 +3104,164 @@
         return pick;
     }
 
+    // ---- v1.23.0 择卡：DS 看得见卡面，挑一张或弃权 ----
+
+    // 候选按启用仓库均摊，保住"仓库数即权重"这条承诺——
+    // DS 只在候选之间挑贴合度，不由它改变各仓库的出场份额。
+    function adrCdCandidateCount(slotPools) {
+        var slots = [];
+        (slotPools || []).forEach(function (p) {
+            if (p.slot !== "nsfw" && slots.indexOf(p.slot) < 0) slots.push(p.slot);
+        });
+        return Math.min(8, Math.max(3, slots.length * 2));
+    }
+
+    // 明面候选按非 NSFW 仓库均摊；NSFW 每个卡池只放一个占位。
+    // 占位不展示卡面，所以放两张一模一样的占位毫无信息量，
+    // 只会白占本可以展示真卡面的位置——测试就是这么抓出来的。
+    // 而且 NSFW 本来就是"这一路走不走"的全有全无判断，不是贴合度比拼。
+    function adrCdBuildCandidates(slotPools, state, want) {
+        var bySlot = {};
+        (slotPools || []).forEach(function (p) { (bySlot[p.slot] = bySlot[p.slot] || []).push(p); });
+        var openSlots = ADR_CD_SLOTS.filter(function (s) {
+            return s !== "nsfw" && bySlot[s] && bySlot[s].length;
+        });
+        var out = [], used = {};
+
+        if (openSlots.length) {
+            var perSlot = Math.max(1, Math.ceil(want / openSlots.length));
+            openSlots.forEach(function (s) {
+                var pools = bySlot[s];
+                var got = 0, tries = 0;
+                while (got < perSlot && tries < perSlot * 8) {
+                    tries++;
+                    var pool = pools[Math.floor(Math.random() * pools.length)];
+                    // 冷却区照旧生效：最近投过的卡不进候选
+                    var card = adrCdPickFromPool(pool.cards, state.recent, adrCdCooldown());
+                    if (!card || used[card]) continue;
+                    used[card] = 1;
+                    out.push({ slot: pool.slot, pool: pool.menuName, card: card });
+                    got++;
+                }
+            });
+        }
+
+        // NSFW：一池一个占位（池名不同才区分得开），卡面此刻就抽好，只是不展示
+        (bySlot.nsfw || []).slice(0, 2).forEach(function (pool) {
+            var card = adrCdPickFromPool(pool.cards, state.recent, adrCdCooldown());
+            if (!card || used[card]) return;
+            used[card] = 1;
+            out.push({ slot: "nsfw", pool: pool.menuName, card: card });
+        });
+
+        return out;
+    }
+
+    // NSFW 卡面不出门。DeepSeek 那边的内容审核会把整次调用打回，
+    // 打回就降级盲抽，反而更糟；而且没必要——要不要走这条通道，
+    // 看双向硬门就够了，不需要它读卡面细节。
+    function adrCdCandidateLine(i, c) {
+        var head = (i + 1) + ". 【" + c.pool + "】";
+        if (c.slot === "nsfw") return head + "（这一格的卡面不外传；选它即表示此刻适合这一路）";
+        return head + adrCdTruncate(c.card, 120);
+    }
+
+    async function adrCdPickCardViaDS(cands, state) {
+        var st = settings();
+        var endpoint = st.cdApiEndpoint || "";
+        if (!endpoint) throw new Error("未填写择池 API 地址");
+        var url = chatUrl(endpoint);
+        if (!url) throw new Error("择池 API 地址无效");
+
+        var hasNsfw = cands.some(function (c) { return c.slot === "nsfw"; });
+
+        var sys = "你是抽卡助手的选卡器。下面会给你几张候选事件卡，请挑出最适合此刻投放的那一张。"
+            + "【刚刚这一楼】就是此刻，贴合与否一律以它为准。"
+            + "【再往前几楼】只用来看这股势头是仍在持续、还是已经收场，不要拿它当此刻。"
+            + "【这个故事的整体调性】只用来判断某类情节允不允许发生，绝不作为此刻氛围的依据。";
+
+        if (hasNsfw) {
+            sys += "标注为「NSFW·」的候选是例外通道，其卡面不展示给你，改用下面这条双向规则判断。"
+                + "先判断【刚刚这一楼】是否同时满足两条：一、已经出现明确的情欲流动或强烈性暗示，且这股张力此刻仍在持续，没有被打断、没有转场；二、这个故事的整体调性允许此类情节发生。"
+                + "两条都满足时，必须从「NSFW·」候选中选，其余候选此刻一律不选——此时投入无关事件会打断正在进行的场面，这是比选错卡更严重的错误。"
+                + "任何一条不满足时，就当「NSFW·」候选不在名单上。"
+                + "剧情平淡、需要推进、想制造转折，都不构成选它的理由；场面已经明确结束或转场之后，也不再算满足。";
+        }
+
+        sys += "如果此刻正在进行的场面不该被任何外来事件打断（一场戏正到紧要处、一段对峙刚起势、情绪正在收束），"
+            + "或者这几张候选没有一张贴合此刻，就回复 0。"
+            + "宁可这一楼什么都不投，也好过塞一张打断场面的卡——空一楼没有代价，打断有。";
+
+        sys += "只准回复一个数字：选中候选的编号，或 0 表示此刻不投卡。"
+            + "不加标点、不加解释、不加思考过程、不加任何其他文字。多一个字视为无效。";
+
+        var parts = [];
+        var recent = "";
+        var pickRounds = adrCdPickReadRounds();
+        try { recent = await recentContentBlocks(pickRounds); } catch (eRc) {}
+        var splitR = adrCdSplitRecent(recent);
+        if (splitR.now) parts.push("【刚刚这一楼 · 此刻的氛围只看这里】\n" + adrCdTruncate(splitR.now, 2000));
+        if (splitR.before) parts.push("【再往前几楼 · 仅用来看这股势头是在持续还是已经收场】\n" + adrCdTruncate(splitR.before, 2500));
+        parts.push("【候选卡】\n" + cands.map(function (c, i) { return adrCdCandidateLine(i, c); }).join("\n")
+            + "\n0. " + ADR_CD_PICK_PASS);
+        var precise = "";
+        try { precise = buildPreciseContext(); } catch (ePc) {}
+        if (precise) {
+            parts.push("【这个故事的整体调性 · 只用来判断某类情节允不允许发生，不是此刻的依据】\n"
+                + adrCdTruncate(precise, 2000));
+        }
+        parts.push("请只回复一个数字（1-" + cands.length + "，或 0）。");
+
+        var aborterC = typeof AbortController !== "undefined" ? new AbortController() : null;
+        var timeoutC = null, didTimeoutC = false;
+        if (aborterC) {
+            timeoutC = setTimeout(function () {
+                didTimeoutC = true;
+                try { aborterC.abort(); } catch (eA) {}
+            }, ADR_CD_PICK_TIMEOUT_MS);
+        }
+
+        var headers = { "Content-Type": "application/json" };
+        if (st.cdApiKey) headers.Authorization = "Bearer " + st.cdApiKey;
+        var optsC = {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({
+                model: st.cdModel || "deepseek-chat",
+                messages: [
+                    { role: "system", content: sys },
+                    { role: "user", content: parts.join("\n\n") }
+                ],
+                temperature: 0.4,
+                max_tokens: 10,
+                stream: false
+            })
+        };
+        if (aborterC) optsC.signal = aborterC.signal;
+
+        var rawC;
+        try {
+            var resC = await fetch(url, optsC);
+            rawC = await resC.text();
+            if (!resC.ok) throw new Error("择卡 API " + resC.status + "：" + String(rawC || "").slice(0, 160));
+        } catch (eF) {
+            if (didTimeoutC && eF && eF.name === "AbortError") throw new Error("择卡超时（" + (ADR_CD_PICK_TIMEOUT_MS / 1000) + "s）");
+            throw eF;
+        } finally {
+            if (timeoutC) clearTimeout(timeoutC);
+        }
+
+        var dataC;
+        try { dataC = JSON.parse(rawC); } catch (eJ) { throw new Error("择卡返回非 JSON"); }
+        var outC = String(parseResponse(dataC) || "").trim();
+        var mNum = outC.match(/-?\d+/);
+        if (!mNum) throw new Error("选卡答复无效：" + adrCdTruncate(outC, 40));
+        var n = Number(mNum[0]);
+        if (n === 0) return 0;
+        if (!(n >= 1 && n <= cands.length)) throw new Error("选卡编号越界：" + outC);
+        return n;
+    }
+
     // ---- 三段抽 ----
 
     // NSFW 唯一保留的闸：择池失败降级成盲抽时，整格不参与。
@@ -3137,6 +3318,37 @@
 
         var floorNow = Number.isFinite(Number(opts.count)) ? Number(opts.count) : adrDAssistantRoundCount();
 
+        function passThisFloor(why) {
+            var retryIn = Math.max(1, Math.min(3, adrCdN()));
+            var stPass = adrCdChatState();
+            stPass.passUntil = floorNow + retryIn;
+            adrCdSaveChatState(stPass);
+            console.log("[抽卡小能手] DS 弃权：" + why + "，" + retryIn + " 楼后再问");
+            adrCdUpdateStatusLine();
+            return { ok: false, passed: true, reason: "DS 判断此刻不适合投卡，空过（" + retryIn + " 楼后再问）" };
+        }
+
+        // v1.23.0 择卡：候选按仓库均摊摸出来，连卡面一起给 DS 挑一张，或弃权。
+        // 治的是"池选对了，池内那张不贴合"——择池只解决了前半段。
+        if (st.cdMode === "pickcard" && !opts.preview) {
+            var tC = Date.now();
+            try {
+                var cands = adrCdBuildCandidates(slotPools, state, adrCdCandidateCount(slotPools));
+                if (!cands.length) throw new Error("没有可用候选卡");
+                var idxC = await adrCdPickCardViaDS(cands, state);
+                console.log("[抽卡小能手] DS 选卡：" + (idxC === 0 ? "弃权" : "第 " + idxC + " 张")
+                    + "（候选 " + cands.length + " 张，耗时 " + (Date.now() - tC) + "ms）");
+                if (idxC === 0) return passThisFloor("这几张候选没有一张贴合此刻");
+                var chosen = cands[idxC - 1];
+                result = { slot: chosen.slot, pool: chosen.pool, card: chosen.card };
+                usedMode = "择卡";
+            } catch (eC) {
+                console.warn("[抽卡小能手] 择卡降级盲抽：" + (eC && eC.message ? eC.message : eC));
+                usedMode = "择卡降级盲抽";
+                degraded = true;
+            }
+        }
+
         if (st.cdMode === "pick" && !opts.preview) {
             var t0 = Date.now();
             try {
@@ -3145,15 +3357,7 @@
 
                 // v1.22.0：DS 判此刻不该投。空一楼没有代价，打断有。
                 // 不推进 lastDrawAt，改用 passUntil 节流——否则下一楼又问一次，白花钱。
-                if (pick === ADR_CD_PICK_PASS) {
-                    var retryIn = Math.max(1, Math.min(3, adrCdN()));
-                    var stPass = adrCdChatState();
-                    stPass.passUntil = floorNow + retryIn;
-                    adrCdSaveChatState(stPass);
-                    console.log("[抽卡小能手] DS 弃权：此刻不投卡，" + retryIn + " 楼后再问");
-                    adrCdUpdateStatusLine();
-                    return { ok: false, passed: true, reason: "DS 判断此刻不适合投卡，空过（" + retryIn + " 楼后再问）" };
-                }
+                if (pick === ADR_CD_PICK_PASS) return passThisFloor("此刻不该被打断");
 
                 var poolObj = null;
                 for (var i = 0; i < slotPools.length; i++) { if (slotPools[i].menuName === pick) { poolObj = slotPools[i]; break; } }
@@ -3545,7 +3749,7 @@
         var on = ADR_CD_SLOTS.filter(function (s) { return state.slotOn[s] && adrCdSlotText(state, s); })
             .map(function (s) { return ADR_CD_SLOT_LABEL[s]; });
         var libPart = on.length ? on.join("＋") : "无可用仓库";
-        var mode = st.cdMode === "pick" ? "择池" : "盲抽";
+        var mode = ADR_CD_MODE_LABEL[st.cdMode] || "盲抽";
         var n = adrCdN();
         var count = adrDAssistantRoundCount();
         var base = Number(state.lastDrawAt);
@@ -3650,7 +3854,7 @@
             adrCdSetCheckedSafe("adr044-cd-enabled", !!st.cdEnabled);
             adrCdSetValueSafe("adr044-cd-n", String(adrCdN()));
             adrCdSetTextAll("adr044-cd-n-val", String(adrCdN()));
-            adrCdSetValueSafe("adr044-cd-mode", st.cdMode === "pick" ? "pick" : "blind");
+            adrCdSetValueSafe("adr044-cd-mode", ADR_CD_MODES.indexOf(st.cdMode) >= 0 ? st.cdMode : "blind");
             adrCdSetValueSafe("adr044-cd-depth", String(adrCdDepth()));
             adrCdSetValueSafe("adr044-cd-cooldown", String(adrCdCooldown()));
             var envPair = adrCdEnvelopePair();
@@ -3823,7 +4027,7 @@
             lines.push("当前楼层：" + count + "　基准线：" + state.lastDrawAt + "　间隔 N：" + adrCdN());
             var fl = adrCdCurrentFloatLength();
             lines.push("耳机通道：" + (fl < 0 ? "读不到（旧版酒馆）" : (fl > 0 ? "已挂载 " + fl + " 字" : "空（未投卡或已暂停）")));
-            lines.push("模式：" + (st.cdMode === "pick" ? "择池" : "盲抽") + "　注入深度：" + adrCdDepth() + "　冷却：" + adrCdCooldown());
+            lines.push("模式：" + (ADR_CD_MODE_LABEL[st.cdMode] || "盲抽") + "　注入深度：" + adrCdDepth() + "　冷却：" + adrCdCooldown());
             var lastH = ((state.history || []).slice(-1)[0]) || null;
             lines.push("上一张怎么来的：" + (lastH ? String(lastH.mode || "未知") : "（还没投过）")
                 + (lastH && String(lastH.mode || "").indexOf("降级") >= 0
@@ -4310,7 +4514,7 @@
                 guard(el);
                 el.addEventListener("change", function () {
                     adrCdTouch(el);
-                    save("cdMode", el.value === "pick" ? "pick" : "blind");
+                    save("cdMode", ADR_CD_MODES.indexOf(el.value) >= 0 ? el.value : "blind");
                     adrCdSaveSoon();
                     adrCdUpdateStatusLine();
                 });
@@ -4541,7 +4745,7 @@
     function adrCdPageInnerHTML(secOpen, secClose, checkClass, actionsClass) {
         var st = settings();
         var noteClass = checkClass === "adr048-check" ? "adr048-note" : "adr044-note";
-        var mode = st.cdMode === "pick" ? "pick" : "blind";
+        var mode = ADR_CD_MODES.indexOf(st.cdMode) >= 0 ? st.cdMode : "blind";
         var lifeMode = adrCdLifeMode();
         return secOpen("剧情小风铃 🎐")
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-enabled"' + (st.cdEnabled ? " checked" : "") + '> 启用剧情小风铃</label>'
@@ -4555,6 +4759,7 @@
             + '<select id="adr044-cd-mode">'
             + opt(mode, "blind", "盲抽（零 API · 天马行空档）")
             + opt(mode, "pick", "择池（DS 只看池名点池，池内仍盲抽）")
+            + opt(mode, "pickcard", "择卡（DS 看得见卡面，从几张候选里挑一张，或弃权）")
             + '</select>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-paused"> 暂停投卡（只停这个聊天；关键场景不打扰）</label>'
             + '<div class="adr044-template-status" id="adr044-cd-pause-status"></div>'
@@ -4604,7 +4809,7 @@
             + '<textarea id="adr044-cd-lib-editor" rows="12" placeholder="## 卡池名&#10;一行一张卡…"></textarea>'
             + secClose()
 
-            + secOpen("择池 API（仅择池模式用）", true)
+            + secOpen("择池／择卡 API（这两档才用）", true)
             + '<div class="adr044-template-compact adr044-api-profile-compact">'
             + '<select id="adr044-api-profile-select-cd">' + adrDApiProfileSelectOptions("cd", adrDSelectedApiProfileName("cd") || "") + '</select>'
             + '<input type="text" id="adr044-api-profile-name-cd" value="' + esc(adrDSelectedApiProfileName("cd") || "") + '" placeholder="预设名，如 DS">'
@@ -4618,7 +4823,7 @@
             + '<label>模型</label><input type="text" id="adr044-cd-model" value="' + esc(st.cdModel || "") + '" placeholder="可以手填，或加载模型">'
             + '<select id="adr044-cd-model-select"><option value="">加载后在此选择模型</option></select>'
             + '<div class="' + actionsClass + '"><button id="adr044-cd-load-models" type="button">加载模型</button><button id="adr044-cd-test" type="button">测试连接</button><button id="adr044-cd-save" type="button">保存当前使用</button></div>'
-            + '<div class="adr044-template-status" id="adr044-cd-status">择池会用这里的 API；任何异常当场降级盲抽，不停摆。试抽恒为盲抽，不产生费用。</div>'
+            + '<div class="adr044-template-status" id="adr044-cd-status">择池与择卡都用这里的 API；任何异常当场降级盲抽，不停摆（降级时 NSFW 一律不参与）。试抽恒为盲抽，不产生费用。</div>'
             + secClose()
 
             + secOpen("高级 · 注入与信封", true)
