@@ -1,6 +1,9 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.19.4｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.23.2｜ripple & GPT & Claude
+ * v1.23.2 全盘审读热修（审读与施工：波哥 Claude Fable 5.1）：冷却区 0 变 32 的 slice(-0)、兑现判定外泄 NSFW 卡面、
+ *          择卡 NSFW 池只取前两个、注入不写 swipes、生命周期无互斥、自动触发旗子升晚、拍子按楼数建键、
+ *          用户名递成角色名、每拍整聊天重载、稿子写进生成中的楼、/v1 硬补、esc 不转引号；细目见 CHANGELOG.md
  * v1.12.0 卡的生命周期：专属／通用／NSFW 三格各自勾选，三段抽；择池 API 并入预设机器；刷新不再覆盖编辑区（施工：波哥 Claude Fable 5）
  * v1.13.0 放养模式：手动放养自动归队——一键撕下当前导演稿，轮换照常走，到下个换稿点自动生成归队；双导演各自独立放养（施工：波哥 Claude Fable 5）
  * v1.13.1 DS 视野随节奏走：兑现判定回看范围挂钩半衰期、择池挂钩投卡间隔，不再钉死 4/6 轮；下限不缩水，上限 12 轮/8000 字（提议：ripple；施工：波哥 Claude Fable 5）
@@ -161,7 +164,9 @@
         var d = rootDoc();
         var div = d.createElement("div");
         div.textContent = s == null ? "" : String(s);
-        return div.innerHTML;
+        // v1.23.2：textContent→innerHTML 只转义 & < >，不转义引号。
+        // 库名会进 value="…" 和 data-adrcd-lib="…"，含引号就把属性撕开了。
+        return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
 
@@ -443,8 +448,11 @@
         } catch (e) {}
     }
 
-    function adrDAutoBeatKey(type, count, n) {
-        return [adrDChatKey(), type === "plot" ? "plot" : "emotion", Number(count) || 0, Number(n) || 0].join("::");
+    // v1.23.2：拍子按基准线建键，不按当前楼数。旧写法 count 每来一楼就变，
+    // API 挂着的时候每一楼都是"新拍子"——首报弹窗每楼弹一次，退避每楼归零直接重试。
+    // 同一条基准线到结算前只算一拍；结算成功基准线前移，键自然换新。
+    function adrDAutoBeatKey(type, base, n) {
+        return [adrDChatKey(), type === "plot" ? "plot" : "emotion", "base", Number(base) || 0, Number(n) || 0].join("::");
     }
 
     function adrDClearAutoBeatState(beatKey) {
@@ -562,7 +570,12 @@
         while (url.length > 1 && url.charAt(url.length - 1) === "/") url = url.slice(0, -1);
         if (url.indexOf("/chat/completions") >= 0) url = url.replace(/\/chat\/completions\/?$/, "");
         if (url.indexOf("/models") >= 0) url = url.replace(/\/models\/?$/, "");
-        if (!url.endsWith("/v1")) url += "/v1";
+        while (url.length > 1 && url.charAt(url.length - 1) === "/") url = url.slice(0, -1);
+        // v1.23.2：只在路径里还没有版本段时补 /v1。旧写法凡不以 /v1 结尾一律硬补，
+        // Gemini 官方兼容口 /v1beta/openai、智谱 /api/paas/v4、火山 /api/v3 全被改成 …/v4/v1。
+        var path = "";
+        try { path = new URL(url).pathname; } catch (eUrl) { path = url.replace(/^[a-z][a-z0-9+.-]*:\/\/[^\/]+/i, ""); }
+        if (!/\/v\d+[a-z]*(?:\/|$)/i.test(path)) url += "/v1";
         return url;
     }
 
@@ -769,9 +782,10 @@
         } catch (e3) {}
 
         try {
-            if (c.characters && Array.isArray(c.characters) && c.name1) {
+            // v1.23.2：兜底按角色名（name2）比对；旧写法拿用户名（name1）去比，永远比不中。
+            if (c.characters && Array.isArray(c.characters) && c.name2) {
                 for (var i = 0; i < c.characters.length; i++) {
-                    if (c.characters[i] && c.characters[i].name === c.name1) return c.characters[i];
+                    if (c.characters[i] && c.characters[i].name === c.name2) return c.characters[i];
                 }
             }
         } catch (e4) {}
@@ -918,7 +932,9 @@
             parts.push("【" + label + "】\n" + s);
         }
 
-        add("用户名称", c.name2);
+        // v1.23.2：酒馆里 name1 是用户、name2 是角色。旧写法把角色名当用户名递给导演，
+        // 情感导演还要据此判"是否过度代演用户"。
+        add("用户名称", c.name1);
 
         try {
             var p = c.powerUserSettings || {};
@@ -1042,7 +1058,6 @@
 
         return parts.join("\n\n");
     }
-
 
 
     function adrDGetExtraInstruction(type) {
@@ -1257,6 +1272,20 @@
         });
     }
 
+    // v1.23.2：稿子不往正在生成的楼里写。导演一趟最长 120 秒，这期间用户继续发消息很正常；
+    // 旧写法回来就往"最后一个有正文的助手楼"里塞，那一楼可能正在流式生成——
+    // 写进去的稿被下一个 chunk 冲掉，saveChat 和重绘还会撞上生成中。
+    // 生成中就把稿留在预览里等 GENERATION_ENDED，最多等 3 分钟（与降旗保险丝同长）。
+    function adrDWaitForGenerationIdle(maxMs) {
+        return new Promise(function (resolve) {
+            var started = Date.now();
+            (function tick() {
+                if (!adrDGenStreaming || Date.now() - started >= maxMs) return resolve(!adrDGenStreaming);
+                setTimeout(tick, 500);
+            })();
+        });
+    }
+
     async function run(type, extra, opts) {
         if (processing) return false;
 
@@ -1284,6 +1313,10 @@
             var st = settings();
             var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
             if (st[autoKey]) {
+                if (adrDGenStreaming) {
+                    status(type, "分析完成，这一楼还在生成，等写完再挂…", "#d6b177");
+                    await adrDWaitForGenerationIdle(180000);
+                }
                 var ok = isAutoRun ? await injectDirectorAsync(type, out) : injectDirector(type, out);
                 if (ok) {
                     success = true;
@@ -1356,13 +1389,6 @@
         }
     }
 
-    function escapeHtmlForDetails(s) {
-        s = String(s || "");
-        return s
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-    }
 
     function adrDSanitizeInjectionBody(body) {
         // v1.9.27：正文消毒。导演输出若自带 "###"，会提前闭合标记块并干扰清理正则。
@@ -1583,7 +1609,8 @@
                 mes = mes.replace(reTypedOwn, "");
 
                 if (mes !== before) {
-                    chat[i].mes = mes.trimEnd();
+                    adrDSetMessageText(chat[i], mes.trimEnd());
+                    adrDNoteRedraw(i);
                     changed++;
                 }
             }
@@ -1725,58 +1752,29 @@
         return -1;
     }
 
-    function saveChatSafe() {
-        try {
-            var c = ctx();
-            if (typeof c.saveChat === "function") {
-                c.saveChat();
-                return;
-            }
-        } catch (e) {}
-
-        try {
-            var rw = rootWin();
-            if (typeof rw.saveChatConditional === "function") rw.saveChatConditional();
-            else if (typeof rw.saveChat === "function") rw.saveChat();
-        } catch (e2) {}
-    }
-
-    function refreshMessageDom(index) {
-        try {
-            var rw = rootWin();
-
-            if (typeof rw.reloadCurrentChat === "function") {
-                // 太重，先不用。优先改 DOM。
-            }
-
-            var d = rootDoc();
-            var msg = null;
-            var sels = [
-                '#chat .mes[mesid="' + index + '"] .mes_text',
-                '#chat .mes[mesid="' + index + '"] .mes_block .mes_text',
-                '#chat .mes[mesid="' + index + '"]',
-                '#chat .mes[data-mesid="' + index + '"] .mes_text',
-                '#chat .mes[data-mesid="' + index + '"]'
-            ];
-
-            for (var i = 0; i < sels.length; i++) {
-                msg = d.querySelector(sels[i]);
-                if (msg) break;
-            }
-
-            if (msg) {
-                var chat = ctx().chat;
-                var content = chat && chat[index] ? chat[index].mes : "";
-                msg.innerHTML = content;
-            }
-        } catch (e) {}
-    }
-
 
     function adrDNativeRedrawNow() {
         try {
             var rw = rootWin();
             var c = ctx();
+
+            // v1.23.2：只重画改过的那几楼。旧写法每拍 reloadCurrentChat()——清空、重读、重渲染全部楼层
+            // 再广播 CHAT_CHANGED，所有插件跟着重跑一遍，长聊天在手机上每拍卡一下、滚动位置跳。
+            // 酒馆没有 updateMessageBlock 的老版本仍走整体重载。
+            try {
+                var pending = adrDPendingRedraw.slice();
+                if (pending.length && c && c.chat && typeof c.updateMessageBlock === "function") {
+                    var drew = 0;
+                    pending.forEach(function (idx) {
+                        try {
+                            if (c.chat[idx]) { c.updateMessageBlock(idx, c.chat[idx]); drew++; }
+                        } catch (eOne) {}
+                    });
+                    adrDPendingRedraw = [];
+                    if (drew) return true;
+                }
+            } catch (eBlock) {}
+            adrDPendingRedraw = [];
 
             try {
                 if (typeof rw.reloadCurrentChat === "function") {
@@ -1879,6 +1877,25 @@
         return false;
     }
 
+    // v1.23.2：楼层正文与当前 swipe 同写。酒馆左右翻页是 mes = swipes[swipe_id] 回填，
+    // 只改 mes 的话，在注入那一楼滑一下导演稿就没了。
+    function adrDSetMessageText(m, mes) {
+        if (!m) return;
+        m.mes = mes;
+        try {
+            if (Array.isArray(m.swipes) && m.swipes.length) {
+                var sid = Number(m.swipe_id);
+                if (!Number.isFinite(sid) || sid < 0 || sid >= m.swipes.length) sid = m.swipes.length - 1;
+                m.swipes[sid] = mes;
+            }
+        } catch (eSw) {}
+    }
+
+    var adrDPendingRedraw = [];   // v1.23.2：改过正文、还没重画的楼号；重绘只画这几楼
+    function adrDNoteRedraw(idx) {
+        try { if (Number.isFinite(Number(idx)) && adrDPendingRedraw.indexOf(Number(idx)) < 0) adrDPendingRedraw.push(Number(idx)); } catch (e) {}
+    }
+
     function adrDWriteDirectorInjection(type, text) {
         if (!text || !text.trim()) return false;
 
@@ -1928,7 +1945,8 @@
             // 旧格式因互删缺陷至多存活一块，清掉后由各导演在各自下一拍以带类型格式重建。
             mes = mes.replace(/\n?arrebol_d(?:_visible)?###[\s\S]*?###/g, "").trimEnd();
 
-            chat[idx].mes = mes.trimEnd() + add;
+            adrDSetMessageText(chat[idx], mes.trimEnd() + add);
+            adrDNoteRedraw(idx);
             try { adrDDirectorLogPush(type, text); } catch (eLog34) {}
             try { adrDUpdateFloatFromInjection(type, text); } catch (eFloat34) {}
             try { adrDGrazeClearOnInjection(type); } catch (eGraze) {} // v1.13.0：稿子挂上即归队
@@ -2550,7 +2568,9 @@
         if (cards.length <= M) M = Math.max(0, cards.length - 1);
         var elig = [];
         while (true) {
-            var recent = (recentList || []).slice(-M);
+            // v1.23.2：M=0 必须是"没有冷却"。旧写法 slice(-0) 等于 slice(0)，
+            // 把整个近期史都当成了冷却区——冷却填 0 反而变成"最近 32 张全不复用"。
+            var recent = M > 0 ? (recentList || []).slice(-M) : [];
             var set = {};
             recent.forEach(function (c) { set[c] = 1; });
             elig = cards.filter(function (c) { return !set[c]; });
@@ -2564,6 +2584,8 @@
     function adrCdSanitizePickResponse(raw, menu) {
         var s = String(raw || "").trim();
         s = s.replace(/^["'「『【\[\(（\s]+/, "").replace(/["'」』】\]\)）。．.!！\s]+$/, "").trim();
+        // v1.23.2：菜单名里的间隔号「·」模型偶尔会回成「・」「•」「･」，认成同一个字。
+        s = s.replace(/[・•･]/g, "·");
         for (var i = 0; i < (menu || []).length; i++) {
             if (s === String(menu[i])) return menu[i];
         }
@@ -2627,7 +2649,8 @@
     function adrCdCooldown() {
         var m = Math.round(Number(settings().cdCooldown));
         if (!Number.isFinite(m) || m < 0) m = 8;
-        return Math.min(99, m);
+        // v1.23.2：近期史缓冲只有 ADR_CD_RECENT_MAX 张，填再大也只认这么多，面板同步封顶。
+        return Math.min(ADR_CD_RECENT_MAX, m);
     }
 
     function adrCdLibraries() {
@@ -3146,8 +3169,14 @@
             });
         }
 
-        // NSFW：一池一个占位（池名不同才区分得开），卡面此刻就抽好，只是不展示
-        (bySlot.nsfw || []).slice(0, 2).forEach(function (pool) {
+        // NSFW：一池一个占位（池名不同才区分得开），卡面此刻就抽好，只是不展示。
+        // v1.23.2：先打乱再取两个。旧写法按文件顺序取前两个，池三池四永远进不了候选。
+        var nsfwPools = (bySlot.nsfw || []).slice();
+        for (var si = nsfwPools.length - 1; si > 0; si--) {
+            var sj = Math.floor(Math.random() * (si + 1));
+            var tmp = nsfwPools[si]; nsfwPools[si] = nsfwPools[sj]; nsfwPools[sj] = tmp;
+        }
+        nsfwPools.slice(0, 2).forEach(function (pool) {
             var card = adrCdPickFromPool(pool.cards, state.recent, adrCdCooldown());
             if (!card || used[card]) return;
             used[card] = 1;
@@ -3302,6 +3331,7 @@
     }
 
     var adrCdDrawRunning = false;
+    var adrCdLifecycleRunning = false;   // v1.23.2：生命周期推进的互斥旗（问询期间不重入）
 
     async function adrCdPerformDraw(opts) {
         opts = opts || {};
@@ -3314,8 +3344,6 @@
         var usedMode = "盲抽";
         var degraded = false;   // 择池失败降级过来的？降级时 NSFW 一律不参与
 
-        var floorNow = Number.isFinite(Number(opts.count)) ? Number(opts.count) : adrDAssistantRoundCount();
-
         // v1.23.0 择卡：候选按仓库均摊摸出来，连卡面一起给 DS 挑一张，或弃权。
         // 治的是"池选对了，池内那张不贴合"——择池只解决了前半段。
         if (st.cdMode === "pickcard" && !opts.preview) {
@@ -3324,7 +3352,7 @@
                 var cands = adrCdBuildCandidates(slotPools, state, adrCdCandidateCount(slotPools));
                 if (!cands.length) throw new Error("没有可用候选卡");
                 var idxC = await adrCdPickCardViaDS(cands, state);
-                console.log("[抽卡小能手] 小眼睛选卡：" + (idxC === 0 ? "弃权" : "第 " + idxC + " 张")
+                console.log("[抽卡小能手] 小眼睛选卡：第 " + idxC + " 张"
                     + "（候选 " + cands.length + " 张，耗时 " + (Date.now() - tC) + "ms）");
                 var chosen = cands[idxC - 1];
                 result = { slot: chosen.slot, pool: chosen.pool, card: chosen.card };
@@ -3514,14 +3542,6 @@
         return out === "是";
     }
 
-    function adrCdMarkTopHistory(status) {
-        try {
-            var state = adrCdChatState();
-            var list = state.history || [];
-            if (list.length) list[list.length - 1].status = status;
-            return state;
-        } catch (e) { return null; }
-    }
 
     // 结案：从耳边撤下，但不推进基准线——下一张仍按原节奏来，中间那几楼留白让剧情喘口气
     function adrCdCloseCard(reason, silent) {
@@ -3581,33 +3601,57 @@
 
             if (age < adrCdHalfLifeFloors()) return;
 
-            if (st.cdAutoDone) {
-                try {
-                    var done = await adrCdAskFulfilled(state.floatCard);
-                    if (done) {
-                        console.log("[抽卡小能手] 小眼睛判定已兑现，自动结案");
-                        adrCdCloseCard("小眼睛自动判定", true);
-                        return;
+            // v1.23.2：问询期间（最长 8s）可能又到了投卡点、新卡已经挂上。
+            // 记下此刻是哪张卡、哪一楼投的，回来先对账；对不上就说明处理的已经不是这张卡，整段放弃。
+            // 同时上一面旗，两次检查并发进来时不重复问询、不重复扣费。
+            if (adrCdLifecycleRunning) return;
+            adrCdLifecycleRunning = true;
+            var cardAtStart = state.floatCard;
+            var drawAtStart = Number(state.lastDrawAt);
+            try {
+                var lastRec = (state.history || []).slice(-1)[0] || null;
+                var isNsfwCard = !!(lastRec && lastRec.slot === "nsfw");
+                if (st.cdAutoDone && isNsfwCard) {
+                    // v1.23.2：NSFW 卡面不出门——择卡那一路早已如此，兑现判定此前却把卡面全文发了出去。
+                    // 小眼睛那边的审核会打回，等于白烧一次调用；这一档直接按未兑现降级。
+                    console.log("[抽卡小能手] NSFW 卡不问小眼睛，直接降级为背景");
+                } else if (st.cdAutoDone) {
+                    try {
+                        var done = await adrCdAskFulfilled(state.floatCard);
+                        var check = adrCdChatState();
+                        if (check.floatCard !== cardAtStart || Number(check.lastDrawAt) !== drawAtStart) {
+                            console.warn("[抽卡小能手] 问询期间卡已换过，本次判定作废");
+                            return;
+                        }
+                        if (done) {
+                            console.log("[抽卡小能手] 小眼睛判定已兑现，自动结案");
+                            adrCdCloseCard("小眼睛自动判定", true);
+                            return;
+                        }
+                        console.log("[抽卡小能手] 小眼睛判定尚未兑现，降级为背景");
+                    } catch (eAsk) {
+                        // 判不了就按未兑现处理，安全降级，绝不误撤
+                        console.warn("[抽卡小能手] 兑现检查失败，按未兑现降级：" + (eAsk && eAsk.message ? eAsk.message : eAsk));
                     }
-                    console.log("[抽卡小能手] 小眼睛判定尚未兑现，降级为背景");
-                } catch (eAsk) {
-                    // 判不了就按未兑现处理，安全降级，绝不误撤
-                    console.warn("[抽卡小能手] 兑现检查失败，按未兑现降级：" + (eAsk && eAsk.message ? eAsk.message : eAsk));
                 }
-            }
 
-            var fresh = adrCdChatState();
-            if (!fresh.floatCard || fresh.floatStage !== "active") return;
-            fresh.floatStage = "faded";
-            fresh.floatText = adrCdBuildEnvelope(adrCdEnvelopePair().faded, fresh.floatCard);
-            var list = fresh.history || [];
-            if (list.length && list[list.length - 1].status === "live") list[list.length - 1].status = "faded";
-            adrCdSaveChatState(fresh);
-            if (!fresh.paused) adrCdApplyFloat(fresh.floatText);
-            console.log("[抽卡小能手] 卡已过半衰期，降级为背景：" + adrCdTruncate(fresh.floatCard, 30));
-            adrCdUpdateStatusLine();
-            adrCdRefreshLifePanel();
+                var fresh = adrCdChatState();
+                if (!fresh.floatCard || fresh.floatStage !== "active") return;
+                if (fresh.floatCard !== cardAtStart || Number(fresh.lastDrawAt) !== drawAtStart) return;
+                fresh.floatStage = "faded";
+                fresh.floatText = adrCdBuildEnvelope(adrCdEnvelopePair().faded, fresh.floatCard);
+                var list = fresh.history || [];
+                if (list.length && list[list.length - 1].status === "live") list[list.length - 1].status = "faded";
+                adrCdSaveChatState(fresh);
+                if (!fresh.paused) adrCdApplyFloat(fresh.floatText);
+                console.log("[抽卡小能手] 卡已过半衰期，降级为背景：" + adrCdTruncate(fresh.floatCard, 30));
+                adrCdUpdateStatusLine();
+                adrCdRefreshLifePanel();
+            } finally {
+                adrCdLifecycleRunning = false;
+            }
         } catch (e) {
+            adrCdLifecycleRunning = false;
             try { console.warn("[抽卡小能手] 生命周期推进失败", e); } catch (e2) {}
         }
     }
@@ -4042,12 +4086,6 @@
     }
 
     // v1.17.2：查一副库当前挂在哪个槽（没挂返回 ""）
-    function adrCdFindMountedSlot(state, name) {
-        for (var i = 0; i < ADR_CD_SLOTS.length; i++) {
-            if (adrCdSlotArr(state.slots[ADR_CD_SLOTS[i]]).indexOf(name) >= 0) return ADR_CD_SLOTS[i];
-        }
-        return "";
-    }
 
     function adrCdSaveLibraryFromEditor() {
         try {
@@ -4801,7 +4839,7 @@
 
             + secOpen("高级 · 注入与信封", true)
             + '<label>注入深度（从最新消息往回数，默认 2）</label><input type="number" id="adr044-cd-depth" min="0" max="4" value="' + esc(String(adrCdDepth())) + '">'
-            + '<label>冷却区（最近 M 张不复用，默认 8）</label><input type="number" id="adr044-cd-cooldown" min="0" max="99" value="' + esc(String(adrCdCooldown())) + '">'
+            + '<label>冷却区（最近 M 张不复用，默认 8，最多 32）</label><input type="number" id="adr044-cd-cooldown" min="0" max="32" value="' + esc(String(adrCdCooldown())) + '">'
             + '<label>信封预设（不同模型吃不同话术）</label>'
             + adrCdEnvSelectHTML()
             + '<input type="text" id="adr044-cd-env-name" value="' + esc(adrCdCurrentEnvelopeName()) + '" placeholder="预设名">'
@@ -5960,6 +5998,14 @@
                     status(type, "没有内容可注入", "#d4726a");
                     return;
                 }
+                if (adrDGenStreaming) {
+                    status(type, "这一楼还在生成，等写完再注入…", "#d6b177");
+                    adrDWaitForGenerationIdle(180000).then(function () {
+                        var ok2 = injectDirector(type, text);
+                        status(type, ok2 ? "已注入当前聊天 ✓" : "注入失败", ok2 ? "#8ed99d" : "#d4726a");
+                    });
+                    return;
+                }
                 var ok = injectDirector(type, text);
                 status(type, ok ? "已注入当前聊天 ✓" : "注入失败", ok ? "#8ed99d" : "#d4726a");
             }
@@ -6698,23 +6744,11 @@
         } catch (e) {}
     }
 
-    function adr048RemoveOldFloatingBits(forceAll) {
-        try {
-            var d = rootDoc();
-            var old = d.querySelectorAll("#adr048-fab");
-            for (var i = 0; i < old.length; i++) {
-                try {
-                    if (forceAll || old[i].getAttribute("data-adr048-owned-fab") === ADR048_FAB_INSTANCE_ID) old[i].remove();
-                } catch (e) {}
-            }
-        } catch (e2) {}
-    }
 
     function adr048SetImportant(el, key, value) {
         try { el.style.setProperty(key, value, "important"); }
         catch(e) { try { el.style[key] = value; } catch(_) {} }
     }
-
 
 
     function adr048RemoveFab() {
@@ -6984,7 +7018,6 @@
             }
         } catch (e2) {}
     }
-
 
 
     var adrDAutoTriggerTimer = null;
@@ -7685,7 +7718,7 @@
                 if (count < base) continue; // partial 小读数，绝不重试。
                 if (count - base < n) continue;
 
-                var beatKey = adrDAutoBeatKey(type, count, n);
+                var beatKey = adrDAutoBeatKey(type, base, n);
                 var retry = adrDAutoRetryByBeat[beatKey];
                 if (!retry || !Number.isFinite(Number(retry.nextAt)) || now >= Number(retry.nextAt)) {
                     return true;
@@ -7766,8 +7799,14 @@
         } catch (e) {}
     }
 
+    var adrDAutoTriggerAgainReason = "";
+
     async function adrDCheckAutoTrigger(reason) {
-        if (adrDAutoTriggerRunning || processing) return;
+        if (adrDAutoTriggerRunning || processing) {
+            // v1.23.2：正在跑的那一趟结束后补查一次，被挡掉的信号不丢。
+            adrDAutoTriggerAgainReason = reason || "again";
+            return;
+        }
 
         if (adrDGenStreaming) {
             if (Date.now() - adrDGenStreamingSince < 180000) {
@@ -7777,6 +7816,9 @@
             adrDMarkGenStreaming(false); // 保险丝：3 分钟没等到结束事件，强制降旗防死锁
         }
 
+        // v1.23.2：旗子在进门就升。旧写法要到导演真开跑才升，前面读全量、抽卡检查、
+        // 问小眼睛这几段 await 都是敞开的，两趟检查能并肩进来重复问询、重复扣费。
+        adrDAutoTriggerRunning = true;
         try {
             var st = settings();
             if (!adrDMasterEnabled()) {
@@ -7831,7 +7873,7 @@
                     try { console.warn("[Arrebol D] align dirty emotion baseline on first passive check", { count: count, base: emotionBase, n: nEmotion, reason: reason || "" }); } catch (eFirstEmotion) {}
                 } else if (count - emotionBase >= nEmotion) {
                     // v1.9.23：不要在 run() 前推进 baseline。API/网络失败时必须保留这一拍，避免失败丢拍后再罚等 N。
-                    toRun.push({ type: "emotion", n: nEmotion, count: count, beatKey: adrDAutoBeatKey("emotion", count, nEmotion) });
+                    toRun.push({ type: "emotion", n: nEmotion, count: count, beatKey: adrDAutoBeatKey("emotion", emotionBase, nEmotion) });
                 }
             }
 
@@ -7852,7 +7894,7 @@
                     try { console.warn("[Arrebol D] align dirty plot baseline on first passive check", { count: count, base: plotBase, n: nPlot, reason: reason || "" }); } catch (eFirstPlot) {}
                 } else if (count - plotBase >= nPlot) {
                     // v1.9.23：不要在 run() 前推进 baseline。API/网络失败时必须保留这一拍，避免失败丢拍后再罚等 N。
-                    toRun.push({ type: "plot", n: nPlot, count: count, beatKey: adrDAutoBeatKey("plot", count, nPlot) });
+                    toRun.push({ type: "plot", n: nPlot, count: count, beatKey: adrDAutoBeatKey("plot", plotBase, nPlot) });
                 }
             }
 
@@ -7870,14 +7912,13 @@
                 return !!(rRetry && Number(rRetry.fails) > 0);
             });
             if (!isSilentRetry && settings().showAutoTriggerPopup !== false) adrDAutoTriggerPopup(toRun, count);
-            adrDAutoTriggerRunning = true;
             for (var i = 0; i < toRun.length; i++) {
                 var item = toRun[i];
                 var type = item.type;
                 var n = item.n;
                 var triggerCount = Number(item.count);
                 if (!Number.isFinite(triggerCount) || triggerCount < 0) triggerCount = count;
-                var beatKey = item.beatKey || adrDAutoBeatKey(type, triggerCount, n);
+                var beatKey = item.beatKey;
                 var extra = "自动触发：已新增约 " + n + " 个助手正文轮次。请基于当前精准读取上下文输出下一阶段方向。";
                 console.log("[Arrebol D] auto triggering", type, "reason=", reason, "count=", triggerCount, "N=", n);
                 var okRun = await run(type, extra, { autoTrigger: true, beatKey: beatKey });
@@ -7903,10 +7944,16 @@
             }
         } catch (e) {
             console.error("[Arrebol D] auto trigger check failed", e);
+        } finally {
+            adrDAutoTriggerRunning = false;
         }
 
-        adrDAutoTriggerRunning = false;
         try { adrDUpdateAutoCounters(); } catch (e2) {}
+        if (adrDAutoTriggerAgainReason) {
+            var againReason = adrDAutoTriggerAgainReason;
+            adrDAutoTriggerAgainReason = "";
+            adrDScheduleAutoTriggerCheck(againReason);
+        }
     }
 
     // v1.16.3：删楼不罚楼。no-shrink 铁律只该防 partial 小读数，不该罚真删除。
