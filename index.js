@@ -1,6 +1,9 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.23.2｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.24.0｜ripple & GPT & Claude
+ * v1.24.0 导演的记忆搬进聊天文件（chat_metadata 主档 + LS 镜像，老存档搬家一次）；计数显示只读；
+ *          备份与 LS JSON 按原文缓存、悬浮球观察器只盯 body 一层（拍板 ripple；施工 波哥 Claude Fable 5.1）
+ * v1.23.3 小眼睛答复额度 10/30 → 200，空答复时说明是思考吃光了额度（波哥 Claude Fable 5.1）
  * v1.23.2 全盘审读热修（审读与施工：波哥 Claude Fable 5.1）：冷却区 0 变 32 的 slice(-0)、兑现判定外泄 NSFW 卡面、
  *          择卡 NSFW 池只取前两个、注入不写 swipes、生命周期无互斥、自动触发旗子升晚、拍子按楼数建键、
  *          用户名递成角色名、每拍整聊天重载、稿子写进生成中的楼、/v1 硬补、esc 不转引号；细目见 CHANGELOG.md
@@ -184,12 +187,19 @@
         "arrebol_d_final_v1039_plain_marker_inject_settings_backup"
     ];
 
+    // v1.24.0：备份解析结果按原文缓存。此前每次 settings() 都 getItem + JSON.parse 一整份备份
+    //（含整套卡库），一次面板刷新调几十次，手机上翻面板那一下的黏就有它一份。
+    var adrDBackupCache = { raw: null, obj: null };
+
     function adrDLoadLocalBackup() {
         try {
             var raw = rootWin().localStorage.getItem(ADR_D_LOCAL_BACKUP_KEY);
             if (raw) {
+                if (raw === adrDBackupCache.raw && adrDBackupCache.obj) return adrDBackupCache.obj;
                 var obj = JSON.parse(raw);
-                return obj && typeof obj === "object" ? obj : {};
+                obj = obj && typeof obj === "object" ? obj : {};
+                adrDBackupCache = { raw: raw, obj: obj };
+                return obj;
             }
 
             // 迁移旧版备份：以后升级插件不再丢 API / 模型 / 预设。
@@ -211,24 +221,33 @@
     function adrDSaveLocalBackup(obj) {
         try {
             rootWin().localStorage.setItem(ADR_D_LOCAL_BACKUP_KEY, JSON.stringify(obj || {}));
+            adrDBackupCache = { raw: null, obj: null };   // 下次读时重新解析一次即可
         } catch (e) {}
     }
+
+    // v1.24.0：备份只在同一份设置对象上合并一次。合并过之后缺失字段已经补齐，再读备份是白读；
+    // 酒馆若整个换掉设置对象（重新从服务器载入），会是一个新对象，自然再合并一次。
+    var adrDBackupMergedInto = (typeof WeakSet === "function") ? new WeakSet() : null;
 
     function settings() {
         var c = ctx();
         if (!c.extensionSettings[EXT]) c.extensionSettings[EXT] = {};
 
-        var backup = adrDLoadLocalBackup();
         var st = c.extensionSettings[EXT];
+        var needMerge = !adrDBackupMergedInto || !adrDBackupMergedInto.has(st);
 
-        if (backup && typeof backup === "object") {
-            for (var bk in backup) {
-                // 只在字段真正缺失时从本地备份恢复。
-                // 空字符串是用户主动清空文本框/API/模板的合法值，不能被旧备份“复活”。
-                if (st[bk] === undefined) {
-                    st[bk] = backup[bk];
+        if (needMerge) {
+            var backup = adrDLoadLocalBackup();
+            if (backup && typeof backup === "object") {
+                for (var bk in backup) {
+                    // 只在字段真正缺失时从本地备份恢复。
+                    // 空字符串是用户主动清空文本框/API/模板的合法值，不能被旧备份“复活”。
+                    if (st[bk] === undefined) {
+                        st[bk] = backup[bk];
+                    }
                 }
             }
+            if (adrDBackupMergedInto) adrDBackupMergedInto.add(st);
         }
 
         for (var k in DEFAULTS) {
@@ -1419,41 +1438,197 @@
     var ADR_D_DIRECTOR_LOG_ITEM_CHARS = 1500;
     var ADR_D_NG_THRESHOLD = 3;
 
+    // v1.24.0：按原文缓存解析结果——同一份 LS 原文不重复 JSON.parse。
+    // 返回的是同一个对象，调用方改完必须经 adrDWriteJsonLS 写回，写回即刷新缓存。
+    var adrDJsonLsCache = {};
+
     function adrDReadJsonLS(key) {
         try {
             var raw = rootWin().localStorage.getItem(key);
-            var obj = raw ? JSON.parse(raw) : null;
-            return obj && typeof obj === "object" ? obj : {};
+            if (!raw) return {};
+            var hit = adrDJsonLsCache[key];
+            if (hit && hit.raw === raw) return hit.obj;
+            var obj = JSON.parse(raw);
+            obj = obj && typeof obj === "object" ? obj : {};
+            adrDJsonLsCache[key] = { raw: raw, obj: obj };
+            return obj;
         } catch (e) { return {}; }
     }
 
     function adrDWriteJsonLS(key, obj) {
-        try { rootWin().localStorage.setItem(key, JSON.stringify(obj || {})); } catch (e) {}
+        try {
+            var raw = JSON.stringify(obj || {});
+            rootWin().localStorage.setItem(key, raw);
+            adrDJsonLsCache[key] = { raw: raw, obj: obj || {} };
+        } catch (e) {}
     }
 
-    // ---- 跟组导演：按 chatKey::type 滚动存最近 N 条"已注入"的指导 ----
-    function adrDDirectorLogList(type) {
+    // ================= v1.24.0 导演的记忆搬进聊天文件 =================
+    // 基准线、跟组记录、常驻贴耳稿、放养标记——此前全在浏览器 localStorage 按 chatKey 存，
+    // 换设备、换网址、清一次缓存，导演就失忆：进度从头数、贴耳稿消失、不记得自己下过什么指导。
+    // 现与抽卡模块同构：chat_metadata 主档（随聊天文件走）+ localStorage 按 chatKey 镜像（灾备）。
+    // 老存档首次打开时从旧 LS 键搬家一次；旧键原样留着，回退到 1.23 仍能用。
+    // 副产品：靠"猜这是不是同一把聊天"活着的那套跨聊天继承／last-key 迁移一并退役——
+    // 状态跟聊天在一起了，不需要猜。
+
+    var ADR_D_META_KEY = "arrebol_d";
+    var ADR_D_META_LS_KEY = "arrebol_d_chat_v1";
+    var ADR_D_AUTO_STATE_KEY = "arrebol_d_auto_trigger_state_v1";   // 旧键，只读搬家用
+    var ADR_D_GRAZE_KEY = "arrebol_d_graze_v1";                       // 旧键，只读搬家用
+
+    function adrDTypeOf(type) { return type === "plot" ? "plot" : "emotion"; }
+
+    function adrDNormAutoItem(o) {
+        if (!o || typeof o !== "object") return null;
+        var base = Number(o.base);
+        if (!Number.isFinite(base) || base < 0) return null;
+        var item = { base: base, updatedAt: Number(o.updatedAt) || Date.now(), mode: String(o.mode || "window-v1") };
+        ["migratedFromMode", "healedFromBase", "deleteShifted"].forEach(function (k) { if (o[k] != null) item[k] = o[k]; });
+        return item;
+    }
+
+    function adrDNormLogList(list) {
+        var out = [];
+        (Array.isArray(list) ? list : []).forEach(function (it) {
+            if (!it || typeof it !== "object" || typeof it.text !== "string" || !it.text) return;
+            out.push({ t: Number(it.t) || 0, floor: Number.isFinite(Number(it.floor)) ? Number(it.floor) : -1, text: it.text });
+        });
+        while (out.length > ADR_D_DIRECTOR_LOG_MAX) out.shift();
+        return out;
+    }
+
+    function adrDNormGraze(o) {
+        if (!o || typeof o !== "object" || !o.on) return null;
+        return { on: true, t: Number(o.t) || 0, floor: Number.isFinite(Number(o.floor)) ? Number(o.floor) : -1 };
+    }
+
+    function adrDNormalizeChatState(o) {
+        o = o && typeof o === "object" ? o : {};
+        var auto = o.auto && typeof o.auto === "object" ? o.auto : {};
+        var log = o.log && typeof o.log === "object" ? o.log : {};
+        var graze = o.graze && typeof o.graze === "object" ? o.graze : {};
+        var fl = null;
+        if (o.float && typeof o.float === "object" && typeof o.float.text === "string" && o.float.text) {
+            fl = { t: Number(o.float.t) || 0, type: adrDTypeOf(o.float.type), text: o.float.text };
+        }
+        return {
+            v: 1,
+            auto: { emotion: adrDNormAutoItem(auto.emotion), plot: adrDNormAutoItem(auto.plot) },
+            log: { emotion: adrDNormLogList(log.emotion), plot: adrDNormLogList(log.plot) },
+            float: fl,
+            graze: { emotion: adrDNormGraze(graze.emotion), plot: adrDNormGraze(graze.plot) }
+        };
+    }
+
+    // 旧 LS 四把钥匙里，属于当前 chatKey 的那一份，拼成一份新状态；一样都没有就返回 null。
+    // 一把聊天只扫一次：旧版本不会再往旧键里写，扫过没有就是没有。
+    var adrDLegacyScanned = {};
+
+    function adrDLegacyChatState() {
+        var key = adrDChatKey();
+        if (adrDLegacyScanned[key]) return null;
+        adrDLegacyScanned[key] = true;
+        var st = adrDNormalizeChatState(null);
+        var found = false;
         try {
-            var all = adrDReadJsonLS(ADR_D_DIRECTOR_LOG_KEY);
-            var list = all[adrDChatKey() + "::" + (type === "plot" ? "plot" : "emotion")];
-            return Array.isArray(list) ? list : [];
-        } catch (e) { return []; }
+            var autoAll = adrDReadJsonLS(ADR_D_AUTO_STATE_KEY);
+            ["emotion", "plot"].forEach(function (t) {
+                var it = adrDNormAutoItem(autoAll[key + "::" + t]);
+                if (it) { st.auto[t] = it; found = true; }
+            });
+        } catch (e0) {}
+        try {
+            var logAll = adrDReadJsonLS(ADR_D_DIRECTOR_LOG_KEY);
+            ["emotion", "plot"].forEach(function (t) {
+                var lst = adrDNormLogList(logAll[key + "::" + t]);
+                if (lst.length) { st.log[t] = lst; found = true; }
+            });
+        } catch (e1) {}
+        try {
+            var flAll = adrDReadJsonLS(ADR_D_FLOAT_KEY);
+            var fl = flAll[key];
+            if (fl && typeof fl.text === "string" && fl.text) { st.float = { t: Number(fl.t) || 0, type: adrDTypeOf(fl.type), text: fl.text }; found = true; }
+        } catch (e2) {}
+        try {
+            var gzAll = adrDReadJsonLS(ADR_D_GRAZE_KEY);
+            ["emotion", "plot"].forEach(function (t) {
+                var g = adrDNormGraze(gzAll[key + "::" + t]);
+                if (g) { st.graze[t] = g; found = true; }
+            });
+        } catch (e3) {}
+        return found ? st : null;
+    }
+
+    function adrDChatState() {
+        try {
+            var root = adrCdMetaRoot();
+            if (root && root[ADR_D_META_KEY] && typeof root[ADR_D_META_KEY] === "object") {
+                return adrDNormalizeChatState(root[ADR_D_META_KEY]);
+            }
+            var keyReady = false;
+            try { keyReady = adrDChatKeyReady(); } catch (eK) { keyReady = false; }
+            if (keyReady) {
+                var all = adrDReadJsonLS(ADR_D_META_LS_KEY);
+                var mirror = all[adrDChatKey()];
+                if (mirror && typeof mirror === "object") {
+                    var fromMirror = adrDNormalizeChatState(mirror);
+                    if (root) adrDSaveChatState(fromMirror);   // 主档没有、镜像有：回填主档
+                    return fromMirror;
+                }
+                var legacy = adrDLegacyChatState();
+                if (legacy) {
+                    adrDSaveChatState(legacy);
+                    try { console.log("[Arrebol D] 导演记忆已从浏览器搬进聊天文件", adrDChatKey()); } catch (eLog) {}
+                    return legacy;
+                }
+            }
+        } catch (e) {}
+        return adrDNormalizeChatState(null);
+    }
+
+    function adrDSaveChatState(state) {
+        var clean = adrDNormalizeChatState(state);
+        var metaOk = false;
+        var keyReady = false;
+        try { keyReady = adrDChatKeyReady(); } catch (eK) { keyReady = false; }
+        try {
+            var root = adrCdMetaRoot();
+            if (root) {
+                root[ADR_D_META_KEY] = clean;
+                metaOk = true;
+                var c = ctx();
+                if (typeof c.saveMetadataDebounced === "function") c.saveMetadataDebounced();
+                else if (typeof c.saveMetadata === "function") c.saveMetadata();
+            }
+        } catch (eMeta) { metaOk = false; }
+        if (keyReady) {
+            try {
+                var all = adrDReadJsonLS(ADR_D_META_LS_KEY);
+                all[adrDChatKey()] = clean;
+                adrDWriteJsonLS(ADR_D_META_LS_KEY, all);
+            } catch (eLs) {}
+        }
+        return metaOk || keyReady;
+    }
+
+    // ---- 跟组导演：滚动存最近 N 条"已注入"的指导 ----
+    function adrDDirectorLogList(type) {
+        try { return adrDChatState().log[adrDTypeOf(type)] || []; } catch (e) { return []; }
     }
 
     function adrDDirectorLogPush(type, text) {
         try {
             if (!settings().directorLogEnabled) return;
-            if (!adrDChatKeyReady || !adrDChatKeyReady()) return;
             var body = String(text || "").trim();
             if (!body) return;
             if (body.length > ADR_D_DIRECTOR_LOG_ITEM_CHARS) body = body.slice(0, ADR_D_DIRECTOR_LOG_ITEM_CHARS) + "…";
-            var all = adrDReadJsonLS(ADR_D_DIRECTOR_LOG_KEY);
-            var k = adrDChatKey() + "::" + (type === "plot" ? "plot" : "emotion");
-            var list = Array.isArray(all[k]) ? all[k] : [];
+            var state = adrDChatState();
+            var t = adrDTypeOf(type);
+            var list = state.log[t] || [];
             list.push({ t: Date.now(), floor: adrDAssistantRoundCount(), text: body });
             while (list.length > ADR_D_DIRECTOR_LOG_MAX) list.shift();
-            all[k] = list;
-            adrDWriteJsonLS(ADR_D_DIRECTOR_LOG_KEY, all);
+            state.log[t] = list;
+            adrDSaveChatState(state);
         } catch (e) {}
     }
 
@@ -1502,11 +1677,10 @@
         try {
             var st = settings();
             if (!st.floatInjectEnabled || !adrDMasterEnabled()) return;
-            if (!adrDChatKeyReady || !adrDChatKeyReady()) return;
             var body = adrDFloatText(type, text);
-            var all = adrDReadJsonLS(ADR_D_FLOAT_KEY);
-            all[adrDChatKey()] = { t: Date.now(), type: type, text: body };
-            adrDWriteJsonLS(ADR_D_FLOAT_KEY, all);
+            var state = adrDChatState();
+            state.float = { t: Date.now(), type: adrDTypeOf(type), text: body };
+            adrDSaveChatState(state);
             adrDApplyFloatPrompt(body);
         } catch (e) {}
     }
@@ -1519,8 +1693,7 @@
                 adrDApplyFloatPrompt("");
                 return;
             }
-            var all = adrDReadJsonLS(ADR_D_FLOAT_KEY);
-            var item = all[adrDChatKey()];
+            var item = adrDChatState().float;
             adrDApplyFloatPrompt(item && item.text ? item.text : "");
         } catch (e) {}
     }
@@ -1531,30 +1704,15 @@
     // 到下一个换稿点自动触发正常生成并挂上，放养自动结束。
     // 铁律：不读写 auto state，不动 baseline；归队唯一判据 = 该类型任意一次成功注入。
 
-    var ADR_D_GRAZE_KEY = "arrebol_d_graze_v1";
-
-    function adrDGrazeStoreKey(type) {
-        return adrDChatKey() + "::" + (type === "plot" ? "plot" : "emotion");
-    }
-
     function adrDGrazeActive(type) {
-        try {
-            if (!adrDChatKeyReady || !adrDChatKeyReady()) return false;
-            var all = adrDReadJsonLS(ADR_D_GRAZE_KEY);
-            var item = all[adrDGrazeStoreKey(type)];
-            return !!(item && item.on);
-        } catch (e) { return false; }
+        try { return !!adrDChatState().graze[adrDTypeOf(type)]; } catch (e) { return false; }
     }
 
     function adrDGrazeSet(type, on) {
         try {
-            if (!adrDChatKeyReady || !adrDChatKeyReady()) return false;
-            var all = adrDReadJsonLS(ADR_D_GRAZE_KEY);
-            var k = adrDGrazeStoreKey(type);
-            if (on) all[k] = { on: true, t: Date.now(), floor: adrDAssistantRoundCount() };
-            else if (all[k]) delete all[k];
-            adrDWriteJsonLS(ADR_D_GRAZE_KEY, all);
-            return true;
+            var state = adrDChatState();
+            state.graze[adrDTypeOf(type)] = on ? { on: true, t: Date.now(), floor: adrDAssistantRoundCount() } : null;
+            return adrDSaveChatState(state);
         } catch (e) { return false; }
     }
 
@@ -1623,12 +1781,11 @@
     function adrDGrazeClearFloatIfType(type) {
         // 常驻浮动稿是全聊天单槽；只有当前挂的是本类型时才撤，另一类型的浮动稿不动。
         try {
-            var all = adrDReadJsonLS(ADR_D_FLOAT_KEY);
-            var k = adrDChatKey();
-            var item = all[k];
-            if (item && item.type === (type === "plot" ? "plot" : "emotion")) {
-                delete all[k];
-                adrDWriteJsonLS(ADR_D_FLOAT_KEY, all);
+            var state = adrDChatState();
+            var item = state.float;
+            if (item && item.type === adrDTypeOf(type)) {
+                state.float = null;
+                adrDSaveChatState(state);
                 adrDApplyFloatPrompt("");
                 return true;
             }
@@ -1767,7 +1924,15 @@
                     var drew = 0;
                     pending.forEach(function (idx) {
                         try {
-                            if (c.chat[idx]) { c.updateMessageBlock(idx, c.chat[idx]); drew++; }
+                            if (c.chat[idx]) {
+                                c.updateMessageBlock(idx, c.chat[idx]);
+                                drew++;
+                                // 照酒馆自己编辑楼层的做法广播一声：美化脚本、变量脚本按"这楼被编辑了"重跑，
+                                // 不必再靠整聊天重载的 CHAT_CHANGED 顺带唤醒它们。
+                                try {
+                                    if (c.eventSource && c.event_types && c.event_types.MESSAGE_UPDATED) c.eventSource.emit(c.event_types.MESSAGE_UPDATED, idx);
+                                } catch (eEv) {}
+                            }
                         } catch (eOne) {}
                     });
                     adrDPendingRedraw = [];
@@ -2455,6 +2620,10 @@
     var ADR_CD_HISTORY_MAX = 5;
     var ADR_CD_RECENT_MAX = 32;
     var ADR_CD_PICK_TIMEOUT_MS = 8000;
+    // v1.23.3：小眼睛的答复额度。此前点池 30、择卡与兑现 10——会思考的模型把这点额度先花在思考上，
+    // 回来是空的，于是永远降级盲抽。提到 200：答复照旧逐字校验、多一个字作废，只是不再把思考也掐死；
+    // 对不思考的模型（DeepSeek-chat 之类）没有任何区别，它本来就只回那几个字。
+    var ADR_CD_REPLY_TOKENS = 200;
 
     // 三个仓库槽位。story 跟角色卡走，common 打底，nsfw 单独一格由住户自己填。
     var ADR_CD_SLOTS = ["story", "common", "nsfw"];
@@ -3015,6 +3184,19 @@
         };
     }
 
+    // v1.23.3：答复空着时看一眼是不是思考把额度吃光了，日志里把话说明白，别让人只看到"答复无效"。
+    function adrCdEmptyReplyHint(data, out) {
+        if (String(out || "").trim()) return "";
+        try {
+            var ch = data && data.choices && data.choices[0];
+            var msg = ch && ch.message;
+            var thought = !!(msg && (msg.reasoning_content || msg.reasoning));
+            var cut = !!(ch && ch.finish_reason === "length");
+            if (thought || cut) return "（小眼睛回来是空的：额度被思考花光了，请换不思考的模型，或在服务商侧关掉思考）";
+        } catch (e) {}
+        return "";
+    }
+
     async function adrCdPickPoolViaDS(slotPools, state) {
         var st = settings();
         var endpoint = st.cdApiEndpoint || "";
@@ -3101,7 +3283,7 @@
                     { role: "user", content: parts.join("\n\n") }
                 ],
                 temperature: 0.4,
-                max_tokens: 30,
+                max_tokens: ADR_CD_REPLY_TOKENS,
                 stream: false
             })
         };
@@ -3123,7 +3305,7 @@
         try { data = JSON.parse(raw); } catch (eJson) { throw new Error("择池返回非 JSON"); }
         var out = parseResponse(data);
         var pick = adrCdSanitizePickResponse(out, menu);
-        if (!pick) throw new Error("点池答复无效：" + adrCdTruncate(out, 40));
+        if (!pick) throw new Error("点池答复无效：" + adrCdTruncate(out, 40) + adrCdEmptyReplyHint(data, out));
         return pick;
     }
 
@@ -3261,7 +3443,7 @@
                     { role: "user", content: parts.join("\n\n") }
                 ],
                 temperature: 0.4,
-                max_tokens: 10,
+                max_tokens: ADR_CD_REPLY_TOKENS,
                 stream: false
             })
         };
@@ -3283,7 +3465,7 @@
         try { dataC = JSON.parse(rawC); } catch (eJ) { throw new Error("择卡返回非 JSON"); }
         var outC = String(parseResponse(dataC) || "").trim();
         var mNum = outC.match(/-?\d+/);
-        if (!mNum) throw new Error("选卡答复无效：" + adrCdTruncate(outC, 40));
+        if (!mNum) throw new Error("选卡答复无效：" + adrCdTruncate(outC, 40) + adrCdEmptyReplyHint(dataC, outC));
         var n = Number(mNum[0]);
         if (!(n >= 1 && n <= cands.length)) throw new Error("选卡编号越界：" + outC);
         return n;
@@ -3522,7 +3704,7 @@
             body: JSON.stringify({
                 model: st.cdModel || "deepseek-chat",
                 messages: [{ role: "system", content: sys }, { role: "user", content: body }],
-                temperature: 0, max_tokens: 10, stream: false
+                temperature: 0, max_tokens: ADR_CD_REPLY_TOKENS, stream: false
             })
         };
         if (ab) opts.signal = ab.signal;
@@ -4437,7 +4619,7 @@
                 body: JSON.stringify({
                     model: st.cdModel,
                     messages: [{ role: "user", content: "回复两个字：在的" }],
-                    max_tokens: 10,
+                    max_tokens: ADR_CD_REPLY_TOKENS,
                     stream: false
                 })
             });
@@ -7014,7 +7196,9 @@
                         } catch (e) {}
                     }, 120);
                 });
-                w.__adr048FabObserver.observe(d.body, { childList: true, subtree: true });
+                // v1.24.0：悬浮球是 body 的直接子节点，只盯 body 一层就够。
+                // 旧写法 subtree:true 盯整棵树，流式生成期间每个字都进回调，白跑。
+                w.__adr048FabObserver.observe(d.body, { childList: true, subtree: false });
             }
         } catch (e2) {}
     }
@@ -7349,12 +7533,9 @@
     }
 
 
-    var ADR_D_AUTO_STATE_KEY = "arrebol_d_auto_trigger_state_v1";
-    var ADR_D_AUTO_LAST_KEY = "arrebol_d_auto_trigger_last_key_v1";
-    // v1.9.31：base 比当前全量总数高出这么多条以上，判定为历史版本的跨聊天污染，自动贴齐重记。
+    // v1.9.31：base 比当前全量总数高出这么多条以上，判定为历史遗留污染，自动贴齐重记。
     // 小幅 count < base（swipe/重roll/删几楼）仍走 no-shrink 保护，不动 base。
     var ADR_D_BASE_OVERRUN_HEAL = 20;
-    // v1.13.2：一次性首检守卫（adrDFirstPassiveAutoCheckDone 等）已由常任离谱差值守卫取代，遗物清除。
 
     function adrDIsPassiveAutoCheck(reason) {
         var r = String(reason || "");
@@ -7389,162 +7570,60 @@
         return true;
     }
 
-    function adrDAutoStateKeyFor(key, type) {
-        return String(key || "chat") + "::" + String(type || "emotion");
-    }
-
-    // 只读读取 auto state：不创建新 key、不迁移、不落盘。
-    // 用于页面刚加载的安全期，避免 UI 计数面板为了显示而把旧进度写成 0。
+    // v1.24.0：基准线住进 adrDChatState().auto[type]。
+    // 只读、不建账、不落盘——给计数显示和轮询用；没有基准线就如实返回 null。
     function adrDPeekAutoState(type) {
         try {
-            var all = adrDAutoStateAll();
-            var key = adrDAutoStateKey(type);
-            var item = all[key];
-            if (item && typeof item === "object" && Number.isFinite(Number(item.base))) return item;
-
-            var last = adrDAutoLastKeys();
-            var lastKey = last[type];
-            var prev = lastKey ? all[lastKey] : null;
-            if (prev && typeof prev === "object" && Number.isFinite(Number(prev.base))) return prev;
+            var item = adrDChatState().auto[adrDTypeOf(type)];
+            return item && Number.isFinite(Number(item.base)) ? item : null;
         } catch (e) {}
         return null;
     }
 
-    function adrDAutoBroadKey() {
-        try {
-            var c = ctx();
-            var cid = "";
-            try { cid = c.characterId != null ? String(c.characterId) : ""; } catch (e0) {}
-            var cname = "";
-            try { cname = c.name2 || ""; } catch (e1) {}
-            try {
-                if (!cname && c.characters && c.characterId != null && c.characters[c.characterId]) {
-                    cname = c.characters[c.characterId].name || "";
-                }
-            } catch (e2) {}
-            return "char::" + (cid || cname || "unknown");
-        } catch (e) {
-            return "char::unknown";
-        }
-    }
-
-    function adrDAutoLastKeys() {
-        try {
-            var s = rootWin().localStorage.getItem(ADR_D_AUTO_LAST_KEY) || "{}";
-            var obj = JSON.parse(s);
-            return obj && typeof obj === "object" ? obj : {};
-        } catch (e) {
-            return {};
-        }
-    }
-
-    function adrDSaveAutoLastKey(type, key) {
-        try {
-            var obj = adrDAutoLastKeys();
-            obj[type] = String(key || "");
-            rootWin().localStorage.setItem(ADR_D_AUTO_LAST_KEY, JSON.stringify(obj));
-        } catch (e) {}
-    }
-
-
-    function adrDAutoStateAll() {
-        try {
-            var s = rootWin().localStorage.getItem(ADR_D_AUTO_STATE_KEY) || "{}";
-            var obj = JSON.parse(s);
-            return obj && typeof obj === "object" ? obj : {};
-        } catch (e) {
-            return {};
-        }
-    }
-
-    function adrDSaveAutoStateAll(obj) {
-        try {
-            rootWin().localStorage.setItem(ADR_D_AUTO_STATE_KEY, JSON.stringify(obj || {}));
-        } catch (e) {}
-    }
-
-    function adrDAutoStateKey(type) {
-        return adrDAutoStateKeyFor(adrDChatKey ? adrDChatKey() : "chat", type);
-    }
-
+    // 读取并在必要时建账：只有自动触发检查这一条路会调它。
     function adrDGetAutoState(type, count) {
+        type = adrDTypeOf(type);
+        var mode = adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1";
         if (!adrDChatKeyReady()) {
-            return { base: Number(count) || 0, updatedAt: Date.now(), broad: adrDAutoBroadKey(), mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "pending-chat-key", pendingChatKey: true, temporary: true };
+            return { base: Number(count) || 0, updatedAt: Date.now(), mode: "pending-chat-key", pendingChatKey: true, temporary: true };
         }
-        var all = adrDAutoStateAll();
-        var key = adrDAutoStateKey(type);
-        var broad = adrDAutoBroadKey();
-        var item = all[key];
+        var state = adrDChatState();
+        var item = state.auto[type];
 
-        if (item && typeof item === "object" && Number.isFinite(Number(item.base))) {
-            if (!item.broad) item.broad = broad;
-            // v1.0.5.6.8.3：从窄窗口计数迁移到全量历史计数与复盘时，只校准一次 baseline。
-            // 否则旧 base 很小、全量 count 很大，会导致安装后立刻误触发。
-            if (adrDCurrentCountMode && adrDCurrentCountMode() === ADR_D_FULL_COUNT_MODE && item.mode !== ADR_D_FULL_COUNT_MODE) {
+        if (item) {
+            var changed = false;
+            // 从窗口口径迁移到全量口径时只校准一次：旧 base 很小、全量 count 很大，不校准会安装后立刻误触发。
+            // 若当前 count 反而小于旧 base，说明读到了 partial 小数，绝不下拉。
+            if (mode === ADR_D_FULL_COUNT_MODE && item.mode !== ADR_D_FULL_COUNT_MODE) {
                 var oldBaseForMode = Number(item.base);
                 var currentCountForMode = Number(count) || 0;
-                // 从窗口口径迁移到全量口径时，通常要贴齐当前全量 count，避免旧小 base 误触发。
-                // 但如果当前 count 反而小于旧 base，说明读到了 partial 小数；这时绝不下拉 baseline。
-                var migratedBase = (Number.isFinite(oldBaseForMode) && oldBaseForMode >= 0 && oldBaseForMode > currentCountForMode)
-                    ? oldBaseForMode
-                    : currentCountForMode;
-                item = { base: migratedBase, updatedAt: Date.now(), broad: broad, mode: ADR_D_FULL_COUNT_MODE, migratedFromMode: item.mode || "window-v1" };
-                all[key] = item;
-                adrDSaveAutoStateAll(all);
+                var migratedBase = (oldBaseForMode > currentCountForMode) ? oldBaseForMode : currentCountForMode;
+                item = { base: migratedBase, updatedAt: Date.now(), mode: ADR_D_FULL_COUNT_MODE, migratedFromMode: item.mode || "window-v1" };
+                changed = true;
             }
-            // v1.9.31：跨聊天污染自愈。同一聊天内全量总数只增，base 不应高出 count；
-            // 历史版本可能把旧聊天的大 base 写进了这个 chatKey，导致面板永远卡 0/N。
-            // 仅在计数就绪（当前聊天的全量读取已成功）且高出 ADR_D_BASE_OVERRUN_HEAL 条以上时贴齐，
-            // 小幅 count < base（swipe/重roll/删几楼）保持 no-shrink 不动。
+            // 同一聊天内全量总数只增，base 高出 count 二十楼以上只能是历史遗留，贴齐重记。
             var healCount = Number(count);
             if (adrDCountReady() && Number.isFinite(healCount) && healCount >= 0 && Number(item.base) - healCount > ADR_D_BASE_OVERRUN_HEAL) {
                 var healedFrom = Number(item.base);
-                item = { base: healCount, updatedAt: Date.now(), broad: broad, mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1", healedFromBase: healedFrom };
-                all[key] = item;
-                adrDSaveAutoStateAll(all);
-                try { console.warn("[Arrebol D] heal cross-chat polluted baseline", { key: key, from: healedFrom, to: healCount }); } catch (eHeal) {}
+                item = { base: healCount, updatedAt: Date.now(), mode: mode, healedFromBase: healedFrom };
+                changed = true;
+                try { console.warn("[Arrebol D] heal overrun baseline", { type: type, from: healedFrom, to: healCount }); } catch (eHeal) {}
             }
-            adrDSaveAutoLastKey(type, key);
+            if (changed) { state.auto[type] = item; adrDSaveChatState(state); }
             return item;
         }
 
-        // v1.0.5.6.8.1：注入后的 reload 可能导致 chatKey 改变。
-        // 如果还是同一个角色卡，就迁移上一把计数状态，不重新归零。
-        var last = adrDAutoLastKeys();
-        var lastKey = last[type];
-        var prev = lastKey ? all[lastKey] : null;
-        if (prev && typeof prev === "object" && Number.isFinite(Number(prev.base))) {
-            var prevBroad = prev.broad || broad;
-            var prevBase = Number(prev.base);
-            var c = Number(count) || 0;
-            // v1.9.31：迁移加数值闸门。同一聊天内总数只增，真正的"注入后 reload 换了 chatKey"
-            // 必然满足 prevBase <= 当前全量总数；若 prevBase > count，说明是同角色开了新聊天
-            // （新聊天更短），此时绝不继承旧 base，让新聊天从自己的当前总数干净起步。
-            if (prevBroad === broad && prevBase >= 0 && prevBase <= c) {
-                // 同聊重载：chatKey 变了但还是这把对话，继承旧 base 保住进度。
-                item = { base: prevBase, updatedAt: Date.now(), broad: broad, migratedFrom: lastKey, mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1" };
-                all[key] = item;
-                adrDSaveAutoStateAll(all);
-                adrDSaveAutoLastKey(type, key);
-                return item;
-            }
-        }
-
-        item = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad, mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1" };
-        all[key] = item;
-        adrDSaveAutoStateAll(all);
-        adrDSaveAutoLastKey(type, key);
+        item = { base: Number(count) || 0, updatedAt: Date.now(), mode: mode };
+        state.auto[type] = item;
+        adrDSaveChatState(state);
         return item;
     }
 
     function adrDSetAutoBaseline(type, count) {
         if (!adrDChatKeyReady()) return false;
-        var all = adrDAutoStateAll();
-        var key = adrDAutoStateKey(type);
-        var broad = adrDAutoBroadKey();
-        all[key] = { base: Number(count) || 0, updatedAt: Date.now(), broad: broad, mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1" };
-        adrDSaveAutoStateAll(all);
-        adrDSaveAutoLastKey(type, key);
+        var state = adrDChatState();
+        state.auto[adrDTypeOf(type)] = { base: Number(count) || 0, updatedAt: Date.now(), mode: adrDCurrentCountMode ? adrDCurrentCountMode() : "window-v1" };
+        return adrDSaveChatState(state);
     }
 
     function adrDAdvanceAutoBaseline(type, count) {
@@ -7667,12 +7746,13 @@
                 return { state: "ok", label: label, tag: grazing ? "放养中 · 启动保护" : "启动保护", graze: grazing, passed: peekPassed, n: n, left: peekLeft, base: peekBase, tech: "本聊天共 " + count + " 条回复 · 视野 " + adrDCountSourceLabel() + " · " + peekMode };
             }
 
-            var state = adrDGetAutoState(type, count);
-            var base = Number(state.base);
-            if (!Number.isFinite(base) || base < 0) {
-                base = count;
-                adrDSetAutoBaseline(type, count);
+            // v1.24.0：显示只读。建账、校准、落盘全部只在自动触发检查里做——
+            // 1.19.3 那场微任务风暴就是"显示反向触发写入"闹的，这里是最后一处。
+            var state = adrDPeekAutoState(type);
+            if (!state) {
+                return { state: "wait", label: label, tag: grazing ? "放养中" : "", msg: "等第一次检查对表（换聊天或下一条消息后自动开始计数）", tech: "本聊天共 " + count + " 条回复 · 视野 " + adrDCountSourceLabel() };
             }
+            var base = Number(state.base);
             // count < base 代表当前读数不可信（聊天重载/只读到一半），只显示 0，不把 baseline 拉下来。
             var passed = Math.max(0, count - base);
             var left = Math.max(0, n - passed);
@@ -7974,23 +8054,22 @@
 
     function adrDShiftBaselinesDown(delta, count, reason) {
         try {
-            var all = adrDAutoStateAll();
+            var state = adrDChatState();
             var changed = false;
             ["emotion", "plot"].forEach(function (type) {
-                var key = adrDAutoStateKey(type);
-                var item = all[key];
-                if (!item || typeof item !== "object" || !Number.isFinite(Number(item.base))) return;
+                var item = state.auto[type];
+                if (!item || !Number.isFinite(Number(item.base))) return;
                 var oldBase = Number(item.base);
                 var newBase = Math.min(Math.max(0, oldBase - delta), Number(count));
                 if (newBase === oldBase) return;
                 item.base = newBase;
                 item.updatedAt = Date.now();
                 item.deleteShifted = { from: oldBase, delta: delta, t: Date.now() };
-                all[key] = item;
+                state.auto[type] = item;
                 changed = true;
             });
             if (changed) {
-                adrDSaveAutoStateAll(all);
+                adrDSaveChatState(state);
                 try { console.log("[Arrebol D] 删楼位移基准线，进度保住不清零", { delta: delta, count: count, reason: reason || "" }); } catch (eLog) {}
             }
         } catch (e) {}

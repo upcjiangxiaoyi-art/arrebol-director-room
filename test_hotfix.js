@@ -143,8 +143,13 @@ const CD_HOMES = { "通用": "common", "夜库": "nsfw" };
         } });
         b.setScript(() => "1");
         b.emit("app_ready"); await tick(3000);
-        b.addRound(); b.emit("message_received"); await tick(6000);
-        for (let i = 0; i < 16; i++) { b.addRound(); b.addRound(); b.emit("message_received"); await tick(6000); }
+        b.addRound(); b.emit("message_received");
+        await waitFor(() => b.meta() && b.meta().lastDrawAt === 1, 30000);
+        for (let i = 0; i < 16; i++) {
+            const before = b.calls.length;
+            b.addRound(); b.addRound(); b.emit("message_received");
+            await waitFor(() => b.calls.length > before, 30000);
+        }
         const seen = {};
         b.calls.forEach(c => (c.user.match(/【NSFW·夜[一二三四]】/g) || []).forEach(m => { seen[m] = 1; }));
         ok(Object.keys(seen).length === 4, "16 拍里四个 NSFW 池都进过候选（旧版永远只有夜一夜二）", Object.keys(seen).join(" "));
@@ -164,8 +169,12 @@ const CD_HOMES = { "通用": "common", "夜库": "nsfw" };
         } });
         b.setScript(() => "否");
         b.emit("app_ready"); await tick(3000);
-        for (let i = 0; i < 4; i++) { b.addRound(); b.emit("message_received"); await tick(6000); }
-        ok(b.meta() && b.meta().floatStage === "faded", "半衰期到了照常降级为背景", b.meta() && b.meta().floatStage);
+        b.addRound(); b.emit("message_received");
+        await waitFor(() => b.meta() && b.meta().lastDrawAt === 1, 30000);                 // 基准线
+        b.addRound(); b.addRound(); b.emit("message_received");
+        await waitFor(() => b.meta() && b.meta().lastDrawAt === 3, 30000);                 // 第 3 楼投卡
+        b.addRound(); b.emit("message_received");                                            // 第 4 楼到半衰期
+        ok(await waitFor(() => b.meta() && b.meta().floatStage === "faded", 30000), "半衰期到了照常降级为背景", b.meta() && b.meta().floatStage);
         ok(b.calls.length === 0, "一次小眼睛调用都没发（旧版把卡面全文发出去了）", "calls=" + b.calls.length);
         ok(b.logs.some(l => l.indexOf("NSFW 卡不问小眼睛") >= 0), "日志说清了为什么没问");
         b.killPoll();
@@ -182,9 +191,14 @@ const CD_HOMES = { "通用": "common", "夜库": "nsfw" };
         } });
         b.setScript(() => "是");
         b.emit("app_ready"); await tick(3000);
-        for (let i = 0; i < 4; i++) { b.addRound(); b.emit("message_received"); await tick(6000); }
+        b.addRound(); b.emit("message_received");
+        await waitFor(() => b.meta() && b.meta().lastDrawAt === 1, 30000);
+        b.addRound(); b.addRound(); b.emit("message_received");
+        await waitFor(() => b.meta() && b.meta().lastDrawAt === 3, 30000);
+        b.addRound(); b.emit("message_received");
+        await waitFor(() => b.calls.length >= 1, 30000);
         ok(b.calls.length === 1 && b.calls[0].user.indexOf("【待发生事件】") >= 0, "通用卡问了一次", "calls=" + b.calls.length);
-        ok(b.meta() && b.meta().floatStage === "done", "小眼睛说是 → 自动结案", b.meta() && b.meta().floatStage);
+        ok(await waitFor(() => b.meta() && b.meta().floatStage === "done", 30000), "小眼睛说是 → 自动结案", b.meta() && b.meta().floatStage);
         b.killPoll();
     }
 
@@ -234,8 +248,10 @@ const CD_HOMES = { "通用": "common", "夜库": "nsfw" };
             } });
             b.setScript(() => "通用·意外");
             b.emit("app_ready"); await tick(3000);
-            b.addRound(); b.emit("message_received"); await tick(6000);
-            b.addRound(); b.emit("message_received"); await tick(6000);
+            b.addRound(); b.emit("message_received");
+            await waitFor(() => b.meta() && b.meta().lastDrawAt === 1, 30000);
+            b.addRound(); b.emit("message_received");
+            await waitFor(() => b.calls.length >= 1, 30000);
             ok(b.calls.length && b.calls[0].url === want, inp + " → " + want, b.calls.length ? b.calls[0].url : "no call");
             b.killPoll();
         }
