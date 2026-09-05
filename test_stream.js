@@ -1,4 +1,4 @@
-// v1.27.0 测试：导演请求改流式接收。
+// v1.27.0–1.27.1 测试：导演请求改流式接收，以及流式开关。
 // 收集器是纯函数，先直接喂假流；再用 jsdom 桩子真跑 index.js，把流式响应、整份 JSON 响应、
 // 只回思考的响应、半路断流四种情形各走一遍导演自动触发。
 // 跑法同其余几套：npm install jsdom && SPEED=10 node test_stream.js
@@ -255,6 +255,39 @@ async function primeDirector(b) {
         ok(await waitFor(() => b.statusText().indexOf("已收到") >= 0, 30000), "收到首块后状态行显示进度", b.statusText());
         ok(await waitFor(() => b.statusText().indexOf("失败") >= 0, 150000), "空闲超时后判失败", b.statusText());
         ok(b.statusText().indexOf("没有新内容") >= 0, "失败文案说明是流式接收中断", b.statusText());
+        b.killPoll();
+    }
+
+    // ───────────────────────────────────────────────
+    section("开关 · 关掉流式就回到 stream:false 老路");
+    {
+        const b = build({ settings: Object.assign({}, DIRECTOR, { streamEnabled: false }) });
+        b.setResponder(rec => ({
+            ok: true, status: 200,
+            body: fakeBody([JSON.stringify({ choices: [{ message: { content: "【情感方向】\n维持" } }] })])
+        }));
+        await primeDirector(b);
+        ok(b.calls.length === 1 && b.calls[0].body.stream === false, "关掉开关后请求体 stream:false", JSON.stringify(b.calls[0] && b.calls[0].body.stream));
+        ok(String(b.calls[0].headers.Accept || "").indexOf("event-stream") < 0, "Accept 头不再要 event-stream");
+        ok(await waitFor(() => b.lastAi() && b.lastAi().mes.indexOf("arrebol_d_visible") >= 0, 30000), "整份 JSON 走 body 流读回来也照常注入");
+        b.killPoll();
+    }
+
+    section("开关 · 默认开、面板里有勾选框、改动会存");
+    {
+        const b = build({ settings: Object.assign({}, DIRECTOR) });
+        b.emit("app_ready"); await tick(3000);
+        const boxes = Array.from(b.doc.querySelectorAll("#adr044-stream-enabled"));
+        ok(boxes.length >= 1, "设置面板里有流式勾选框", "n=" + boxes.length);
+        ok(boxes.every(x => x.checked), "老存档没这个字段时默认是开的");
+        const box = boxes[0];
+        box.checked = false; box.dispatchEvent(new b.win.Event("change", { bubbles: true }));
+        await tick(500);
+        const st = b.win.SillyTavern.getContext().extensionSettings[SET_KEY];
+        ok(st && st.streamEnabled === false, "取消勾选立刻写进设置", JSON.stringify(st && st.streamEnabled));
+        box.checked = true; box.dispatchEvent(new b.win.Event("change", { bubbles: true }));
+        await tick(500);
+        ok(st.streamEnabled === true, "再勾上也存回去");
         b.killPoll();
     }
 

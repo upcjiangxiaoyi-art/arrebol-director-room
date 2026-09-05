@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.27.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.27.1｜ripple & GPT & Claude
+ * v1.27.1 流式接收加开关：共享设置里一枚勾选框，默认开；关掉回到 stream:false 老路（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.27.0 导演请求改流式接收：stream:true 逐块收 delta.content、思考只计数不进稿、120 秒改为两块之间的空闲闸；服务端回整份 JSON 时自动走老路（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.26.1 放大编辑热修：整屏编辑器钉在 iOS 可视视口上，键盘弹出不再把它顶飞；手机上不自动弹键盘（报告 江；施工 波哥 Claude Fable 5.1）
  * v1.26.0 放大编辑：浮窗与抽屉里每个文字框右上角一枚 ⛶，点开整屏编辑器，确定回填并照常触发保存（提议 江；施工 波哥 Claude Fable 5.1）
@@ -68,6 +69,7 @@
         showFloatingWindow: true,
         dawnTheme: false,           // v1.14.4 开灯：浮窗朝霞浅色皮，默认关（暗河红霞）
         showAutoTriggerPopup: true,
+        streamEnabled: true,        // v1.27.1 导演请求流式接收；中转站不支持流式时可关
         directorLogEnabled: true,
         ngDetectEnabled: true,
         floatInjectEnabled: true,
@@ -703,6 +705,9 @@
 
         var satp = qForm("adr044-show-auto-trigger-popup");
         if (satp) save("showAutoTriggerPopup", !!satp.checked);
+
+        var stm = qForm("adr044-stream-enabled");
+        if (stm) save("streamEnabled", !!stm.checked);
 
         var flt = qForm("adr044-float-inject");
         if (flt) save("floatInjectEnabled", !!flt.checked);
@@ -1349,7 +1354,9 @@
         var url = chatUrl(endpoint);
         if (!url) throw new Error("API 地址无效");
 
-        var headers = { "Content-Type": "application/json", "Accept": "text/event-stream, application/json" };
+        // v1.27.1：开关。关掉就回到整份 JSON 的老路（stream:false），给不支持流式的中转站留门；收集器本来就认整份 JSON。
+        var useStream = st.streamEnabled !== false;
+        var headers = { "Content-Type": "application/json", "Accept": useStream ? "text/event-stream, application/json" : "application/json" };
         if (key) headers.Authorization = "Bearer " + key;
 
         adrDAbortWasManual = false;
@@ -1364,7 +1371,7 @@
                 { role: "user", content: await buildPrompt(type, extra || "") }
             ],
             temperature: 0.6,
-            stream: true
+            stream: useStream
         };
 
         var opts = {
@@ -5340,6 +5347,7 @@
             + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
             + adrxDrawerStart("shared-adv", "⚙️ 进阶开关（默认已调好，一般不用动）", false)
             + '<label>正文标签名（默认 content，多个用英文逗号分隔；正文没有标签就填 *，整层楼当正文读）</label>'
             + '<input type="text" id="adr044-content-tags" placeholder="content" value="' + esc(st.contentTagNames || "content") + '">' 
@@ -5462,6 +5470,7 @@
             adrDSetAllById("adr044-director-log", "", st.directorLogEnabled !== false);
             adrDSetAllById("adr044-ng-detect", "", st.ngDetectEnabled !== false);
             adrDSetAllById("adr044-show-auto-trigger-popup", "", st.showAutoTriggerPopup !== false);
+            adrDSetAllById("adr044-stream-enabled", "", st.streamEnabled !== false);
 
             ["emotion", "plot"].forEach(function (type) {
                 var p = prefixOf(type);
@@ -6769,6 +6778,15 @@
             });
         }
 
+        var streamBox = qForm("adr044-stream-enabled");
+        if (streamBox && !streamBox.__adr044Bound) {
+            streamBox.__adr044Bound = true;
+            streamBox.addEventListener("change", function () {
+                save("streamEnabled", !!streamBox.checked);
+                saveNow();
+            });
+        }
+
         ["emotion", "plot"].forEach(function (type) {
             var modelSelect = qForm("adr044-" + type + "-model-select");
             if (modelSelect && !modelSelect.__adr044Bound) {
@@ -7087,6 +7105,7 @@
             + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
 
             + adrxDrawerStart("shared-adv", "⚙️ 进阶开关（默认已调好，一般不用动）", false)
             + '<label>正文标签名（默认 content，多个用英文逗号分隔；正文没有标签就填 *，整层楼当正文读）</label>'
