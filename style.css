@@ -4128,13 +4128,13 @@ html #adr048-popup-panel[data-arb-theme="dawn"] {
     --arb-lilac: #a08ed0;
     --arb-sky: #7fabd6;
     --arb-gold: #b07f3c;
-    --arb-card: rgba(255, 255, 255, .62);
-    --arb-card-strong: rgba(255, 255, 255, .82);
-    --arb-field: rgba(255, 255, 255, .90);
+    --arb-card: rgba(255, 255, 255, .50);
+    --arb-card-strong: rgba(255, 255, 255, .72);
+    --arb-field: rgba(255, 255, 255, .84);
     --arb-field-focus: #ffffff;
-    --arb-shadow: rgba(70, 64, 110, .08);
-    --arb-tab: rgba(255, 255, 255, .50);
-    --arb-tab-active: #ffffff;
+    --arb-shadow: rgba(150, 100, 160, .10);
+    --arb-tab: rgba(255, 255, 255, .42);
+    --arb-tab-active: rgba(255, 255, 255, .96);
     --arb-primary-ink: #3a2c5a;
     --arb-primary: linear-gradient(135deg, #f0c4da 0%, #cdb6ee 52%, #b6c6ee 100%);
     --arb-primary-hover: linear-gradient(135deg, #f4cfe2 0%, #d5c2f1 52%, #c1cff1 100%);
@@ -4143,15 +4143,18 @@ html #adr048-popup-panel[data-arb-theme="dawn"] {
     --arb-hi: rgba(255, 255, 255, .85);
     --arb-inset: inset 0 1px 2px rgba(60, 56, 96, .06);
     --arb-surface:
-        radial-gradient(120% 55% at 50% -14%, rgba(246, 188, 214, .30), transparent 60%),
-        radial-gradient(60% 40% at 100% 6%, rgba(160, 208, 238, .24), transparent 70%),
-        radial-gradient(55% 35% at 0% 100%, rgba(192, 176, 226, .16), transparent 70%),
-        linear-gradient(180deg, #fcf9fc 0%, #f7f5fb 50%, #f2f4fa 100%);
-    --arb-head: rgba(255, 255, 255, .78);
+        radial-gradient(130% 62% at 38% -16%, rgba(250, 166, 206, .62), rgba(250, 166, 206, .18) 45%, transparent 68%),
+        radial-gradient(70% 46% at 104% 10%, rgba(158, 200, 245, .50), transparent 70%),
+        radial-gradient(60% 40% at -6% 42%, rgba(255, 200, 220, .38), transparent 70%),
+        radial-gradient(70% 42% at 8% 104%, rgba(196, 170, 238, .42), transparent 70%),
+        radial-gradient(60% 36% at 96% 100%, rgba(255, 214, 196, .40), transparent 70%),
+        linear-gradient(180deg, #fdf0f7 0%, #f8f1fb 46%, #eef1fb 100%);
+    --arb-head: rgba(255, 255, 255, .58);
     --arb-backdrop:
-        radial-gradient(circle at 14% 8%, rgba(246, 188, 214, .18), transparent 33%),
-        radial-gradient(circle at 88% 12%, rgba(160, 208, 238, .16), transparent 32%),
-        linear-gradient(180deg, rgba(250, 246, 251, .18), rgba(236, 238, 248, .14));
+        radial-gradient(circle at 14% 8%, rgba(250, 166, 206, .30), transparent 36%),
+        radial-gradient(circle at 88% 12%, rgba(158, 200, 245, .26), transparent 34%),
+        radial-gradient(circle at 60% 100%, rgba(196, 170, 238, .22), transparent 36%),
+        linear-gradient(180deg, rgba(252, 240, 247, .22), rgba(236, 238, 248, .16));
 }
 
 /* ---- 幕布与壳体 ---- */
@@ -4177,6 +4180,16 @@ html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-shell::before {
 
 html #adr048-popup-panel[data-arb-theme="dawn"] #adr048-popup-shell::before {
     border-color: rgba(255, 255, 255, .9) !important;
+}
+
+html #adr048-popup-panel[data-arb-theme="dawn"] #adr048-popup-head::after {
+    background: linear-gradient(90deg, transparent, rgba(240, 150, 195, .75) 22%, rgba(190, 160, 232, .65) 52%, rgba(150, 195, 240, .7) 80%, transparent) !important;
+    opacity: 1 !important;
+}
+
+html #adr048-popup-panel[data-arb-theme="dawn"] #adr048-popup-body .adr048-section {
+    border-color: rgba(255, 255, 255, .85) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .95), 0 10px 30px rgba(190, 120, 170, .12) !important;
 }
 
 /* ---- 头部 ---- */
@@ -5044,10 +5057,10 @@ html #adr044-drawer {
     --adrx-lilac: #a08ed0;
     --adrx-sky: #7fabd6;
     --adrx-gold: #b07f3c;
-    --adrx-card: rgba(255, 255, 255, .66);
-    --adrx-card-strong: rgba(255, 255, 255, .84);
-    --adrx-field: rgba(255, 255, 255, .92);
-    --adrx-shadow: rgba(70, 64, 110, .08);
+    --adrx-card: rgba(255, 255, 255, .54);
+    --adrx-card-strong: rgba(255, 255, 255, .74);
+    --adrx-field: rgba(255, 255, 255, .86);
+    --adrx-shadow: rgba(150, 100, 160, .10);
     --adrx-glow: rgba(190, 160, 232, .28);
     --adrx-ring: rgba(204, 134, 169, .18);
     --adrx-inset: inset 0 1px 2px rgba(60, 56, 96, .06);
@@ -5066,17 +5079,20 @@ html #adr044-drawer > .inline-drawer {
     border: 1px solid rgba(255, 255, 255, .9) !important;
     border-radius: 20px !important;
     background:
-        radial-gradient(120% 55% at 50% -14%, rgba(246, 188, 214, .28), transparent 60%),
-        radial-gradient(60% 40% at 100% 4%, rgba(160, 208, 238, .22), transparent 70%),
-        linear-gradient(180deg, rgba(252, 249, 252, .985), rgba(243, 245, 250, .985)) !important;
-    box-shadow: 0 1px 0 rgba(64, 70, 110, .08), 0 16px 40px rgba(70, 64, 110, .12) !important;
+        radial-gradient(130% 50% at 38% -12%, rgba(250, 166, 206, .58), rgba(250, 166, 206, .16) 45%, transparent 68%),
+        radial-gradient(70% 40% at 104% 8%, rgba(158, 200, 245, .46), transparent 70%),
+        radial-gradient(60% 30% at -6% 46%, rgba(255, 200, 220, .34), transparent 70%),
+        radial-gradient(70% 34% at 8% 104%, rgba(196, 170, 238, .40), transparent 70%),
+        radial-gradient(60% 30% at 96% 100%, rgba(255, 214, 196, .38), transparent 70%),
+        linear-gradient(180deg, rgba(253, 240, 247, .985), rgba(248, 241, 251, .985) 46%, rgba(238, 241, 251, .985)) !important;
+    box-shadow: 0 1px 0 rgba(64, 70, 110, .08), 0 16px 40px rgba(190, 120, 170, .14) !important;
 }
 
 html #adr044-drawer .inline-drawer-toggle.inline-drawer-header {
     min-height: 54px !important;
     padding: 12px 15px !important;
-    border-bottom: 1px solid var(--adrx-line) !important;
-    background: rgba(255, 255, 255, .62) !important;
+    border-bottom: 1px solid rgba(240, 150, 195, .28) !important;
+    background: rgba(255, 255, 255, .42) !important;
 }
 
 html #adr044-drawer .inline-drawer-toggle b {
