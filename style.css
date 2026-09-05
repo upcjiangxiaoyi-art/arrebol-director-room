@@ -4073,7 +4073,8 @@ html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body .adr044-cd-ch
    选择器统一以 html 开头压过历史的 html 前缀锁，后来者居上。
    ============================================================ */
 
-html #adr048-popup-panel[data-arb-theme] {
+html #adr048-popup-panel[data-arb-theme],
+html #adrx-editor[data-arb-theme] {
     --arb-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans SC", "Microsoft YaHei", sans-serif;
     --arb-primary-ink: #1c1536;
     --arb-primary: linear-gradient(135deg, #ecb4d3 0%, #c0a3ea 52%, #9aa6ec 100%);
@@ -4087,7 +4088,8 @@ html #adr048-popup-panel[data-arb-theme] {
     --arb-radius-field: 12px;
 }
 
-html #adr048-popup-panel[data-arb-theme="dusk"] {
+html #adr048-popup-panel[data-arb-theme="dusk"],
+html #adrx-editor[data-arb-theme="dusk"] {
     --arb-ink: #f2edf8;
     --arb-ink-rgb: 242, 237, 248;
     --arb-muted: rgba(230, 222, 242, .72);
@@ -4117,7 +4119,8 @@ html #adr048-popup-panel[data-arb-theme="dusk"] {
         linear-gradient(180deg, rgba(14, 10, 32, .22), rgba(10, 7, 24, .30));
 }
 
-html #adr048-popup-panel[data-arb-theme="dawn"] {
+html #adr048-popup-panel[data-arb-theme="dawn"],
+html #adrx-editor[data-arb-theme="dawn"] {
     --arb-ink: #363b52;
     --arb-ink-rgb: 54, 59, 82;
     --arb-muted: rgba(54, 59, 82, .70);
@@ -5687,5 +5690,285 @@ html #adr044-drawer .adr044-cd-preview-out:empty {
         padding-left: 12px !important;
         padding-right: 12px !important;
         border-radius: 16px !important;
+    }
+}
+
+
+/* ============================================================
+   v1.26.0 放大编辑 · UI-only
+   文字框右上角一枚 ⛶（.adrx-ta 容器 + .adrx-expand 按钮），
+   点开 #adrx-editor 整屏编辑器：手机全屏，桌面居中大卡；
+   令牌与浮窗共用（dusk / dawn），抽屉里打开的一律走朝霞浅色。
+   ============================================================ */
+.adrx-ta {
+    position: relative;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.adrx-ta > textarea,
+.adrx-ta > input {
+    display: block;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.adrx-ta > input[type="text"] {
+    padding-right: 42px !important;
+}
+
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-ta > .adrx-expand,
+html #adr044-drawer .adrx-ta > .adrx-expand {
+    position: absolute !important;
+    top: 12px !important;
+    right: 8px !important;
+    z-index: 2 !important;
+    width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--arb-line-strong, rgba(64, 70, 110, .17)) !important;
+    background: var(--arb-card-strong, rgba(255, 255, 255, .78)) !important;
+    box-shadow: 0 2px 8px var(--arb-shadow, rgba(70, 64, 110, .10)) !important;
+    opacity: .82 !important;
+    cursor: pointer !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    -webkit-tap-highlight-color: transparent !important;
+    touch-action: manipulation !important;
+    transition: opacity .16s ease, transform .14s ease, border-color .16s ease !important;
+}
+
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-ta > .adrx-expand::before,
+html #adr044-drawer .adrx-ta > .adrx-expand::before {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    background-color: var(--arb-muted, rgba(54, 59, 82, .70));
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+html #adr044-drawer .adrx-ta > .adrx-expand {
+    border-color: var(--adrx-line-strong) !important;
+    background: var(--adrx-card-strong) !important;
+    box-shadow: 0 2px 8px var(--adrx-shadow) !important;
+}
+
+html #adr044-drawer .adrx-ta > .adrx-expand::before {
+    background-color: var(--adrx-muted);
+}
+
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-ta > .adrx-expand:hover,
+html #adr044-drawer .adrx-ta > .adrx-expand:hover {
+    opacity: 1 !important;
+    border-color: rgba(204, 134, 169, .5) !important;
+}
+
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-ta > .adrx-expand:active,
+html #adr044-drawer .adrx-ta > .adrx-expand:active {
+    transform: scale(.94) !important;
+}
+
+/* 整屏编辑器 */
+html #adrx-editor {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483647;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 0;
+    background: rgba(12, 8, 30, .55);
+    backdrop-filter: blur(10px) saturate(1.05);
+    -webkit-backdrop-filter: blur(10px) saturate(1.05);
+    font-family: var(--arb-font);
+    -webkit-font-smoothing: antialiased;
+    animation: adrx-fade .18s ease-out 1;
+}
+
+html #adrx-editor[data-arb-theme="dawn"] {
+    background: rgba(90, 70, 120, .30);
+}
+
+@keyframes adrx-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+html #adrx-editor .adrx-editor-shell {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    box-sizing: border-box;
+    padding: calc(12px + env(safe-area-inset-top, 0px)) 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--arb-surface);
+    color: var(--arb-ink);
+    animation: arb-rise .22s ease-out 1;
+}
+
+html #adrx-editor .adrx-editor-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    flex: 0 0 auto;
+    padding: 6px 4px 10px;
+}
+
+html #adrx-editor .adrx-editor-title {
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--arb-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+html #adrx-editor .adrx-editor-title::before {
+    content: "";
+    display: inline-block;
+    width: 3px;
+    height: 12px;
+    margin-right: 8px;
+    border-radius: 999px;
+    vertical-align: -1px;
+    background: linear-gradient(180deg, #e9b6d4, #97a5ea);
+    box-shadow: 0 0 8px rgba(190, 160, 232, .5);
+}
+
+html #adrx-editor .adrx-editor-count {
+    flex: 0 0 auto;
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .04em;
+    color: var(--arb-faint);
+}
+
+html #adrx-editor .adrx-editor-ta {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--arb-line-strong);
+    border-radius: 16px;
+    background: var(--arb-field);
+    color: var(--arb-ink);
+    -webkit-text-fill-color: var(--arb-ink);
+    caret-color: var(--arb-rose);
+    font-family: var(--arb-font);
+    font-size: 16px;
+    line-height: 1.75;
+    resize: none;
+    outline: none;
+    box-shadow: var(--arb-inset);
+    -webkit-overflow-scrolling: touch;
+}
+
+html #adrx-editor .adrx-editor-ta:focus {
+    border-color: rgba(204, 134, 169, .62);
+    background: var(--arb-field-focus);
+    box-shadow: var(--arb-inset), 0 0 0 3px var(--arb-ring);
+}
+
+html #adrx-editor .adrx-editor-ta::placeholder {
+    color: var(--arb-faint);
+    -webkit-text-fill-color: var(--arb-faint);
+}
+
+html #adrx-editor .adrx-editor-foot {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 10px;
+    flex: 0 0 auto;
+    padding-top: 12px;
+}
+
+html #adrx-editor .adrx-editor-foot button {
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid var(--arb-line-strong);
+    border-radius: 13px;
+    background: var(--arb-card-strong);
+    color: var(--arb-ink);
+    -webkit-text-fill-color: var(--arb-ink);
+    font-family: var(--arb-font);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    cursor: pointer;
+    box-shadow: inset 0 1px 0 var(--arb-hi);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: background .18s ease, border-color .18s ease, transform .14s ease;
+}
+
+html #adrx-editor .adrx-editor-foot button:active {
+    transform: scale(.98);
+}
+
+html #adrx-editor .adrx-editor-foot .adrx-editor-cancel {
+    background: transparent;
+    color: var(--arb-muted);
+    -webkit-text-fill-color: var(--arb-muted);
+    box-shadow: none;
+}
+
+html #adrx-editor .adrx-editor-foot .adrx-editor-ok {
+    border-color: transparent;
+    background: var(--arb-primary);
+    color: var(--arb-primary-ink);
+    -webkit-text-fill-color: var(--arb-primary-ink);
+    font-weight: 700;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 6px 18px var(--arb-glow);
+}
+
+html #adrx-editor .adrx-editor-foot .adrx-editor-ok:hover {
+    background: var(--arb-primary-hover);
+}
+
+@media (min-width: 700px) {
+    html #adrx-editor {
+        padding: 24px;
+    }
+
+    html #adrx-editor .adrx-editor-shell {
+        width: min(920px, 100%);
+        height: min(86vh, 900px);
+        padding: 16px 18px 18px;
+        border: 1px solid rgba(255, 255, 255, .16);
+        border-radius: 22px;
+        box-shadow: 0 26px 70px rgba(5, 3, 20, .5);
+    }
+
+    html #adrx-editor[data-arb-theme="dawn"] .adrx-editor-shell {
+        border-color: rgba(255, 255, 255, .92);
+        box-shadow: 0 26px 70px rgba(70, 64, 110, .26);
+    }
+
+    html #adrx-editor .adrx-editor-foot {
+        grid-template-columns: 1fr 1fr;
+        justify-content: end;
+        max-width: 360px;
+        margin-left: auto;
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html #adrx-editor,
+    html #adrx-editor .adrx-editor-shell {
+        animation: none;
     }
 }

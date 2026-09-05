@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.25.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.26.0｜ripple & GPT & Claude
+ * v1.26.0 放大编辑：浮窗与抽屉里每个文字框右上角一枚 ⛶，点开整屏编辑器，确定回填并照常触发保存（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.25.0 「琉璃暗河」换皮：浮窗与内嵌抽屉全套视觉重整（style.css 末位新层 + 壳体内联圆角/投影与悬浮球配色三处 JS 改值），
  *          DOM、ID、事件、存储、计数、注入、API 与抽卡管线一字未动（拍板 ripple；施工 波哥 Claude Fable 5.1）
  * v1.24.0 导演的记忆搬进聊天文件（chat_metadata 主档 + LS 镜像，老存档搬家一次）；计数显示只读；
@@ -6229,8 +6230,170 @@
         );
     }
 
+    // ============================================================
+    // v1.26.0 放大编辑：每个文字框右上角一枚 ⛶，点开整屏编辑器，
+    // 确定后把内容回填原框并派发 input/change，原有的自动保存链路照常走。
+    // 只包一层 .adrx-ta 容器，不改任何 id；抽卡编辑区的忙保护（adrCdTouch）一并打上。
+    // ============================================================
+    var ADRX_EXPAND_SELECTOR = '#adr048-popup-body textarea, #adr044-drawer textarea, '
+        + '#adr048-popup-body input[type="text"][id$="-extra"], #adr044-drawer input[type="text"][id$="-extra"]';
+
+    function adrxExpandTitleFor(el) {
+        try {
+            var wrap = el.parentNode;
+            var prev = wrap && wrap.classList && wrap.classList.contains("adrx-ta") ? wrap.previousElementSibling : el.previousElementSibling;
+            var hops = 0;
+            while (prev && hops < 4) {
+                var tag = String(prev.tagName || "").toLowerCase();
+                if (tag === "label" && !(prev.classList && (prev.classList.contains("adr048-check") || prev.classList.contains("adr044-check")))) {
+                    var t = String(prev.textContent || "").replace(/\s+/g, " ").trim();
+                    if (t) return t;
+                }
+                if (tag === "textarea" || tag === "input" || tag === "select" || tag === "button") break;
+                prev = prev.previousElementSibling;
+                hops++;
+            }
+        } catch (e) {}
+        // 没有紧邻的 label（预设 / 结果 / 卡库编辑区）：退而取所在分区的标题。
+        try {
+            var node = el.parentNode;
+            var depth = 0;
+            while (node && depth < 8) {
+                if (node.classList && node.classList.contains("adr048-section")) {
+                    var sm = node.querySelector(".adr048-summary");
+                    var st = sm ? String(sm.textContent || "").replace(/\s+/g, " ").trim() : "";
+                    if (st) return st;
+                }
+                if (String(node.tagName || "").toLowerCase() === "details") {
+                    var sm2 = node.querySelector(":scope > summary");
+                    var st2 = sm2 ? String(sm2.textContent || "").replace(/\s+/g, " ").trim() : "";
+                    if (st2) return st2;
+                }
+                node = node.parentNode;
+                depth++;
+            }
+        } catch (e2) {}
+        return String(el.getAttribute("placeholder") || "编辑").split("\n")[0].trim() || "编辑";
+    }
+
+    function adrxInstallExpanders() {
+        try {
+            var d = rootDoc();
+            var list = Array.prototype.slice.call(d.querySelectorAll(ADRX_EXPAND_SELECTOR));
+            list.forEach(function (el) {
+                try {
+                    if (!el || el.__adrxExpandInstalled) return;
+                    if (!el.parentNode) return;
+                    if (el.parentNode.classList && el.parentNode.classList.contains("adrx-ta")) { el.__adrxExpandInstalled = true; return; }
+                    var wrap = d.createElement("div");
+                    wrap.className = "adrx-ta";
+                    el.parentNode.insertBefore(wrap, el);
+                    wrap.appendChild(el);
+                    var btn = d.createElement("button");
+                    btn.type = "button";
+                    btn.className = "adrx-expand";
+                    btn.title = "放大编辑";
+                    btn.setAttribute("aria-label", "放大编辑");
+                    btn.addEventListener("click", function (ev) {
+                        try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                        adrxOpenBigEditor(el);
+                    });
+                    wrap.appendChild(btn);
+                    el.__adrxExpandInstalled = true;
+                } catch (e1) {}
+            });
+        } catch (e) {}
+    }
+
+    function adrxCloseBigEditor() {
+        try {
+            var d = rootDoc();
+            var old = d.querySelector("#adrx-editor");
+            if (old) {
+                if (old.__adrxKeyHandler) { try { d.removeEventListener("keydown", old.__adrxKeyHandler, true); } catch (e0) {} }
+                if (old.parentNode) old.parentNode.removeChild(old);
+            }
+        } catch (e) {}
+    }
+
+    function adrxOpenBigEditor(el) {
+        try {
+            if (!el) return;
+            adrxCloseBigEditor();
+            var d = rootDoc();
+            var isInput = String(el.tagName || "").toLowerCase() === "input";
+            var panel = d.querySelector("#adr048-popup-panel");
+            var theme = (panel && panel.contains(el)) ? (panel.getAttribute("data-arb-theme") || "dusk") : "dawn";
+
+            var ov = d.createElement("div");
+            ov.id = "adrx-editor";
+            ov.setAttribute("data-arb-theme", theme);
+            ov.setAttribute("role", "dialog");
+            ov.setAttribute("aria-modal", "true");
+            ov.innerHTML = ''
+                + '<div class="adrx-editor-shell">'
+                + '<div class="adrx-editor-head"><div class="adrx-editor-title"></div><div class="adrx-editor-count"></div></div>'
+                + '<textarea class="adrx-editor-ta" spellcheck="false"></textarea>'
+                + '<div class="adrx-editor-foot"><button type="button" class="adrx-editor-cancel">取消</button><button type="button" class="adrx-editor-ok">确定</button></div>'
+                + '</div>';
+
+            var title = ov.querySelector(".adrx-editor-title");
+            var count = ov.querySelector(".adrx-editor-count");
+            var ta = ov.querySelector(".adrx-editor-ta");
+            title.textContent = adrxExpandTitleFor(el);
+            ta.value = String(el.value || "");
+            ta.placeholder = String(el.getAttribute("placeholder") || "");
+            if (isInput) ta.setAttribute("data-single-line", "1");
+
+            function refreshCount() {
+                try { count.textContent = String(ta.value || "").length + " 字"; } catch (e) {}
+            }
+            refreshCount();
+            ta.addEventListener("input", refreshCount);
+
+            function commit() {
+                try {
+                    var v = String(ta.value || "");
+                    if (isInput) v = v.replace(/\r?\n+/g, " ");
+                    try { adrCdTouch(el); } catch (e0) {}
+                    el.value = v;
+                    try { el.dispatchEvent(new Event("input", { bubbles: true })); } catch (e1) {}
+                    try { el.dispatchEvent(new Event("change", { bubbles: true })); } catch (e2) {}
+                } catch (e) {}
+                adrxCloseBigEditor();
+            }
+
+            ov.querySelector(".adrx-editor-ok").addEventListener("click", function (ev) {
+                try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                commit();
+            });
+            ov.querySelector(".adrx-editor-cancel").addEventListener("click", function (ev) {
+                try { ev.preventDefault(); ev.stopPropagation(); } catch (e) {}
+                adrxCloseBigEditor();
+            });
+            var keyHandler = function (ev) {
+                try {
+                    if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); adrxCloseBigEditor(); }
+                    else if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) { ev.preventDefault(); ev.stopPropagation(); commit(); }
+                } catch (e) {}
+            };
+            ov.__adrxKeyHandler = keyHandler;
+            d.addEventListener("keydown", keyHandler, true);
+
+            (d.body || d.documentElement).appendChild(ov);
+            try {
+                ta.focus();
+                var n = ta.value.length;
+                ta.setSelectionRange(n, n);
+            } catch (e3) {}
+        } catch (e) {
+            console.error("[ADRX] open big editor failed", e);
+        }
+    }
+
     function bindDirect() {
         try {
+            try { adrxInstallExpanders(); } catch (eExpand) {} // v1.26.0：文字框放大编辑按钮（幂等）
             try { adrCdBindControls(); } catch (eCdBind) {} // v1.10.0：抽卡控件随每次重绑一起带起（幂等）
             if (!rootWin().adrDStableAutoSaveBound) {
                 rootWin().adrDStableAutoSaveBound = true;
