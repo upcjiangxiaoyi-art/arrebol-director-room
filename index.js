@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.26.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.27.0｜ripple & GPT & Claude
+ * v1.27.0 导演请求改流式接收：stream:true 逐块收 delta.content、思考只计数不进稿、120 秒改为两块之间的空闲闸；服务端回整份 JSON 时自动走老路（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.26.1 放大编辑热修：整屏编辑器钉在 iOS 可视视口上，键盘弹出不再把它顶飞；手机上不自动弹键盘（报告 江；施工 波哥 Claude Fable 5.1）
  * v1.26.0 放大编辑：浮窗与抽屉里每个文字框右上角一枚 ⛶，点开整屏编辑器，确定回填并照常触发保存（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.25.0 「琉璃暗河」换皮：浮窗与内嵌抽屉全套视觉重整（style.css 末位新层 + 壳体内联圆角/投影与悬浮球配色三处 JS 改值），
@@ -1201,6 +1202,138 @@
         } catch (e) {}
     }
 
+    // v1.27.0：导演请求改流式接收（提议：江；施工：波哥）。
+    // 非流式时，会思考的模型要把整段思考跑完才回第一个字节——中转站／网关的空闲超时（常见 60–100 秒）
+    // 在这之前就把连接掐断，回来是 502／524 或半截 JSON；本地那道 120 秒硬闸也常在思考结束前落下。
+    // 流式下第一个 chunk 很快就到、连接上一直有字节在走，网关不掐；本地闸改成"两个 chunk 之间最多 120 秒"。
+    // 正文只收 delta.content；思考（reasoning_content / reasoning）看见就跳过、只计字数进状态提示。
+    // 服务端不理 stream:true 而回整份 JSON 时（或测试桩、老中转），照旧按 JSON 解析——旧路径一字不丢。
+    var ADR_D_STREAM_IDLE_MS = 120000;
+
+    function adrDTextOfContent(c) {
+        if (typeof c === "string") return c;
+        if (!Array.isArray(c)) return "";
+        var parts = [];
+        c.forEach(function (p) {
+            if (!p) return;
+            if (typeof p === "string") parts.push(p);
+            else if (typeof p.text === "string") parts.push(p.text);
+        });
+        return parts.join("");
+    }
+
+    // 正文空着时把话说明白：是思考把额度吃光了，还是被 finish_reason=length 掐了。
+    function adrDEmptyContentHint(reasoningChars, finish) {
+        var why = [];
+        if (reasoningChars > 0) why.push("模型只回了 " + reasoningChars + " 字思考，正文一个字没出");
+        if (finish === "length") why.push("finish_reason=length，输出上限先到了");
+        if (!why.length) return "";
+        return "（" + why.join("；") + "。请在服务商侧关掉思考或放宽输出上限，或换不思考的模型）";
+    }
+
+    // SSE 增量收集器：喂进来的文本按事件切开，data: 行里的 JSON 逐块合并。
+    // 第一个非空白字符是 { 或 [ 就认定服务端回的是整份 JSON，全部攒起来最后交给 parseResponse。
+    function adrDStreamCollector() {
+        var buf = "";
+        var mode = "";           // "" 未定 | "sse" | "json"
+        var rawAll = "";
+        var content = "";
+        var reasoningChars = 0;
+        var finish = "";
+        var chunks = 0;
+        var streamError = null;
+
+        function applyChunk(obj) {
+            if (!obj || typeof obj !== "object") return;
+            if (obj.error && !streamError) {
+                var em = obj.error && (obj.error.message || obj.error.msg);
+                streamError = new Error("API 流中报错：" + String(em || JSON.stringify(obj.error)).slice(0, 220));
+            }
+            var ch = obj.choices && obj.choices[0];
+            if (!ch) return;
+            var d = ch.delta || ch.message || {};
+            if (typeof d.reasoning_content === "string") reasoningChars += d.reasoning_content.length;
+            else if (typeof d.reasoning === "string") reasoningChars += d.reasoning.length;
+            var piece = adrDTextOfContent(d.content);
+            if (!piece && typeof ch.text === "string") piece = ch.text;
+            if (piece) content += piece;
+            if (ch.finish_reason) finish = String(ch.finish_reason);
+            chunks++;
+        }
+
+        function handleEvent(evt) {
+            var dataLines = [];
+            evt.split("\n").forEach(function (line) {
+                if (line.indexOf("data:") === 0) dataLines.push(line.slice(5).replace(/^ /, ""));
+            });
+            if (!dataLines.length) return;
+            var payload = dataLines.join("\n").trim();
+            if (!payload || payload === "[DONE]") return;
+            var obj;
+            try { obj = JSON.parse(payload); } catch (eJson) { return; }
+            applyChunk(obj);
+        }
+
+        function drain(final) {
+            var idx;
+            while ((idx = buf.indexOf("\n\n")) >= 0) {
+                var evt = buf.slice(0, idx);
+                buf = buf.slice(idx + 2);
+                handleEvent(evt);
+            }
+            if (final && buf.trim()) { handleEvent(buf); buf = ""; }
+        }
+
+        return {
+            push: function (text) {
+                text = String(text || "");
+                if (!text) return;
+                rawAll += text;
+                if (!mode) {
+                    var head = rawAll.replace(/^[\s﻿]+/, "");
+                    if (!head) return;
+                    mode = (head.charAt(0) === "{" || head.charAt(0) === "[") ? "json" : "sse";
+                    if (mode === "sse") { buf = rawAll.replace(/\r/g, ""); drain(false); }
+                    return;
+                }
+                if (mode === "sse") { buf += text.replace(/\r/g, ""); drain(false); }
+            },
+            end: function () { if (mode === "sse") drain(true); },
+            mode: function () { return mode; },
+            raw: function () { return rawAll; },
+            content: function () { return content; },
+            reasoningChars: function () { return reasoningChars; },
+            finish: function () { return finish; },
+            chunks: function () { return chunks; },
+            error: function () { return streamError; }
+        };
+    }
+
+    // 逐块读响应体；老环境（没有 body.getReader / TextDecoder）退回 res.text() 一次性喂进去。
+    async function adrDReadBody(res, onChunk) {
+        var body = res && res.body;
+        if (body && typeof body.getReader === "function" && typeof TextDecoder !== "undefined") {
+            var reader = body.getReader();
+            var dec = new TextDecoder("utf-8");
+            while (true) {
+                var r = await reader.read();
+                if (r.done) break;
+                var txt = r.value ? dec.decode(r.value, { stream: true }) : "";
+                if (txt) onChunk(txt);
+            }
+            var tail = dec.decode();
+            if (tail) onChunk(tail);
+            return;
+        }
+        var all = await res.text();
+        onChunk(all);
+    }
+
+    // 测试钩子：收集器与空正文提示语是纯函数，test_stream.js 直接拿来喂假流。
+    try {
+        rootWin().__adrDStreamTest = { collector: adrDStreamCollector, emptyHint: adrDEmptyContentHint, readBody: adrDReadBody };
+    } catch (eStreamHook) {}
+
     async function callAPI(type, extra) {
         var st = settings();
         var p = prefixOf(type);
@@ -1216,7 +1349,7 @@
         var url = chatUrl(endpoint);
         if (!url) throw new Error("API 地址无效");
 
-        var headers = { "Content-Type": "application/json" };
+        var headers = { "Content-Type": "application/json", "Accept": "text/event-stream, application/json" };
         if (key) headers.Authorization = "Bearer " + key;
 
         adrDAbortWasManual = false;
@@ -1231,7 +1364,7 @@
                 { role: "user", content: await buildPrompt(type, extra || "") }
             ],
             temperature: 0.6,
-            stream: false
+            stream: true
         };
 
         var opts = {
@@ -1241,23 +1374,44 @@
         };
         if (localAborter) opts.signal = localAborter.signal;
 
+        // 空闲闸：等首字节、以及任意两个 chunk 之间，都最多 120 秒；每来一块就重新上表。
         var timeoutId = null;
         var didTimeout = false;
-        if (localAborter && typeof setTimeout === "function") {
+        function armIdleTimer() {
+            if (!localAborter || typeof setTimeout !== "function") return;
+            if (timeoutId) clearTimeout(timeoutId);
             timeoutId = setTimeout(function () {
                 didTimeout = true;
                 try { localAborter.abort(); } catch (eAbort) {}
-            }, 120000);
+            }, ADR_D_STREAM_IDLE_MS);
         }
+        armIdleTimer();
 
+        var col = adrDStreamCollector();
         var res;
-        var raw;
+        var raw = "";
         try {
             res = await fetch(url, opts);
-            raw = await res.text();
+            if (!res.ok) {
+                raw = await res.text();
+            } else {
+                await adrDReadBody(res, function (txt) {
+                    armIdleTimer();
+                    col.push(txt);
+                    if (col.mode() !== "sse") return;
+                    var got = col.content().length;
+                    var thought = col.reasoningChars();
+                    if (got) status(type, "正在分析…（已收到 " + got + " 字）", "#8ed99d");
+                    else if (thought) status(type, "正在分析…（模型思考中，" + thought + " 字）", "#8ed99d");
+                });
+                col.end();
+                raw = col.raw();
+            }
         } catch (eFetch) {
             if (didTimeout && eFetch && eFetch.name === "AbortError") {
-                var timeoutErr = new Error("请求超时，请检查 API、中转站或稍后重试");
+                var timeoutErr = new Error(col.chunks()
+                    ? "流式接收中断：" + (ADR_D_STREAM_IDLE_MS / 1000) + " 秒没有新内容，请检查 API、中转站或稍后重试"
+                    : "请求超时，请检查 API、中转站或稍后重试");
                 timeoutErr.name = "TimeoutError";
                 throw timeoutErr;
             }
@@ -1268,12 +1422,34 @@
 
         if (!res.ok) throw new Error("API " + res.status + "：" + String(raw || "").slice(0, 220));
 
+        if (col.mode() === "sse") {
+            var streamed = String(col.content() || "").trim();
+            if (streamed) return streamed;
+            if (col.error()) throw col.error();
+            if (!col.chunks()) throw new Error("流式响应里没有可解析的内容：" + raw.slice(0, 220));
+            throw new Error("无法解析响应：正文为空" + adrDEmptyContentHint(col.reasoningChars(), col.finish()));
+        }
+
         var data;
         try { data = JSON.parse(raw); }
         catch (e) { throw new Error("API 返回非 JSON：" + raw.slice(0, 180)); }
 
+        if (data && data.error && !(data.choices && data.choices[0])) {
+            var em = data.error.message || data.error.msg || JSON.stringify(data.error);
+            throw new Error("API 报错：" + String(em).slice(0, 220));
+        }
+
         var out = parseResponse(data);
-        if (!out) throw new Error("无法解析响应：" + raw.slice(0, 220));
+        if (!out) {
+            var hint = "";
+            try {
+                var ch0 = data.choices && data.choices[0];
+                var m0 = ch0 && ch0.message;
+                var rc = m0 && (m0.reasoning_content || m0.reasoning);
+                hint = adrDEmptyContentHint(typeof rc === "string" ? rc.length : 0, ch0 && ch0.finish_reason);
+            } catch (eHint) {}
+            throw new Error("无法解析响应：" + (hint ? "正文为空" + hint : raw.slice(0, 220)));
+        }
         return out;
     }
 
