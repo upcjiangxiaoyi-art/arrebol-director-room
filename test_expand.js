@@ -12,6 +12,12 @@ function build(settings) {
     const chat = [], prompts = {}, extensionSettings = {}, chatMetadata = {}, handlers = {};
     extensionSettings[SET_KEY] = Object.assign({ supplementMemory: "旧的" }, settings || {});
     for (let i = 0; i < 4; i++) { chat.push({ is_user: true, mes: "a" }); chat.push({ is_user: false, mes: "<content>b</content>" }); }
+    // v1.26.1：仿 iOS 可视视口——键盘弹出后 offsetTop / height 会变，编辑器必须跟着走
+    const vvHandlers = {};
+    win.visualViewport = { offsetTop: 0, offsetLeft: 0, width: 390, height: 844,
+        addEventListener(t, f) { (vvHandlers[t] = vvHandlers[t] || []).push(f); },
+        removeEventListener(t, f) { vvHandlers[t] = (vvHandlers[t] || []).filter(x => x !== f); },
+        fire(t) { (vvHandlers[t] || []).forEach(f => f()); }, handlers: vvHandlers };
     win.SillyTavern = { getContext: () => context };
     win.toastr = { info() {}, success() {}, warning() {}, error() {} };
     win.fetch = async () => { throw new Error("offline"); };
@@ -90,6 +96,18 @@ function build(settings) {
     const mem2 = d.querySelector("#adr048-popup-body #adr044-memory");
     ok(mem2.parentNode.querySelectorAll(".adrx-expand").length === 1, "重开浮窗后每个框仍只有一枚 ⛶");
     ok(d.querySelectorAll("#adr044-drawer #adr044-memory + .adrx-expand, #adr044-drawer .adrx-ta .adrx-expand").length === drawerBtns.length, "抽屉侧按钮数不变（幂等）");
+
+    console.log("\n── iOS 可视视口 ──");
+    const vv = W.visualViewport;
+    click(mem2.parentNode.querySelector(".adrx-expand")); await tick(50);
+    ed = d.querySelector("#adrx-editor");
+    ok(ed.style.getPropertyValue("height") === "844px" && ed.style.getPropertyValue("top") === "0px", "打开时按可视视口定位", ed.style.cssText);
+    vv.offsetTop = 260; vv.height = 420; vv.fire("resize"); vv.fire("scroll");
+    ok(ed.style.getPropertyValue("top") === "260px" && ed.style.getPropertyValue("height") === "420px", "键盘弹出（视口缩小并上顶）后编辑器跟着钉住", ed.style.cssText);
+    vv.offsetTop = 0; vv.height = 844; vv.fire("resize");
+    ok(ed.style.getPropertyValue("top") === "0px" && ed.style.getPropertyValue("height") === "844px", "收键盘后回到整屏");
+    click(ed.querySelector(".adrx-editor-cancel")); await tick(50);
+    ok((vv.handlers.resize || []).length === 0 && (vv.handlers.scroll || []).length === 0, "关闭后视口监听全部摘掉");
 
     console.log("\n通过 " + PASS + " · 失败 " + FAIL);
     process.exit(FAIL ? 1 : 0);

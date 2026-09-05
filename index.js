@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.26.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.26.1｜ripple & GPT & Claude
+ * v1.26.1 放大编辑热修：整屏编辑器钉在 iOS 可视视口上，键盘弹出不再把它顶飞；手机上不自动弹键盘（报告 江；施工 波哥 Claude Fable 5.1）
  * v1.26.0 放大编辑：浮窗与抽屉里每个文字框右上角一枚 ⛶，点开整屏编辑器，确定回填并照常触发保存（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.25.0 「琉璃暗河」换皮：浮窗与内嵌抽屉全套视觉重整（style.css 末位新层 + 壳体内联圆角/投影与悬浮球配色三处 JS 改值），
  *          DOM、ID、事件、存储、计数、注入、API 与抽卡管线一字未动（拍板 ripple；施工 波哥 Claude Fable 5.1）
@@ -6311,9 +6312,46 @@
             var old = d.querySelector("#adrx-editor");
             if (old) {
                 if (old.__adrxKeyHandler) { try { d.removeEventListener("keydown", old.__adrxKeyHandler, true); } catch (e0) {} }
+                if (old.__adrxUnfit) { try { old.__adrxUnfit(); } catch (e1) {} }
                 if (old.parentNode) old.parentNode.removeChild(old);
             }
         } catch (e) {}
+    }
+
+    // v1.26.1 iOS 键盘：Safari 弹键盘时会把布局视口整个往上顶，position:fixed 的整屏层跟着飞走，
+    // 收键盘也不回来。这里让编辑器钉在「可视视口」上：键盘弹出就缩到键盘上方，页面被顶就跟着复位。
+    function adrxFitToVisualViewport(ov) {
+        var w = rootWin();
+        var vv = null;
+        try { vv = w.visualViewport || null; } catch (e) {}
+        if (!vv) return function () {};
+        function fit() {
+            try {
+                ov.style.setProperty("top", Math.max(0, vv.offsetTop || 0) + "px", "important");
+                ov.style.setProperty("left", Math.max(0, vv.offsetLeft || 0) + "px", "important");
+                ov.style.setProperty("width", Math.round(vv.width || w.innerWidth) + "px", "important");
+                ov.style.setProperty("height", Math.round(vv.height || w.innerHeight) + "px", "important");
+                ov.style.setProperty("right", "auto", "important");
+                ov.style.setProperty("bottom", "auto", "important");
+            } catch (e) {}
+        }
+        fit();
+        try { vv.addEventListener("resize", fit); } catch (e1) {}
+        try { vv.addEventListener("scroll", fit); } catch (e2) {}
+        try { w.addEventListener("orientationchange", fit); } catch (e3) {}
+        return function () {
+            try { vv.removeEventListener("resize", fit); } catch (e4) {}
+            try { vv.removeEventListener("scroll", fit); } catch (e5) {}
+            try { w.removeEventListener("orientationchange", fit); } catch (e6) {}
+        };
+    }
+
+    function adrxIsTouchDevice() {
+        try {
+            var w = rootWin();
+            if (w.matchMedia && w.matchMedia("(pointer: coarse)").matches) return true;
+            return ("ontouchstart" in w) && (w.navigator && w.navigator.maxTouchPoints > 0);
+        } catch (e) { return false; }
     }
 
     function adrxOpenBigEditor(el) {
@@ -6380,12 +6418,21 @@
             ov.__adrxKeyHandler = keyHandler;
             d.addEventListener("keydown", keyHandler, true);
 
+            // 幕布本身吃掉触摸滚动，别把底下的面板一起拖走。
+            ov.addEventListener("touchmove", function (ev) {
+                try { if (ev.target === ov) ev.preventDefault(); } catch (e) {}
+            }, { passive: false });
+
             (d.body || d.documentElement).appendChild(ov);
-            try {
-                ta.focus();
-                var n = ta.value.length;
-                ta.setSelectionRange(n, n);
-            } catch (e3) {}
+            ov.__adrxUnfit = adrxFitToVisualViewport(ov);
+            // 手机上不自动弹键盘：点进去再打字，免得一开就被键盘顶飞。桌面照旧落焦点到末尾。
+            if (!adrxIsTouchDevice()) {
+                try {
+                    ta.focus();
+                    var n = ta.value.length;
+                    ta.setSelectionRange(n, n);
+                } catch (e3) {}
+            }
         } catch (e) {
             console.error("[ADRX] open big editor failed", e);
         }
