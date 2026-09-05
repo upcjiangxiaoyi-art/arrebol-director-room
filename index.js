@@ -1,6 +1,8 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.24.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.25.0｜ripple & GPT & Claude
+ * v1.25.0 「琉璃暗河」换皮：浮窗与内嵌抽屉全套视觉重整（style.css 末位新层 + 壳体内联圆角/投影与悬浮球配色三处 JS 改值），
+ *          DOM、ID、事件、存储、计数、注入、API 与抽卡管线一字未动（拍板 ripple；施工 波哥 Claude Fable 5.1）
  * v1.24.0 导演的记忆搬进聊天文件（chat_metadata 主档 + LS 镜像，老存档搬家一次）；计数显示只读；
  *          备份与 LS JSON 按原文缓存、悬浮球观察器只盯 body 一层（拍板 ripple；施工 波哥 Claude Fable 5.1）
  * v1.23.3 小眼睛答复额度 10/30 → 200，空答复时说明是思考吃光了额度（波哥 Claude Fable 5.1）
@@ -6812,9 +6814,9 @@
             adr048SetImportant(shell, "overflow", "hidden");
             adr048SetImportant(shell, "background", "rgba(42,52,67,.98)");
             adr048SetImportant(shell, "color", "#f2f2f2");
-            adr048SetImportant(shell, "border", "1px solid rgba(255,255,255,.18)");
-            adr048SetImportant(shell, "border-radius", "14px");
-            adr048SetImportant(shell, "box-shadow", "0 14px 42px rgba(0,0,0,.48)");
+            adr048SetImportant(shell, "border", "1px solid rgba(228,212,246,.16)");
+            adr048SetImportant(shell, "border-radius", "22px");
+            adr048SetImportant(shell, "box-shadow", "0 26px 70px rgba(5,3,20,.58), 0 0 0 1px rgba(183,157,220,.06)");
 
             if (body) {
                 adr048SetImportant(body, "display", "block");
@@ -6880,11 +6882,11 @@
                     : "rgba(42,52,67,.98)");
                 adr048SetImportant(shell, "color", dawn ? "#404D62" : "#f2f2f2");
                 adr048SetImportant(shell, "border", dawn
-                    ? "1px solid rgba(116,136,162,.30)"
-                    : "1px solid rgba(255,255,255,.18)");
+                    ? "1px solid rgba(255,255,255,.92)"
+                    : "1px solid rgba(228,212,246,.16)");
                 adr048SetImportant(shell, "box-shadow", dawn
-                    ? "0 18px 48px rgba(84,100,124,.20), 0 0 0 1px rgba(255,255,255,.55)"
-                    : "0 14px 42px rgba(0,0,0,.48)");
+                    ? "0 26px 70px rgba(70,64,110,.26), 0 0 0 1px rgba(64,70,110,.10)"
+                    : "0 26px 70px rgba(5,3,20,.58), 0 0 0 1px rgba(183,157,220,.06)");
             }
 
             var tg = d.querySelector("#adr048-theme-toggle");
@@ -7052,7 +7054,7 @@
             btn.setAttribute("data-adr048-owned-fab", ADR048_FAB_INSTANCE_ID);
             btn.type = "button";
             /* 砚蓝入胭雾 · SVG 胶囊皮肤（按钮外壳透明，视觉全由 SVG 承担） */
-            btn.innerHTML = '<svg viewBox="0 0 120 44" xmlns="http://www.w3.org/2000/svg" aria-label="ARB" style="height:100%;width:auto;display:block;pointer-events:none"><defs><linearGradient id="pkARB-bg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#404D62"/><stop offset="55%" stop-color="#A2AFC4"/><stop offset="100%" stop-color="#E4C8D0"/></linearGradient><linearGradient id="pkARB-river" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#E4C8D0"/><stop offset="100%" stop-color="#404D62"/></linearGradient></defs><rect x="1" y="1" width="118" height="42" rx="21" fill="url(#pkARB-bg)"/><text x="60" y="22" text-anchor="middle" font-size="15.5" font-weight="700" fill="#F7ECF1" letter-spacing="3" font-family="-apple-system,sans-serif">ARB</text><path d="M12 32 C 32 26 48 37 66 30 C 84 24 98 32 108 27" fill="none" stroke="url(#pkARB-river)" stroke-width="2.4" stroke-linecap="round" opacity="0.9"/><path d="M12 32 C 32 26 48 37 66 30 C 84 24 98 32 108 27" fill="none" stroke="#FFF3F7" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="5 96" opacity="0.95"><animate attributeName="stroke-dashoffset" values="101;0" dur="4.5s" repeatCount="indefinite"/></path></svg>';
+            btn.innerHTML = '<svg viewBox="0 0 120 44" xmlns="http://www.w3.org/2000/svg" aria-label="ARB" style="height:100%;width:auto;display:block;pointer-events:none"><defs><linearGradient id="pkARB-bg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#2A2150"/><stop offset="55%" stop-color="#8F95D8"/><stop offset="100%" stop-color="#EBBFDA"/></linearGradient><linearGradient id="pkARB-river" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#F3D6E6"/><stop offset="100%" stop-color="#2A2150"/></linearGradient></defs><rect x="1" y="1" width="118" height="42" rx="21" fill="url(#pkARB-bg)"/><text x="60" y="22" text-anchor="middle" font-size="15.5" font-weight="700" fill="#F7ECF1" letter-spacing="3" font-family="-apple-system,sans-serif">ARB</text><path d="M12 32 C 32 26 48 37 66 30 C 84 24 98 32 108 27" fill="none" stroke="url(#pkARB-river)" stroke-width="2.4" stroke-linecap="round" opacity="0.9"/><path d="M12 32 C 32 26 48 37 66 30 C 84 24 98 32 108 27" fill="none" stroke="#FFF3F7" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="5 96" opacity="0.95"><animate attributeName="stroke-dashoffset" values="101;0" dur="4.5s" repeatCount="indefinite"/></path></svg>';
             btn.title = "Arrebol D 小红霞";
             btn.setAttribute("aria-label", "Arrebol D 小红霞");
 
@@ -7078,7 +7080,7 @@
             setImp("font-weight", "800");
             setImp("line-height", "28px");
             btn.style.boxShadow = "none"; /* 不带 important：给脉冲动画让路 */
-            setImp("filter", "drop-shadow(0 4px 10px rgba(64,77,98,.30))");
+            setImp("filter", "drop-shadow(0 6px 14px rgba(28,21,54,.34))");
             setImp("cursor", "grab");
             setImp("pointer-events", "auto");
             setImp("user-select", "none");
