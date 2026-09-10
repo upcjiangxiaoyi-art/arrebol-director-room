@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.28.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.29.0｜ripple & GPT & Claude
+ * v1.29.0 雾珠月汐：界面光感与留白精修，浮标自动昼夜 / 跟随面板（ripple & GPT）
  * v1.28.0 顶部导演切换与进度，收纳共享设置，双主题 UI 精修（ripple & GPT）
  * v1.27.1 流式接收加开关：共享设置里一枚勾选框，默认开；关掉回到 stream:false 老路（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.27.0 导演请求改流式接收：stream:true 逐块收 delta.content、思考只计数不进稿、120 秒改为两块之间的空闲闸；服务端回整份 JSON 时自动走老路（提议 江；施工 波哥 Claude Fable 5.1）
@@ -68,6 +69,7 @@
         autoInjectPlot: true,
         injectMode: "visible",
         showFloatingWindow: true,
+        fabThemeMode: "clock",      // 浮标：设备当地时间 7–19 点为日间；也可跟随面板。
         dawnTheme: false,           // v1.14.4 开灯：浮窗朝霞浅色皮，默认关（暗河红霞）
         showAutoTriggerPopup: true,
         streamEnabled: true,        // v1.27.1 导演请求流式接收；中转站不支持流式时可关
@@ -703,6 +705,10 @@
 
         var sfw = qForm("adr044-show-floating-window");
         if (sfw) save("showFloatingWindow", !!sfw.checked);
+
+        var fabMode = qForm("adr044-fab-theme-mode");
+        if (fabMode) save("fabThemeMode", fabMode.value === "panel" ? "panel" : "clock");
+        adr048ApplyFabTheme();
 
         var satp = qForm("adr044-show-auto-trigger-popup");
         if (satp) save("showAutoTriggerPopup", !!satp.checked);
@@ -5375,7 +5381,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.28.0</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.29.0</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + adrDTopDeckHTML(false)
@@ -5397,6 +5403,10 @@
             + opt(st.injectMode, "folded", "隐形标记（配合美化正则）")
             + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
+            + '<label for="adr044-fab-theme-mode">浮标配色</label><select id="adr044-fab-theme-mode">'
+            + opt(st.fabThemeMode || "clock", "clock", "自动昼夜 · 当地时间 7:00–19:00 为白天")
+            + opt(st.fabThemeMode, "panel", "跟随面板 · 与太阳／月亮按钮同步")
+            + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
             + adrxDrawerStart("shared-adv", "⚙️ 进阶开关（默认已调好，一般不用动）", false)
@@ -5527,6 +5537,7 @@
             adrDSetAllById("adr044-ng-detect", "", st.ngDetectEnabled !== false);
             adrDSetAllById("adr044-show-auto-trigger-popup", "", st.showAutoTriggerPopup !== false);
             adrDSetAllById("adr044-stream-enabled", "", st.streamEnabled !== false);
+            adrDSetAllById("adr044-fab-theme-mode", st.fabThemeMode === "panel" ? "panel" : "clock");
 
             ["emotion", "plot"].forEach(function (type) {
                 var p = prefixOf(type);
@@ -7147,6 +7158,10 @@
             + opt(st.injectMode, "folded", "隐形标记（配合美化正则）")
             + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
+            + '<label for="adr044-fab-theme-mode">浮标配色</label><select id="adr044-fab-theme-mode">'
+            + opt(st.fabThemeMode || "clock", "clock", "自动昼夜 · 当地时间 7:00–19:00 为白天")
+            + opt(st.fabThemeMode, "panel", "跟随面板 · 与太阳／月亮按钮同步")
+            + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
 
@@ -7306,6 +7321,7 @@
     // 打开浮窗与点灯时各调一次，把 open 流程里的内联 !important 深色按主题重刷，
     // 其余配色交给 style.css 的 [data-arb-theme="dawn"] 级联。
     function adr048ApplyPanelTheme() {
+        adr048ApplyFabTheme();
         try {
             var d = rootDoc();
             var p = d.querySelector("#adr048-popup-panel");
@@ -7478,6 +7494,32 @@
         }
     }
 
+    // UI-only: local clock; no location/network access and no director state writes.
+    function adr048FabTheme(date) {
+        if (settings().fabThemeMode === "panel") return settings().dawnTheme === true ? "dawn" : "dusk";
+        var hour = (date || new Date()).getHours();
+        return hour >= 7 && hour < 19 ? "dawn" : "dusk";
+    }
+
+    function adr048ApplyFabTheme() {
+        try {
+            var btn = rootDoc().querySelector("#adr048-fab");
+            if (!btn) return;
+            var theme = adr048FabTheme();
+            if (btn.getAttribute("data-arb-theme") !== theme) btn.setAttribute("data-arb-theme", theme);
+        } catch (e) {}
+    }
+
+    function adr048InstallFabClock() {
+        var w = rootWin(), d = rootDoc();
+        if (w.__adr048FabClock) return;
+        w.__adr048FabClock = w.setInterval(function () {
+            if (!d.hidden) adr048ApplyFabTheme();
+        }, 60000);
+        d.addEventListener("visibilitychange", adr048ApplyFabTheme);
+        w.addEventListener("focus", adr048ApplyFabTheme);
+    }
+
     function adr048CreateFab() {
         try {
             var d = rootDoc();
@@ -7489,14 +7531,14 @@
             }
 
             var btn = d.querySelector("#adr048-fab");
-            if (btn) return;
+            if (btn) { adr048ApplyFabTheme(); return; }
 
             btn = d.createElement("button");
             btn.id = "adr048-fab";
             btn.setAttribute("data-adr048-owned-fab", ADR048_FAB_INSTANCE_ID);
             btn.type = "button";
-            /* 砚蓝入胭雾 · SVG 胶囊皮肤（按钮外壳透明，视觉全由 SVG 承担） */
-            btn.innerHTML = '<svg viewBox="0 0 120 44" xmlns="http://www.w3.org/2000/svg" aria-label="ARB" style="height:100%;width:auto;display:block;pointer-events:none"><defs><linearGradient id="pkARB-bg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#2A2150"/><stop offset="55%" stop-color="#8F95D8"/><stop offset="100%" stop-color="#EBBFDA"/></linearGradient><linearGradient id="pkARB-river" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#F3D6E6"/><stop offset="100%" stop-color="#2A2150"/></linearGradient></defs><rect x="1" y="1" width="118" height="42" rx="21" fill="url(#pkARB-bg)"/><text x="60" y="22" text-anchor="middle" font-size="15.5" font-weight="700" fill="#F7ECF1" letter-spacing="3" font-family="-apple-system,sans-serif">ARB</text><path d="M12 32 C 32 26 48 37 66 30 C 84 24 98 32 108 27" fill="none" stroke="url(#pkARB-river)" stroke-width="2.4" stroke-linecap="round" opacity="0.9"/><path d="M12 32 C 32 26 48 37 66 30 C 84 24 98 32 108 27" fill="none" stroke="#FFF3F7" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="5 96" opacity="0.95"><animate attributeName="stroke-dashoffset" values="101;0" dur="4.5s" repeatCount="indefinite"/></path></svg>';
+            // SVG palette follows data-arb-theme; the button and drag listeners are never rebuilt.
+            btn.innerHTML = '<svg viewBox="0 0 120 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="height:100%;width:auto;display:block;pointer-events:none"><defs><linearGradient id="pkARB-bg" x1="0" y1="0" x2="1" y2="1"><stop class="arb-fab-stop-a" offset="0" stop-color="#263757"/><stop class="arb-fab-stop-b" offset=".55" stop-color="#616ca3"/><stop class="arb-fab-stop-c" offset="1" stop-color="#ac95c9"/></linearGradient><radialGradient id="pkARB-pearl" cx=".3" cy=".25" r=".85"><stop offset="0" stop-color="#fff"/><stop class="arb-fab-pearl" offset=".5" stop-color="#c8d8f5"/><stop offset="1" stop-color="#a996d1"/></radialGradient></defs><rect class="arb-fab-shell" x="1" y="1" width="118" height="42" rx="21" fill="url(#pkARB-bg)" stroke="#ffffff" stroke-opacity=".45"/><path d="M18 5 Q 59 0 102 5" stroke="#fff" stroke-opacity=".5" fill="none"/><circle class="arb-fab-halo" cx="23" cy="22" r="14" fill="none" stroke="#fff" stroke-opacity=".3"/><circle class="arb-fab-core" cx="23" cy="22" r="10" fill="url(#pkARB-pearl)"/><path class="arb-fab-moon" d="M27 14a9 9 0 1 0 3 13A9 9 0 0 1 27 14" fill="#f8f5ff"/><path class="arb-fab-sun" d="M23 16v12m-6-6h12m-10-4 8 8m0-8-8 8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><text class="arb-fab-word" x="74" y="23" text-anchor="middle" font-size="14" font-weight="600" fill="#f5f4ff" letter-spacing="3" font-family="-apple-system,sans-serif">ARB</text><path class="arb-fab-river" d="M46 32 Q 60 28 74 32 T104 30" fill="none" stroke="#ede8ff" stroke-width="1" stroke-linecap="round" opacity=".7"/></svg>';
             btn.title = "Arrebol D 小红霞";
             btn.setAttribute("aria-label", "Arrebol D 小红霞");
 
@@ -7535,6 +7577,8 @@
             btn.setAttribute("data-anchor", "own-lazy-fixed");
 
             (d.body || d.documentElement).appendChild(btn);
+            adr048InstallFabClock();
+            adr048ApplyFabTheme();
             adr048ApplyFabPosition(btn, adr048GetFabSavedPosition(), true);
 
             var dragging = false;

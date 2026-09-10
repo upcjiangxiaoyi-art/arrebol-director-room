@@ -6211,3 +6211,138 @@ html #adr044-drawer .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer
         font-size: 16px !important;
     }
 }
+
+/* v1.29.0 · 雾珠月汐：霞光在边缘，内容落在安静的珠白 / 海蓝面上。 */
+html #adr048-popup-panel[data-arb-theme="dawn"],
+html #adrx-editor[data-arb-theme="dawn"] {
+    --arb-surface: radial-gradient(ellipse at 2% 0%, #f3dceb 0, transparent 48%), radial-gradient(ellipse at 100% 18%, #e1e5fa 0, transparent 48%), linear-gradient(155deg, #faf7fb, #f4f2fb 65%, #eef7f8);
+    --arb-head: rgba(251, 247, 253, .86);
+    --arb-ink: #46425d;
+    --arb-muted: #757086;
+    --arb-faint: #878297;
+    --arb-line: rgba(141, 117, 162, .14);
+    --arb-card: rgba(255, 255, 255, .62);
+    --arb-card-strong: rgba(255, 255, 255, .83);
+    --arb-field: rgba(255, 255, 255, .68);
+    --arb-shadow: rgba(107, 90, 144, .065);
+    --arb-primary: linear-gradient(115deg, #eed4e4, #d9cef2 55%, #ccdff0);
+    --arb-primary-hover: linear-gradient(115deg, #f3ddeb, #e3d9f7 55%, #d6e7f5);
+    --arb-accent-line: linear-gradient(100deg, #dcaac8, #b0a6dc 52%, #91c3cf);
+    --adr-deck-bg: #f0ebf6;
+    --adr-deck-ink: #46425d;
+    --adr-deck-card: linear-gradient(125deg, rgba(255,255,255,.92), rgba(253,247,253,.82) 50%, rgba(233,239,252,.88));
+    --adr-pearl-glow: rgba(211, 174, 223, .20);
+}
+html #adr048-popup-panel[data-arb-theme="dusk"],
+html #adrx-editor[data-arb-theme="dusk"] {
+    --arb-surface: radial-gradient(ellipse at 0% 0%, rgba(129,101,159,.23), transparent 48%), radial-gradient(ellipse at 100% 25%, rgba(69,133,148,.17), transparent 52%), linear-gradient(160deg, #202940, #182437 60%, #152837);
+    --arb-head: rgba(27, 35, 54, .95);
+    --arb-ink: #eeeaf8;
+    --arb-muted: #b9bfd2;
+    --arb-faint: #949fb7;
+    --arb-line: rgba(191, 204, 239, .14);
+    --arb-card: rgba(193, 209, 245, .045);
+    --arb-card-strong: rgba(194, 207, 245, .075);
+    --arb-field: rgba(12, 21, 36, .24);
+    --arb-field-focus: rgba(183, 201, 234, .08);
+    --arb-shadow: rgba(6, 14, 29, .14);
+    --arb-primary: linear-gradient(115deg, #d3b5dc, #b3b7e0 55%, #9ecad2);
+    --arb-primary-hover: linear-gradient(115deg, #dfc7e6, #c1c5ea 55%, #b1d6dd);
+    --arb-accent-line: linear-gradient(100deg, #d0a6d3, #a8b4e0 52%, #80bfcd);
+    --adr-deck-bg: #26334a;
+    --adr-deck-ink: #eeeaf8;
+    --adr-deck-muted: #b9bfd2;
+    --adr-deck-card: linear-gradient(125deg, rgba(201,187,235,.10), rgba(184,208,238,.045) 55%, rgba(112,177,192,.10));
+    --adr-pearl-glow: rgba(143, 174, 214, .13);
+}
+html #adr044-drawer {
+    --adrx-ink: #46425d;
+    --adrx-muted: #757086;
+    --adrx-faint: #878297;
+    --adrx-card: rgba(255,255,255,.62);
+    --adrx-field: rgba(255,255,255,.68);
+    --adrx-shadow: rgba(107,90,144,.065);
+    --adrx-primary: linear-gradient(115deg, #eed4e4, #d9cef2 55%, #ccdff0);
+    --adr-deck-bg: #f0ebf6;
+    --adr-deck-ink: #46425d;
+    --adr-deck-card: linear-gradient(125deg, rgba(255,255,255,.92), rgba(253,247,253,.82) 50%, rgba(233,239,252,.88));
+    --adr-pearl-glow: rgba(211,174,223,.20);
+}
+html #adr044-drawer > .inline-drawer {
+    background: radial-gradient(ellipse at 2% 0%, #f3dceb, transparent 48%), radial-gradient(ellipse at 100% 18%, #e1e5fa, transparent 48%), linear-gradient(155deg, #faf7fb, #f4f2fb 65%, #eef7f8) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-head {
+    background: var(--arb-head) !important;
+    border-bottom-color: var(--arb-line) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr048-section,
+html #adr044-drawer .adr044-page > details {
+    border-radius: 20px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 6px 20px var(--adr-pearl-glow) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .adr044-auto-counter,
+html #adr044-drawer .adr-top-progress .adr044-auto-counter {
+    padding: 20px 20px 12px !important;
+    border-radius: 22px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.40), 0 10px 30px var(--adr-pearl-glow) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .adr044-auto-counter::before,
+html #adr044-drawer .adr-top-progress .adr044-auto-counter::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 24px;
+    right: 24px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(218,184,227,.85), rgba(158,201,215,.75), transparent);
+    pointer-events: none;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs,
+html #adr044-drawer .adr-top-tabs {
+    border-radius: 19px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 3px 12px var(--adr-pearl-glow) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs button.active,
+html #adr044-drawer .adr-top-tabs button.active {
+    background: var(--adr-deck-card) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.30), 0 2px 6px var(--adr-pearl-glow) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .arb-ct-bar i {
+    background: var(--arb-accent-line) !important;
+    box-shadow: 0 0 10px var(--adr-pearl-glow) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr048-summary {
+    font-size: 12px !important;
+    letter-spacing: .10em !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr044-template-compact,
+html #adr044-drawer .adr044-template-compact {
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    margin: 8px 0 16px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer:not([open]),
+html #adr044-drawer .adrx-drawer:not([open]) {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+/* Float colors use SVG stops, so dragging/opening and saved position stay intact. */
+html #adr048-fab[data-arb-theme="dawn"] .arb-fab-stop-a { stop-color: #f4e2ef; }
+html #adr048-fab[data-arb-theme="dawn"] .arb-fab-stop-b { stop-color: #dbd3f1; }
+html #adr048-fab[data-arb-theme="dawn"] .arb-fab-stop-c { stop-color: #cce5eb; }
+html #adr048-fab[data-arb-theme="dawn"] .arb-fab-pearl { stop-color: #f6d8e9; }
+html #adr048-fab[data-arb-theme="dawn"] .arb-fab-word { fill: #625476; }
+html #adr048-fab[data-arb-theme="dawn"] .arb-fab-river { stroke: #987dad; }
+html #adr048-fab[data-arb-theme="dawn"] .arb-fab-moon,
+html #adr048-fab[data-arb-theme="dusk"] .arb-fab-sun { display: none; }
+html #adr048-fab[data-arb-theme="dusk"] .arb-fab-stop-a { stop-color: #263757; }
+html #adr048-fab[data-arb-theme="dusk"] .arb-fab-stop-b { stop-color: #616ca3; }
+html #adr048-fab[data-arb-theme="dusk"] .arb-fab-stop-c { stop-color: #ac95c9; }
+html #adr048-fab[data-arb-theme] .arb-fab-halo { animation: arb-pearl-breathe 5s ease-in-out infinite; }
+@keyframes arb-pearl-breathe { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+    html #adr048-fab[data-arb-theme],
+    html #adr048-fab[data-arb-theme] *,
+    html #adr048-fab[data-arb-theme]::after { animation: none !important; transition: none !important; }
+}

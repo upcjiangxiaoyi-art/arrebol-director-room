@@ -1,11 +1,11 @@
-// v1.28.0: layout changes must keep settings, counters and both panel surfaces in sync.
+// v1.29.0: layout changes must keep settings, counters and both panel surfaces in sync.
 // Run: npm install --no-save jsdom && node test_ui.js
 const fs = require('fs');
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 const KEY = 'arrebol-d-final-v1040-stable-settings';
 const source = fs.readFileSync('index.js', 'utf8').replace('    wait();',
-    '    window.uiTest = { init, switchTab, adrDUpdateAutoCounters, adr048OpenPopupPanel, adr048ClosePopupPanel, adr048ApplyPanelTheme };');
+    '    window.uiTest = { init, switchTab, adrDUpdateAutoCounters, adr048OpenPopupPanel, adr048ClosePopupPanel, adr048ApplyPanelTheme, adr048FabTheme, adr048ApplyFabTheme, adr048InstallFabClock };');
 const delay = ms => new Promise(r => setTimeout(r, ms));
 let passed = 0;
 function check(condition, name) { assert.ok(condition, name); console.log('✓ ' + name); passed++; }
@@ -19,6 +19,9 @@ function build() {
     const chatMetadata = { arrebol_d: { v: 1, auto: { emotion: { base: 30, mode: 'full-chat-v1' }, plot: { base: 24, mode: 'full-chat-v1' } } },
         arrebol_d_cd: { lastDrawAt: 32, history: [] } };
     for (let i = 0; i < 34; i++) chat.push({ is_user: true, mes: '继续' }, { is_user: false, mes: '<content>灯亮了。</content>' });
+    const timers = [];
+    const nativeInterval = w.setInterval.bind(w);
+    w.setInterval = (fn, ms) => { timers.push({ fn, ms }); return nativeInterval(fn, ms); };
     let requests = 0;
     w.fetch = async () => { requests++; throw Error('No network in UI tests'); };
     w.toastr = { success() {}, info() {}, error() {}, warning() {} };
@@ -29,7 +32,7 @@ function build() {
         event_types: { APP_READY: 'app_ready', MESSAGE_RECEIVED: 'message_received', CHAT_CHANGED: 'chat_changed' } };
     w.SillyTavern = { getContext: () => context };
     w.eval(source); w.uiTest.init();
-    return { w, d, chat, extensionSettings, chatMetadata, requests: () => requests, close: () => dom.window.close() };
+    return { w, d, chat, extensionSettings, chatMetadata, timers, requests: () => requests, close: () => dom.window.close() };
 }
 (async () => {
     const e = build(), { w, d } = e;
@@ -103,6 +106,40 @@ function build() {
         check(!root().querySelector('#adr044-stream-enabled').checked, '改版保留原流式开关');
         click(d.querySelector('#adr048-theme-toggle')); await delay(50);
         check(d.querySelector('#adr048-popup-panel').dataset.arbTheme === 'dusk', '主题切换仍可用');
+        const settings = e.extensionSettings[KEY];
+        const fab = d.querySelector('#adr048-fab');
+        const svg = fab.firstElementChild;
+        const position = [fab.style.left, fab.style.top, fab.style.right, fab.style.bottom].join('|');
+        check(root().querySelector('#adr044-fab-theme-mode').value === 'clock', '新浮标默认使用当地时间');
+        for (const [hour, expected] of [[0, 'dusk'], [6, 'dusk'], [7, 'dawn'], [12, 'dawn'], [18, 'dawn'], [19, 'dusk'], [23, 'dusk']]) {
+            check(w.uiTest.adr048FabTheme({ getHours: () => hour }) === expected, hour + ' 点昼夜配色正确');
+        }
+        const mode = root().querySelector('#adr044-fab-theme-mode');
+        mode.value = 'panel'; mode.dispatchEvent(new w.Event('change', { bubbles: true }));
+        check(settings.fabThemeMode === 'panel', '浮标配色选择自动保存');
+        check(drawer.querySelector('#adr044-fab-theme-mode').value === 'panel', '两端配色选择同步');
+        check(fab.dataset.arbTheme === 'dusk', '跟随面板时立即同步夜色');
+        click(d.querySelector('#adr048-theme-toggle'));
+        check(fab.dataset.arbTheme === 'dawn', '点太阳按钮时浮标同步日色');
+        check(w.uiTest.adr048FabTheme({ getHours: () => 23 }) === 'dawn', '跟随面板模式不被时钟覆盖');
+        mode.value = 'clock'; mode.dispatchEvent(new w.Event('change', { bubbles: true }));
+        const NativeDate = w.Date;
+        let hour = 6;
+        w.Date = class extends NativeDate { getHours() { return hour; } };
+        d.dispatchEvent(new w.Event('visibilitychange'));
+        check(fab.dataset.arbTheme === 'dusk', '返回页面时更新当地昼夜');
+        hour = 7;
+        const clock = e.timers.find(t => t.ms === 60000);
+        check(!!clock, '只需每分钟检查一次浮标时间');
+        clock.fn();
+        check(fab.dataset.arbTheme === 'dawn', '跨过 7 点自动变成日色');
+        hour = 19; w.dispatchEvent(new w.Event('focus'));
+        check(fab.dataset.arbTheme === 'dusk', '页面恢复焦点后同步夜色');
+        w.uiTest.adr048InstallFabClock();
+        check(e.timers.filter(t => t.ms === 60000).length === 1, '重复初始化不叠加时钟');
+        check(fab.firstElementChild === svg, '换色不重建浮标，不丢拖动监听');
+        check([fab.style.left, fab.style.top, fab.style.right, fab.style.bottom].join('|') === position, '换色保留浮标位置');
+        w.Date = NativeDate;
         check(e.requests() === 0, '全部 UI 操作没有发送 API 请求');
         console.log('\n通过 ' + passed + ' · 失败 0');
     } finally { e.close(); }
