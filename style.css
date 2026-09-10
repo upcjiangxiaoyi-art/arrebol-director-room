@@ -6346,3 +6346,191 @@ html #adr048-fab[data-arb-theme] .arb-fab-halo { animation: arb-pearl-breathe 5s
     html #adr048-fab[data-arb-theme] *,
     html #adr048-fab[data-arb-theme]::after { animation: none !important; transition: none !important; }
 }
+
+/* v1.29.1 · 秀气版：缩字体与视觉间距，保持雾珠月汐配色。 */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body label,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr048-check,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr044-check,
+html #adr044-drawer#adr044-drawer .adr044-box label,
+html #adr044-drawer#adr044-drawer .adr044-box .adr048-check,
+html #adr044-drawer#adr044-drawer .adr044-box .adr044-check {
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    line-height: 1.5 !important;
+    margin-top: 9px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body input[type="text"],
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body input[type="password"],
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body input[type="number"],
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body input:not([type]),
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body select,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body textarea,
+html #adr044-drawer#adr044-drawer .adr044-box input[type="text"],
+html #adr044-drawer#adr044-drawer .adr044-box input[type="password"],
+html #adr044-drawer#adr044-drawer .adr044-box input[type="number"],
+html #adr044-drawer#adr044-drawer .adr044-box input:not([type]),
+html #adr044-drawer#adr044-drawer .adr044-box select,
+html #adr044-drawer#adr044-drawer .adr044-box textarea {
+    font-size: 13px !important;
+    font-weight: 400 !important;
+    line-height: 1.55 !important;
+    padding: 7px 10px !important;
+    margin-top: 5px !important;
+    border-radius: 10px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body input[type="text"],
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body input[type="password"],
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body input[type="number"],
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body input:not([type]),
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body select,
+html #adr044-drawer#adr044-drawer .adr044-box input[type="text"],
+html #adr044-drawer#adr044-drawer .adr044-box input[type="password"],
+html #adr044-drawer#adr044-drawer .adr044-box input[type="number"],
+html #adr044-drawer#adr044-drawer .adr044-box input:not([type]),
+html #adr044-drawer#adr044-drawer .adr044-box select {
+    min-height: 36px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body select,
+html #adr044-drawer#adr044-drawer .adr044-box select {
+    padding-right: 30px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body button:not([id="adr044-master-toggle"]):not(.adrx-expand),
+html #adr044-drawer#adr044-drawer .adr044-box button:not([id="adr044-master-toggle"]):not(.adrx-expand) {
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    min-height: 34px !important;
+    padding: 6px 10px !important;
+    letter-spacing: .015em !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr048-summary,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr044-page > details > summary,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adrx-drawer > summary,
+html #adr044-drawer#adr044-drawer .adr044-box .adr048-summary,
+html #adr044-drawer#adr044-drawer .adr044-box .adr044-page > details > summary,
+html #adr044-drawer#adr044-drawer .adr044-box .adrx-drawer > summary {
+    font-size: 11px !important;
+    font-weight: 550 !important;
+    letter-spacing: .055em !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr048-section,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr044-page > details,
+html #adr044-drawer#adr044-drawer .adr044-box .adr048-section,
+html #adr044-drawer#adr044-drawer .adr044-box .adr044-page > details {
+    padding: 12px !important;
+    margin: 10px 0 !important;
+    border-radius: 17px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-tabs,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-tabs {
+    padding: 4px !important;
+    gap: 3px !important;
+    margin-bottom: 9px !important;
+    border-radius: 15px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-tabs button,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-tabs button {
+    min-height: 36px !important;
+    padding: 7px 4px !important;
+    border-radius: 11px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-tabs button.active,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-tabs button.active {
+    font-weight: 550 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-progress .adr044-auto-counter,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-progress .adr044-auto-counter {
+    padding: 12px 16px 6px !important;
+    border-radius: 18px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-progress .arb-ct-nums b,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-progress .arb-ct-nums b {
+    font-size: 24px !important;
+    font-weight: 500 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-progress .arb-ct-label,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-progress .arb-ct-label {
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    letter-spacing: .06em !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .arb-ct-nums i,
+html #adr044-drawer#adr044-drawer .adr044-box .arb-ct-nums i {
+    font-size: 11px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .arb-ct-bar,
+html #adr044-drawer#adr044-drawer .adr044-box .arb-ct-bar {
+    height: 4px !important;
+    margin: 10px 0 8px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .arb-ct-line,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .arb-ct-msg,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr044-cd-status-line,
+html #adr044-drawer#adr044-drawer .adr044-box .arb-ct-line,
+html #adr044-drawer#adr044-drawer .adr044-box .arb-ct-msg,
+html #adr044-drawer#adr044-drawer .adr044-box .adr044-cd-status-line {
+    font-size: 11px !important;
+    line-height: 1.55 !important;
+    font-weight: 400 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body b,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body strong,
+html #adr044-drawer#adr044-drawer .adr044-box b,
+html #adr044-drawer#adr044-drawer .adr044-box strong {
+    font-weight: 550 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-progress .arb-ct-nums b,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-progress .arb-ct-nums b {
+    font-weight: 500 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-counter-details > summary,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-counter-details > summary {
+    font-size: 10.5px !important;
+    min-height: 30px !important;
+    font-weight: 400 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adrx-drawer > summary,
+html #adr044-drawer#adr044-drawer .adr044-box .adrx-drawer > summary {
+    min-height: 36px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body #adr044-master-toggle,
+html #adr044-drawer#adr044-drawer .adr044-box #adr044-master-toggle {
+    min-height: 38px !important;
+    margin-bottom: 10px !important;
+    border-radius: 12px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body #adr044-master-toggle::before,
+html #adr044-drawer#adr044-drawer .adr044-box #adr044-master-toggle::before {
+    font-size: 12px !important;
+    font-weight: 550 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body #adr044-master-toggle::after,
+html #adr044-drawer#adr044-drawer .adr044-box #adr044-master-toggle::after {
+    font-size: 9.5px !important;
+    font-weight: 500 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-head .adr048-title::before,
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-head .adr048-title-d {
+    font-size: 15.5px !important;
+    font-weight: 650 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-head .adr048-title-cn {
+    font-size: 9.5px !important;
+    font-weight: 500 !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-sub {
+    font-size: 9.5px !important;
+    font-weight: 400 !important;
+}
+/* A travelling highlight follows the little wave; no SVG/DOM replacement is needed. */
+html #adr048-fab[data-arb-theme] .arb-fab-current {
+    animation: arb-wave-flow 4.5s linear infinite;
+    pointer-events: none;
+}
+html #adr048-fab[data-arb-theme="dawn"] .arb-fab-current { stroke: #fffaff; }
+html #adr048-fab[data-arb-theme="dusk"] .arb-fab-current { stroke: #e8f7ff; }
+@keyframes arb-wave-flow { from { stroke-dashoffset: 62; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+    html #adr048-fab[data-arb-theme] .arb-fab-current { animation: none !important; }
+}

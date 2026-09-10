@@ -1,11 +1,11 @@
-// v1.29.0: layout changes must keep settings, counters and both panel surfaces in sync.
+// v1.29.1: layout changes must keep settings, counters and both panel surfaces in sync.
 // Run: npm install --no-save jsdom && node test_ui.js
 const fs = require('fs');
 const assert = require('node:assert/strict');
 const { JSDOM } = require('jsdom');
 const KEY = 'arrebol-d-final-v1040-stable-settings';
 const source = fs.readFileSync('index.js', 'utf8').replace('    wait();',
-    '    window.uiTest = { init, switchTab, adrDUpdateAutoCounters, adr048OpenPopupPanel, adr048ClosePopupPanel, adr048ApplyPanelTheme, adr048FabTheme, adr048ApplyFabTheme, adr048InstallFabClock };');
+    '    window.uiTest = { init, switchTab, adrDUpdateAutoCounters, adr048OpenPopupPanel, adr048ClosePopupPanel, adr048ApplyPanelTheme, adr048FabTheme, adr048ApplyFabTheme };');
 const delay = ms => new Promise(r => setTimeout(r, ms));
 let passed = 0;
 function check(condition, name) { assert.ok(condition, name); console.log('✓ ' + name); passed++; }
@@ -110,36 +110,20 @@ function build() {
         const fab = d.querySelector('#adr048-fab');
         const svg = fab.firstElementChild;
         const position = [fab.style.left, fab.style.top, fab.style.right, fab.style.bottom].join('|');
-        check(root().querySelector('#adr044-fab-theme-mode').value === 'clock', '新浮标默认使用当地时间');
-        for (const [hour, expected] of [[0, 'dusk'], [6, 'dusk'], [7, 'dawn'], [12, 'dawn'], [18, 'dawn'], [19, 'dusk'], [23, 'dusk']]) {
-            check(w.uiTest.adr048FabTheme({ getHours: () => hour }) === expected, hour + ' 点昼夜配色正确');
-        }
-        const mode = root().querySelector('#adr044-fab-theme-mode');
-        mode.value = 'panel'; mode.dispatchEvent(new w.Event('change', { bubbles: true }));
-        check(settings.fabThemeMode === 'panel', '浮标配色选择自动保存');
-        check(drawer.querySelector('#adr044-fab-theme-mode').value === 'panel', '两端配色选择同步');
-        check(fab.dataset.arbTheme === 'dusk', '跟随面板时立即同步夜色');
+        // Upgrade from v1.29.0 must also follow the panel without manual migration.
+        settings.fabThemeMode = 'clock';
+        w.uiTest.adr048ApplyFabTheme();
+        check(fab.dataset.arbTheme === 'dusk', '旧版时钟设置不再干扰浮标，夜间面板即夜色');
         click(d.querySelector('#adr048-theme-toggle'));
-        check(fab.dataset.arbTheme === 'dawn', '点太阳按钮时浮标同步日色');
-        check(w.uiTest.adr048FabTheme({ getHours: () => 23 }) === 'dawn', '跟随面板模式不被时钟覆盖');
-        mode.value = 'clock'; mode.dispatchEvent(new w.Event('change', { bubbles: true }));
-        const NativeDate = w.Date;
-        let hour = 6;
-        w.Date = class extends NativeDate { getHours() { return hour; } };
-        d.dispatchEvent(new w.Event('visibilitychange'));
-        check(fab.dataset.arbTheme === 'dusk', '返回页面时更新当地昼夜');
-        hour = 7;
-        const clock = e.timers.find(t => t.ms === 60000);
-        check(!!clock, '只需每分钟检查一次浮标时间');
-        clock.fn();
-        check(fab.dataset.arbTheme === 'dawn', '跨过 7 点自动变成日色');
-        hour = 19; w.dispatchEvent(new w.Event('focus'));
-        check(fab.dataset.arbTheme === 'dusk', '页面恢复焦点后同步夜色');
-        w.uiTest.adr048InstallFabClock();
-        check(e.timers.filter(t => t.ms === 60000).length === 1, '重复初始化不叠加时钟');
+        check(fab.dataset.arbTheme === 'dawn', '太阳按钮立即同步浮标日色');
+        check(w.uiTest.adr048FabTheme({ getHours: () => 23 }) === 'dawn', '晚上也尊重用户选择的日间面板');
+        click(d.querySelector('#adr048-theme-toggle'));
+        check(fab.dataset.arbTheme === 'dusk', '月亮按钮立即同步浮标夜色');
+        check(!root().querySelector('#adr044-fab-theme-mode'), '不再显示容易混淆的时钟设置');
+        check(e.timers.filter(t => t.ms === 60000).length === 0, '不安装浮标时钟轮询');
         check(fab.firstElementChild === svg, '换色不重建浮标，不丢拖动监听');
         check([fab.style.left, fab.style.top, fab.style.right, fab.style.bottom].join('|') === position, '换色保留浮标位置');
-        w.Date = NativeDate;
+        check(!!fab.querySelector('.arb-fab-current'), '浮标恢复沿小波浪流动的高光');
         check(e.requests() === 0, '全部 UI 操作没有发送 API 请求');
         console.log('\n通过 ' + passed + ' · 失败 0');
     } finally { e.close(); }
