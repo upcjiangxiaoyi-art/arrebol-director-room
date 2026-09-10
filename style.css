@@ -6189,8 +6189,8 @@ html #adr048-popup-panel[data-arb-theme] summary:focus-visible {
 }
 
 /* Main switches keep their capsule shape even after moving into a disclosure. */
-html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"]) > .adr048-check input[type="checkbox"],
-html #adr044-drawer .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"]) > .adr044-check input[type="checkbox"] {
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"], .adr-fold-card) > .adr048-check input[type="checkbox"],
+html #adr044-drawer .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"], .adr-fold-card) > .adr044-check input[type="checkbox"] {
     width: 40px !important;
     min-width: 40px !important;
     max-width: 40px !important;
@@ -6200,8 +6200,8 @@ html #adr044-drawer .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer
     border-radius: 999px !important;
     background: radial-gradient(circle at 11px 50%, #fff 0 7px, transparent 7.6px), rgba(130, 120, 155, .22) !important;
 }
-html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"]) > .adr048-check input[type="checkbox"]:checked,
-html #adr044-drawer .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"]) > .adr044-check input[type="checkbox"]:checked {
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"], .adr-fold-card) > .adr048-check input[type="checkbox"]:checked,
+html #adr044-drawer .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"], .adr-fold-card) > .adr044-check input[type="checkbox"]:checked {
     background: radial-gradient(circle at calc(100% - 11px) 50%, #fff 0 7px, transparent 7.6px), linear-gradient(90deg, #e9b6d4, #bda2e6 55%, #97a5ea) !important;
 }
 @media (max-width: 600px) and (pointer: coarse) {
@@ -6534,3 +6534,47 @@ html #adr048-fab[data-arb-theme="dusk"] .arb-fab-current { stroke: #e8f7ff; }
 @media (prefers-reduced-motion: reduce) {
     html #adr048-fab[data-arb-theme] .arb-fab-current { animation: none !important; }
 }
+
+/* v1.29.2 · 轻收纳与进度快捷操作 */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-fold-card,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-fold-card {
+    padding: 0 !important; margin: 10px 0 !important; border-radius: 17px !important; overflow: hidden;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-fold-card[open],
+html #adr044-drawer#adr044-drawer .adr044-box .adr-fold-card[open] {
+    padding: 0 12px 12px !important; background: var(--arb-card, var(--adrx-card)) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-fold-card > summary,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-fold-card > summary {
+    padding: 11px 12px !important; min-height: 40px !important; color: var(--arb-muted, var(--adrx-muted)) !important; cursor: pointer;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-fold-card[open] > summary,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-fold-card[open] > summary {
+    margin: 0 -12px 10px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-fold-card > summary:focus-visible,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-fold-card > summary:focus-visible {
+    outline: 2px solid var(--arb-rose, #bda2e6); outline-offset: -3px;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adrx-drawer :is(input, select, textarea),
+html #adr044-drawer#adr044-drawer .adr044-box .adrx-drawer :is(input, select, textarea) {
+    box-sizing: border-box !important; max-width: 100% !important; min-width: 0;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-calibrate,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-calibrate {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 8px 2px 10px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-calibrate > span,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-calibrate > span {
+    font-size: 10px; color: var(--arb-faint, var(--adrx-faint)); line-height: 1.5;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-calibrate > button.adr044-auto-calibrate,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-calibrate > button.adr044-auto-calibrate {
+    width: auto !important; flex: 0 0 auto; min-height: 32px !important; margin: 0 !important; padding: 5px 13px !important; border-radius: 999px !important;
+}
+
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-fold-card > :not(summary),
+html #adr044-drawer#adr044-drawer .adr044-box .adr-fold-card > :not(summary) { margin-left: 0 !important; margin-right: 0 !important; }
+
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adrx-drawer:not(.adr-fold-card) > :is(input:not([type="checkbox"]), select, textarea),
+html #adr044-drawer#adr044-drawer .adr044-box .adrx-drawer:not(.adr-fold-card) > :is(input:not([type="checkbox"]), select, textarea) { width: calc(100% - 20px) !important; max-width: calc(100% - 20px) !important; }

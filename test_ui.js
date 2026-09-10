@@ -1,4 +1,4 @@
-// v1.29.1: layout changes must keep settings, counters and both panel surfaces in sync.
+// v1.29.2: layout changes must keep settings, counters and both panel surfaces in sync.
 // Run: npm install --no-save jsdom && node test_ui.js
 const fs = require('fs');
 const assert = require('node:assert/strict');
@@ -47,6 +47,18 @@ function build() {
             check(scope.firstElementChild.classList.contains('adr-top-tabs'), name + '第一项为导演切换');
             check(scope.firstElementChild.nextElementSibling.classList.contains('adr-top-progress'), name + '进度紧跟切换');
             check(!scope.querySelector('[data-drawer-id="shared-main"]').open, name + '共享设置默认收起');
+            for (const type of ['emotion', 'plot']) {
+                for (const kind of ['api', 'preset']) {
+                    const fold = scope.querySelector('[data-drawer-id="' + kind + '-' + type + '"]');
+                    check(fold?.tagName === 'DETAILS' && !fold.open, name + type + kind + '默认折叠');
+                }
+                const calibrate = scope.querySelector('#adr044-' + type + '-calibrate-auto');
+                check(calibrate.closest('.adr-top-pane')?.dataset.director === type && !calibrate.closest('details'), name + type + '对表在顶部且无需展开');
+            }
+            for (const key of ['slots', 'library', 'api', 'envelope', 'help']) {
+                check(!scope.querySelector('[data-drawer-id="cd-' + key + '"]').open, name + '抽卡' + key + '默认收起');
+            }
+            check(scope.querySelector('[data-drawer-id="cd-controls"]').open && scope.querySelector('[data-drawer-id="cd-current"]').open, name + '抽卡常用操作和当前卡片默认展开');
             const ids = [...scope.querySelectorAll('[id]')].map(el => el.id);
             check(new Set(ids).size === ids.length, name + '内部没有新增重复 ID');
             check(counter(scope, 'emotion').querySelector('.arb-ct-nums b').textContent === '4', name + '原有情感进度 4/17 保留');
@@ -124,6 +136,29 @@ function build() {
         check(fab.firstElementChild === svg, '换色不重建浮标，不丢拖动监听');
         check([fab.style.left, fab.style.top, fab.style.right, fab.style.bottom].join('|') === position, '换色保留浮标位置');
         check(!!fab.querySelector('.arb-fab-current'), '浮标恢复沿小波浪流动的高光');
+        // Folding preserves edited values and remembered state after rebuilding the popup.
+        const folds = ['api-emotion', 'preset-emotion', 'cd-api', 'cd-library', 'cd-envelope'];
+        for (const key of folds) root().querySelector('[data-drawer-id="' + key + '"]').open = true;
+        w.uiTest.switchTab('emotion');
+        const model = root().querySelector('#adr044-emotion-model');
+        model.value = 'ui-fold-model';
+        model.dispatchEvent(new w.Event('change', { bubbles: true }));
+        await delay(650);
+        w.uiTest.adr048ClosePopupPanel(); w.uiTest.adr048OpenPopupPanel(); await delay(150);
+        for (const key of folds) check(root().querySelector('[data-drawer-id="' + key + '"]').open, key + '重新打开保留展开状态');
+        check(root().querySelector('#adr044-emotion-model').value === 'ui-fold-model', '折叠 API 配置仍能保存模型');
+        check(!root().querySelector('#adr044-emotion-preview').closest('.adr-fold-card'), '导演结果保持直接可见');
+        root().querySelector('[data-drawer-id="trigger-emotion"]').open = false;
+        const baselineBefore = e.chatMetadata.arrebol_d.auto.emotion.base;
+        const plotBefore = e.chatMetadata.arrebol_d.auto.plot.base;
+        const cdBefore = e.chatMetadata.arrebol_d_cd.lastDrawAt;
+        const calibrate = root().querySelector('#adr044-emotion-calibrate-auto');
+        click(calibrate); await delay(500);
+        check(e.chatMetadata.arrebol_d.auto.emotion.base === baselineBefore && calibrate.textContent === '确定对表？', '顶部对表第一次点击仍仅确认');
+        click(calibrate); await delay(150);
+        check(e.chatMetadata.arrebol_d.auto.emotion.base === 35, '触发设置收起时仍能对表至当前楼层');
+        check(counter(root(), 'emotion').querySelector('.arb-ct-nums b').textContent === '0' && counter(drawer, 'emotion').querySelector('.arb-ct-nums b').textContent === '0', '对表后两端进度都归零');
+        check(e.chatMetadata.arrebol_d.auto.plot.base === plotBefore && e.chatMetadata.arrebol_d_cd.lastDrawAt === cdBefore, '情感对表不改统筹或抽卡基准线');
         check(e.requests() === 0, '全部 UI 操作没有发送 API 请求');
         console.log('\n通过 ' + passed + ' · 失败 0');
     } finally { e.close(); }

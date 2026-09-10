@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.29.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.29.2｜ripple & GPT & Claude
+ * v1.29.2 轻收纳：API / 预设折叠，重新对表提至进度下方，抽卡同样整理（ripple & GPT）
  * v1.29.1 秀气版：缩字号 / 字重 / 留白，恢复浮标流波；浮标只跟随面板日夜（ripple & GPT）
  * v1.29.0 雾珠月汐：界面光感与留白精修，浮标自动昼夜 / 跟随面板（ripple & GPT）
  * v1.28.0 顶部导演切换与进度，收纳共享设置，双主题 UI 精修（ripple & GPT）
@@ -5151,7 +5152,7 @@
         var noteClass = checkClass === "adr048-check" ? "adr048-note" : "adr044-note";
         var mode = ADR_CD_MODES.indexOf(st.cdMode) >= 0 ? st.cdMode : "blind";
         var lifeMode = adrCdLifeMode();
-        return secOpen("剧情小风铃 🎐")
+        return secOpen("剧情小风铃 🎐", false, "controls")
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-enabled"' + (st.cdEnabled ? " checked" : "") + '> 启用剧情小风铃</label>'
             + '<div class="' + actionsClass + '"><button id="adr044-cd-preview-draw" type="button">试抽一张（仅预览）</button><button id="adr044-cd-selfcheck" type="button">🔧 自检</button></div>'
             + '<div class="adr044-cd-preview-out" id="adr044-cd-preview-out"></div>'
@@ -5168,7 +5169,7 @@
             + '<div class="adr044-template-status" id="adr044-cd-pause-status"></div>'
             + secClose()
 
-            + secOpen("耳边这张卡")
+            + secOpen("耳边这张卡", false, "current")
             + '<div class="adr044-cd-life-card" id="adr044-cd-life-card">耳边暂无卡片。</div>'
             + '<div class="' + actionsClass + '"><button id="adr044-cd-close-card" type="button">✓ 这张已兑现，撤下</button></div>'
             + '<div class="adr044-template-status" id="adr044-cd-life-status">读到卡里的事已经落地了，点一下撤下它。下一张仍按原节奏来，中间那几楼留白，让剧情喘口气。</div>'
@@ -5184,7 +5185,7 @@
             + '<div class="adr044-cd-life-history" id="adr044-cd-life-history">还没投过卡。</div>'
             + secClose()
 
-            + secOpen("三个仓库")
+            + secOpen("三个仓库", true, "slots")
             + '<div class="' + noteClass + '">启用哪几格，就在哪几格之间均等掷——仓库数即权重。专属库配角色卡，通用库打底，NSFW 库单独一格。点亮=这局使用（换聊天各记各的）；库住哪个箱是永久的，灰芯片=在箱未用，虚线=未分箱。</div>'
             + adrCdSlotRowHTML("story", checkClass)
             + adrCdSlotRowHTML("common", checkClass)
@@ -5192,7 +5193,7 @@
             + '<div class="adr044-template-status" id="adr044-cd-slot-status">点一下芯片＝这局用不用它；开关＝整格用不用。每次点完这里会回报存没存进去。</div>'
             + secClose()
 
-            + secOpen("编辑卡库")
+            + secOpen("编辑卡库", true, "library")
             + '<label>正在编辑</label>'
             + adrCdEditSelectHTML()
             + '<input type="text" id="adr044-cd-lib-name" placeholder="卡库名（保存＝新建或更新；重命名＝改当前这副）">'
@@ -5212,7 +5213,7 @@
             + '<textarea id="adr044-cd-lib-editor" rows="12" placeholder="## 卡池名&#10;一行一张卡…"></textarea>'
             + secClose()
 
-            + secOpen("择池／择卡 API（这两档才用）", true)
+            + secOpen("择池／择卡 API（这两档才用）", true, "api")
             + '<div class="adr044-template-compact adr044-api-profile-compact">'
             + '<select id="adr044-api-profile-select-cd">' + adrDApiProfileSelectOptions("cd", adrDSelectedApiProfileName("cd") || "") + '</select>'
             + '<input type="text" id="adr044-api-profile-name-cd" value="' + esc(adrDSelectedApiProfileName("cd") || "") + '" placeholder="预设名，如 DS">'
@@ -5229,7 +5230,7 @@
             + '<div class="adr044-template-status" id="adr044-cd-status">择池与择卡都用这里的 API；任何异常当场降级盲抽，不停摆（降级时 NSFW 一律不参与）。试抽恒为盲抽，不产生费用。</div>'
             + secClose()
 
-            + secOpen("高级 · 注入与信封", true)
+            + secOpen("高级 · 注入与信封", true, "envelope")
             + '<label>注入深度（从最新消息往回数，默认 2）</label><input type="number" id="adr044-cd-depth" min="0" max="4" value="' + esc(String(adrCdDepth())) + '">'
             + '<label>冷却区（最近 M 张不复用，默认 8，最多 32）</label><input type="number" id="adr044-cd-cooldown" min="0" max="32" value="' + esc(String(adrCdCooldown())) + '">'
             + '<label>信封预设（不同模型吃不同话术）</label>'
@@ -5246,15 +5247,15 @@
             + '<textarea id="adr044-cd-envelope-faded" rows="3">' + esc(adrCdEnvelopePair().faded) + '</textarea>'
             + secClose()
 
-            + secOpen("卡面家法", true)
+            + secOpen("卡面家法", true, "help")
             + '<div class="' + noteClass + '" style="white-space:pre-wrap">' + esc(ADR_CD_HELP_TEXT) + '</div>'
             + secClose();
     }
 
     function adrCdPageHTML() {
         var st = settings();
-        function secOpen(title, closed) {
-            return '<details' + (closed ? '' : ' open') + '><summary>' + title + '</summary>';
+        function secOpen(title, closed, key) {
+            return adrxDrawerStart('cd-' + key, title, !closed, true);
         }
         function secClose() { return '</details>'; }
         return '<div class="adr044-page" id="adr044-page-cd"' + (st.activeTab === "cd" ? '' : ' style="display:none"') + '>'
@@ -5264,10 +5265,10 @@
 
     function adrCd048PageHTML() {
         var st = settings();
-        function secOpen(title) {
-            return '<div class="adr048-section"><div class="adr048-summary">' + title + '</div>';
+        function secOpen(title, closed, key) {
+            return adrxDrawerStart('cd-' + key, title, !closed, true);
         }
-        function secClose() { return '</div>'; }
+        function secClose() { return '</details>'; }
         return '<div class="adr048-page" id="adr048-page-cd"' + (st.activeTab === "cd" ? '' : ' style="display:none"') + '>'
             + adrCdPageInnerHTML(secOpen, secClose, "adr048-check", "adr048-actions")
             + '</div>';
@@ -5287,7 +5288,7 @@
         var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
 
         return '<div class="adr044-page" id="adr044-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
-            + '<details open><summary>' + title + '配置</summary>'
+            + adrxDrawerStart('api-' + type, title + ' · API 配置', false, true)
             + '<label>API 预设</label>'
             + '<div class="adr044-template-compact adr044-api-profile-compact">'
             + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileSelectOptions(type, adrDSelectedApiProfileName(type) || "") + '</select>'
@@ -5306,7 +5307,7 @@
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
             + '</details>'
 
-            + '<details><summary>' + title + '预设</summary>'
+            + adrxDrawerStart('preset-' + type, title + '预设', false, true)
             + '<div class="adr044-template-compact">'
             + '<select id="adr044-template-select-' + type + '">' + adrDTemplateOptions(type) + '</select>'
             + '<input id="adr044-template-name-' + type + '" placeholder="新模板名 / 当前模板名">'
@@ -5348,7 +5349,8 @@
             if (type === 'cd') {
                 html += '<div class="adr044-cd-status-line" id="adr044-cd-status-line" title="点一下展开／收起">' + esc(adrCdStatusText()) + '</div>';
             } else {
-                html += adrDTriggerControlsHTML(type, popup);
+                html += '<div class="adr044-auto-calibrate-row adr-top-calibrate"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button" title="从当前楼层重新计数自动触发间隔">重新对表</button><span>从当前楼层重新计数</span></div>'
+                    + adrDTriggerControlsHTML(type, popup);
             }
             html += '</div>';
         });
@@ -5371,7 +5373,6 @@
             + '</select>'
             + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
             + '<div class="' + noteClass + ' adr044-auto-reroll-note">ℹ️ 触发层重 roll 不会自动再触发；如需基于新回复补导演建议，点「分析」即可，想附加要求就先填补充指令。</div>'
-            + '<div class="adr044-auto-calibrate-row"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button">重新对表（从现在起重数间隔）</button></div>'
             + '</details>';
     }
 
@@ -5379,7 +5380,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.29.1</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.29.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + adrDTopDeckHTML(false)
@@ -7038,7 +7039,7 @@
         var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
 
         return '<div class="adr048-page" id="adr048-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
-            + '<div class="adr048-section"><div class="adr048-summary">' + title + '配置</div>'
+            + adrxDrawerStart('api-' + type, title + ' · API 配置', false, true)
             + '<label>API 预设</label>'
             + '<div class="adr044-template-compact adr044-api-profile-compact">'
             + '<select id="adr044-api-profile-select-' + type + '">' + adrDApiProfileSelectOptions(type, adrDSelectedApiProfileName(type) || "") + '</select>'
@@ -7055,9 +7056,9 @@
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
             + '<div class="adr048-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存当前使用</button></div>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
-            + '</div>'
+            + '</details>'
 
-            + '<div class="adr048-section"><div class="adr048-summary">' + title + '预设</div>'
+            + adrxDrawerStart('preset-' + type, title + '预设', false, true)
             + '<div class="adr044-template-compact">'
             + '<select id="adr044-template-select-' + type + '">' + adrDTemplateOptions(type) + '</select>'
             + '<input id="adr044-template-name-' + type + '" placeholder="新模板名 / 当前模板名">'
@@ -7068,7 +7069,7 @@
             + '<div class="adr044-template-status" id="adr044-template-status-' + type + '"></div>'
             + '</div>'
             + '<textarea id="adr044-' + type + '-preset" rows="8">' + esc(st[p + "Preset"] || "") + '</textarea>'
-            + '</div>'
+            + '</details>'
 
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '结果</div>'
             + '<div id="adr044-' + type + '-status" class="adr048-status">可先试运行看看导演会读到什么，或直接点「分析」。</div>'
@@ -7098,8 +7099,8 @@
         return defOpen ? " open" : "";
     }
 
-    function adrxDrawerStart(id, label, defOpen) {
-        return '<details class="adrx-drawer" data-drawer-id="' + id + '"' + adrxDrawerOpenAttr(id, defOpen) + '><summary>' + label + '</summary>';
+    function adrxDrawerStart(id, label, defOpen, card) {
+        return '<details class="adrx-drawer' + (card ? ' adr-fold-card' : '') + '" data-drawer-id="' + id + '"' + adrxDrawerOpenAttr(id, defOpen) + '><summary>' + label + '</summary>';
     }
 
     function adrxInstallDrawerMemory() {
