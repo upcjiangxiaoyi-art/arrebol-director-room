@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.27.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.28.0｜ripple & GPT & Claude
+ * v1.28.0 顶部导演切换与进度，收纳共享设置，双主题 UI 精修（ripple & GPT）
  * v1.27.1 流式接收加开关：共享设置里一枚勾选框，默认开；关掉回到 stream:false 老路（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.27.0 导演请求改流式接收：stream:true 逐块收 delta.content、思考只计数不进稿、120 秒改为两块之间的空闲闸；服务端回整份 JSON 时自动走老路（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.26.1 放大编辑热修：整屏编辑器钉在 iOS 可视视口上，键盘弹出不再把它顶飞；手机上不自动弹键盘（报告 江；施工 波哥 Claude Fable 5.1）
@@ -4155,8 +4156,25 @@
         return head;
     }
 
+    function adrCdCounterInfo() {
+        var label = "剧情小风铃";
+        if (!adrDMasterEnabled()) return { state: "off", label: label, msg: "总开关已关闭 · 剧情小风铃随组休息" };
+        if (!settings().cdEnabled) return { state: "off", label: label, msg: "开启剧情小风铃后，在这里查看投卡进度" };
+        var state = adrCdChatState();
+        if (state.paused) return { state: "off", label: label, tag: "已暂停", msg: "这个聊天已暂停投卡" };
+        if (!adrDCountReady() || !adrDChatKeyReady()) return { state: "wait", label: label, msg: "正在读取聊天，稍后显示投卡进度…" };
+        var count = adrDAssistantRoundCount();
+        var n = adrCdN();
+        var base = Number(state.lastDrawAt);
+        if (!Number.isFinite(base) || base < 0) return { state: "wait", label: label, msg: "等待下一次检查对表" };
+        var passed = Math.max(0, count - base);
+        return { state: "ok", label: label, unit: "card", passed: passed, n: n,
+            left: Math.max(0, n - passed), base: base, tech: "本聊天共 " + count + " 条回复 · 基准线 " + base + " 楼起" };
+    }
+
     function adrCdUpdateStatusLine() {
         try { adrCdSetTextAll("adr044-cd-status-line", adrCdStatusText()); } catch (e) {}
+        try { adrDSetCounterText("cd", adrCdCounterInfo()); } catch (e) {}
     }
 
     function adrCdToggleStatusExpand() {
@@ -4901,6 +4919,8 @@
             });
 
             each("adr044-cd-paused", function (el) {
+                // 与启用/仓库开关相同：触摸先上锁，避免共享设置刷新在 change 前拨回旧值。
+                tapLock(el);
                 el.addEventListener("change", function () {
                     adrCdTouch(el);
                     adrCdSetPaused(!!el.checked, false);
@@ -5129,7 +5149,6 @@
         var lifeMode = adrCdLifeMode();
         return secOpen("剧情小风铃 🎐")
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-cd-enabled"' + (st.cdEnabled ? " checked" : "") + '> 启用剧情小风铃</label>'
-            + '<div class="adr044-cd-status-line" id="adr044-cd-status-line" title="点一下展开／收起">状态加载中…</div>'
             + '<div class="' + actionsClass + '"><button id="adr044-cd-preview-draw" type="button">试抽一张（仅预览）</button><button id="adr044-cd-selfcheck" type="button">🔧 自检</button></div>'
             + '<div class="adr044-cd-preview-out" id="adr044-cd-preview-out"></div>'
             + '<div class="adr044-cd-preview-out" id="adr044-cd-selfcheck-out"></div>'
@@ -5281,19 +5300,6 @@
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
             + '<div class="adr044-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存当前使用</button></div>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
-            + '<label class="adr044-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "让统筹定期来看一眼大局（默认关）" : "启用情感导演自动触发") + '</label>'
-            + '<label>自动触发间隔</label>'
-            + '<select id="adr044-auto-trigger-range-' + type + '">'
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "10", "每 10 个助手正文轮次")
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "20", "每 20 个助手正文轮次")
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "30", "每 30 个助手正文轮次")
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "50", "每 50 个助手正文轮次")
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
-            + '</select>'
-            + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
-            + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">计数加载中…</div>'
-            + '<div class="adr044-note adr044-auto-reroll-note">ℹ️ 触发层重 roll 不会自动再触发；如需基于新回复补导演建议，点「分析」即可，想附加要求就先填补充指令。</div>'
-            + '<div class="adr044-auto-calibrate-row"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button">重新对表（从现在起重数间隔）</button></div>'
             + '</details>'
 
             + '<details><summary>' + title + '预设</summary>'
@@ -5320,17 +5326,62 @@
             + '</div>';
     }
 
+    // v1.28.0: one top deck per surface; existing control IDs and save handlers stay intact.
+    function adrDTopDeckHTML(popup) {
+        var st = settings();
+        var active = st.activeTab === "plot" || st.activeTab === "cd" ? st.activeTab : "emotion";
+        var kinds = ["emotion", "plot", "cd"];
+        var labels = { emotion: "情感导演", plot: "统筹", cd: "抽卡" };
+        var html = '<div class="' + (popup ? 'adr048-tabs' : 'adr044-tabs') + ' adr-top-tabs" role="group" aria-label="切换导演">';
+        kinds.forEach(function (type) {
+            html += '<button id="adr044-tab-' + type + '" type="button" aria-pressed="' + (active === type) + '" class="' + (active === type ? 'active' : '') + '">' + labels[type] + '</button>';
+        });
+        html += '</div><div class="adr-top-progress">';
+        kinds.forEach(function (type) {
+            html += '<div class="adr-top-pane" data-director="' + type + '"' + (active === type ? '' : ' hidden') + '>'
+                + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">'
+                + adrDCounterHTML(type === 'cd' ? adrCdCounterInfo() : adrDAutoCounterText(type)) + '</div>';
+            if (type === 'cd') {
+                html += '<div class="adr044-cd-status-line" id="adr044-cd-status-line" title="点一下展开／收起">' + esc(adrCdStatusText()) + '</div>';
+            } else {
+                html += adrDTriggerControlsHTML(type, popup);
+            }
+            html += '</div>';
+        });
+        return html + '</div>';
+    }
+
+    function adrDTriggerControlsHTML(type, popup) {
+        var st = settings();
+        var checkClass = popup ? 'adr048-check' : 'adr044-check';
+        var noteClass = popup ? 'adr048-note' : 'adr044-note';
+        return adrxDrawerStart('trigger-' + type, '自动触发设置', false)
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "让统筹定期来看一眼大局（默认关）" : "启用情感导演自动触发") + '</label>'
+            + '<label>自动触发间隔</label>'
+            + '<select id="adr044-auto-trigger-range-' + type + '">'
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "10", "每 10 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "20", "每 20 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "30", "每 30 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "50", "每 50 个助手正文轮次")
+            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
+            + '</select>'
+            + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
+            + '<div class="' + noteClass + ' adr044-auto-reroll-note">ℹ️ 触发层重 roll 不会自动再触发；如需基于新回复补导演建议，点「分析」即可，想附加要求就先填补充指令。</div>'
+            + '<div class="adr044-auto-calibrate-row"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button">重新对表（从现在起重数间隔）</button></div>'
+            + '</details>';
+    }
+
     function drawerHTML() {
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.19.4</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.28.0</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + '<div class="adr044-note">小红霞在线｜ripple & GPT & Claude</div>'
+            + adrDTopDeckHTML(false)
             + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
 
-            + '<details open><summary>共享设置</summary>'
+            + adrxDrawerStart("shared-main", "共享设置", false)
             + '<label>导演回看多少楼</label><select id="adr044-range">'
             + opt(st.range, "10", "最近 10 轮")
             + opt(st.range, "20", "最近 20 轮")
@@ -5361,12 +5412,6 @@
             + '<div class="adr044-actions"><button id="adr044-preview-precise" type="button">预览精准读取</button></div>'
             + '</details>'
             + '</details>'
-
-            + '<div class="adr044-tabs">'
-            + '<button id="adr044-tab-emotion" type="button" class="' + (st.activeTab === "plot" || st.activeTab === "cd" ? "" : "active") + '">情感导演</button>'
-            + '<button id="adr044-tab-plot" type="button" class="' + (st.activeTab === "plot" ? "active" : "") + '">统筹</button>'
-            + '<button id="adr044-tab-cd" type="button" class="' + (st.activeTab === "cd" ? "active" : "") + '">🎴 抽卡</button>'
-            + '</div>'
 
             + pageHTML("emotion")
             + pageHTML("plot")
@@ -5402,10 +5447,18 @@
 
     function switchTab(type) {
         type = (type === "plot" || type === "cd") ? type : "emotion";
+        var changed = settings().activeTab !== type;
         save("activeTab", type);
 
         try {
             var d = rootDoc();
+            Array.prototype.slice.call(d.querySelectorAll(".adr-top-pane")).forEach(function (el) {
+                el.hidden = el.getAttribute("data-director") !== type;
+            });
+            if (changed) {
+                var body = d.querySelector("#adr048-popup-body");
+                if (body) body.scrollTop = 0;
+            }
 
             // 抽屉与浮窗会同时存在，且内部 id 重复。
             // 所以这里必须同步所有同名节点，不能只 q("#id")。
@@ -5423,14 +5476,17 @@
 
             Array.prototype.slice.call(d.querySelectorAll("#adr044-tab-emotion")).forEach(function (el) {
                 el.classList.toggle("active", type === "emotion");
+                el.setAttribute("aria-pressed", String(type === "emotion"));
             });
 
             Array.prototype.slice.call(d.querySelectorAll("#adr044-tab-plot")).forEach(function (el) {
                 el.classList.toggle("active", type === "plot");
+                el.setAttribute("aria-pressed", String(type === "plot"));
             });
 
             Array.prototype.slice.call(d.querySelectorAll("#adr044-tab-cd")).forEach(function (el) {
                 el.classList.toggle("active", type === "cd");
+                el.setAttribute("aria-pressed", String(type === "cd"));
             });
 
             adrDRefreshAllFieldsFromSettings();
@@ -6995,19 +7051,6 @@
             + '<select id="adr044-' + type + '-model-select"><option value="' + esc(st[p + "Model"] || "") + '">' + (st[p + "Model"] ? esc(st[p + "Model"]) + "（当前）" : "加载后选择模型") + '</option></select>'
             + '<div class="adr048-actions"><button id="adr044-' + type + '-load-models" type="button">加载模型</button><button id="adr044-' + type + '-save" type="button">保存当前使用</button></div>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-inject-' + type + '"' + (st[autoKey] ? " checked" : "") + '> 生成后自动注入当前聊天</label>'
-            + '<label class="adr048-check"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "让统筹定期来看一眼大局（默认关）" : "启用情感导演自动触发") + '</label>'
-            + '<label>自动触发间隔</label>'
-            + '<select id="adr044-auto-trigger-range-' + type + '">'
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "10", "每 10 个助手正文轮次")
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "20", "每 20 个助手正文轮次")
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "30", "每 30 个助手正文轮次")
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "50", "每 50 个助手正文轮次")
-            + opt(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"], "custom", "自定义")
-            + '</select>'
-            + '<input type="number" id="adr044-auto-trigger-custom-' + type + '" placeholder="自定义自动触发轮次" value="' + esc(st[type === "plot" ? "autoTriggerPlotCustomRange" : "autoTriggerEmotionCustomRange"] || "") + '" style="display:' + (String(st[type === "plot" ? "autoTriggerPlotRange" : "autoTriggerEmotionRange"]) === "custom" ? "block" : "none") + '">'
-            + '<div class="adr044-auto-counter" id="adr044-auto-counter-' + type + '">计数加载中…</div>'
-            + '<div class="adr048-note adr048-auto-reroll-note">ℹ️ 触发层重 roll 不会自动再触发；如需基于新回复补导演建议，点「分析」即可，想附加要求就先填补充指令。</div>'
-            + '<div class="adr044-auto-calibrate-row"><button class="adr044-auto-calibrate" id="adr044-' + type + '-calibrate-auto" type="button">重新对表（从现在起重数间隔）</button></div>'
             + '</div>'
 
             + '<div class="adr048-section"><div class="adr048-summary">' + title + '预设</div>'
@@ -7082,13 +7125,13 @@
             + '<div id="adr048-popup-head">'
             + '<div class="adr048-head-txt"><div class="adr048-title">🎬 Arrebol <span class="adr048-title-d">D</span><span class="adr048-title-cn">暗河红霞导演系统</span></div><div id="adr048-popup-sub">小红霞在线 · ripple &amp; GPT &amp; Claude</div></div>'
             + '<button type="button" id="adr048-theme-toggle" title="开灯 / 关灯">' + (st.dawnTheme === true ? "☀️" : "🌙") + '</button>'
-            + '<button type="button" id="adr048-popup-close">×</button>'
+            + '<button type="button" id="adr048-popup-close" aria-label="关闭导演室">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
+            + adrDTopDeckHTML(true)
             + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
-            + '<div class="adr048-note adrx-blurb">小红霞已就绪。自动触发、手动导演、纯文本注入与本地设置保存均已启用。由 ripple & GPT & Claude 收尾维护。</div>'
 
-            + '<div class="adr048-section"><div class="adr048-summary">共享设置</div>'
+            + adrxDrawerStart("shared-main", "共享设置", false)
             + '<label>导演回看多少楼</label><select id="adr044-range">'
             + opt(st.range, "10", "最近 10 轮")
             + opt(st.range, "20", "最近 20 轮")
@@ -7120,13 +7163,7 @@
             + '<div class="adr048-actions"><button id="adr044-probe-context" type="button">检测上下文</button><button id="adr044-probe-content" type="button">测试 &lt;content&gt; 提取</button></div>'
             + '<div class="adr048-actions"><button id="adr044-preview-precise" type="button">预览精准读取</button></div>'
             + '</details>'
-            + '</div>'
-
-            + '<div class="adr048-tabs">'
-            + '<button id="adr044-tab-emotion" type="button" class="' + (st.activeTab === "plot" || st.activeTab === "cd" ? "" : "active") + '">情感导演</button>'
-            + '<button id="adr044-tab-plot" type="button" class="' + (st.activeTab === "plot" ? "active" : "") + '">统筹</button>'
-            + '<button id="adr044-tab-cd" type="button" class="' + (st.activeTab === "cd" ? "active" : "") + '">🎴 抽卡</button>'
-            + '</div>'
+            + '</details>'
 
             + adr048PageHTML("emotion")
             + adr048PageHTML("plot")
@@ -7213,7 +7250,7 @@
             adr048SetImportant(shell, "bottom", "64px");
             adr048SetImportant(shell, "width", "auto");
             adr048SetImportant(shell, "height", "auto");
-            adr048SetImportant(shell, "min-height", "360px");
+            adr048SetImportant(shell, "min-height", "0");
             adr048SetImportant(shell, "max-height", "calc(100vh - 128px)");
             adr048SetImportant(shell, "z-index", "2147483647");
             adr048SetImportant(shell, "overflow", "hidden");
@@ -7231,7 +7268,7 @@
                 adr048SetImportant(body, "overflow", "auto");
                 adr048SetImportant(body, "-webkit-overflow-scrolling", "touch");
                 adr048SetImportant(body, "padding", "10px 12px 16px");
-                adr048SetImportant(body, "min-height", "260px");
+                adr048SetImportant(body, "min-height", "0");
             }
 
             adr048ApplyPanelTheme();
@@ -7934,7 +7971,15 @@
             var html = adrDCounterHTML(info);
             var nodes = Array.prototype.slice.call(d.querySelectorAll("#" + id));
             nodes.forEach(function (el) {
-                if (el) el.innerHTML = html;
+                if (!el || el.__adrCounterHTML === html) return;
+                var details = el.querySelector('.adr-counter-details');
+                var expanded = details && details.open;
+                el.innerHTML = html;
+                el.__adrCounterHTML = html;
+                if (expanded) {
+                    details = el.querySelector('.adr-counter-details');
+                    if (details) details.open = true;
+                }
             });
         } catch (e) {}
     }
@@ -8081,6 +8126,10 @@
 
     // v1.9.32：计数条改结构化渲染。主行说人话（已攒/还差/基准线 N 楼起），
     // 视野与口径标记降为排查小字。所有拼接内容均为内部数值与固定文案，经 esc 转义。
+    function adrDCounterDetailsHTML(tech) {
+        return tech ? '<details class="adr-counter-details"><summary>计数详情</summary><div class="arb-ct-tech">' + esc(tech) + '</div></details>' : '';
+    }
+
     function adrDCounterHTML(info) {
         if (typeof info === "string") {
             return '<div class="arb-ct"><div class="arb-ct-msg">' + esc(info) + '</div></div>';
@@ -8091,7 +8140,7 @@
             return '<div class="arb-ct">'
                 + '<div class="arb-ct-top"><span class="arb-ct-label">' + label + tag + '</span></div>'
                 + '<div class="arb-ct-msg">' + esc(info.msg || "") + '</div>'
-                + (info.tech ? '<div class="arb-ct-tech">' + esc(info.tech) + '</div>' : '')
+                + adrDCounterDetailsHTML(info.tech)
                 + '</div>';
         }
         var n = Math.max(1, Number(info.n) || 1);
@@ -8102,11 +8151,13 @@
             + '<span class="arb-ct-label">' + label + tag + '</span>'
             + '<span class="arb-ct-nums"><b>' + esc(passed) + '</b><i>/' + esc(info.n) + '</i></span>'
             + '</div>'
-            + '<div class="arb-ct-bar"><i style="width:' + pct + '%"></i></div>'
-            + (info.graze
+            + '<div class="arb-ct-bar" role="progressbar" aria-label="' + esc(info.label || '进度') + '" aria-valuemin="0" aria-valuemax="' + n + '" aria-valuenow="' + Math.min(n, passed) + '"><i style="width:' + pct + '%"></i></div>'
+            + (info.unit === 'card'
+                ? '<div class="arb-ct-line">距下张还有 <b>' + esc(info.left) + '</b> 楼</div>'
+                : info.graze
                 ? '<div class="arb-ct-line">放养中 · 距下次接管还有 <b>' + esc(info.left) + '</b> 楼 · 基准线 <b>' + esc(info.base) + '</b> 楼起</div>'
                 : '<div class="arb-ct-line">还差 <b>' + esc(info.left) + '</b> 条触发 · 基准线 <b>' + esc(info.base) + '</b> 楼起</div>')
-            + '<div class="arb-ct-tech">' + esc(info.tech || "") + '</div>'
+            + adrDCounterDetailsHTML(info.tech)
             + '</div>';
     }
 

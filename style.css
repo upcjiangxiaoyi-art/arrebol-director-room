@@ -5974,3 +5974,240 @@ html #adrx-editor .adrx-editor-foot .adrx-editor-ok:hover {
         animation: none;
     }
 }
+
+/* v1.28.0 · 顶部工作台。作用域只覆盖导演室，保留宿主主题与事件命中边界。 */
+html #adr048-popup-panel[data-arb-theme] {
+    --adr-deck-bg: #252039;
+    --adr-deck-ink: var(--arb-ink);
+    --adr-deck-muted: var(--arb-muted);
+    --adr-deck-line: var(--arb-line);
+    --adr-deck-card: var(--arb-card-strong);
+    --adr-deck-accent: #d9b3db;
+}
+html #adr048-popup-panel[data-arb-theme="dawn"],
+html #adr044-drawer {
+    --adr-deck-bg: #f3edf7;
+    --adr-deck-ink: #363b52;
+    --adr-deck-muted: #727086;
+    --adr-deck-line: rgba(86, 76, 120, .12);
+    --adr-deck-card: rgba(255, 255, 255, .78);
+    --adr-deck-accent: #9a638a;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs,
+html #adr044-drawer .adr-top-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    gap: 4px !important;
+    margin: 0 0 12px !important;
+    padding: 5px !important;
+    border-radius: 18px !important;
+    background: var(--adr-deck-bg) !important;
+    border: 1px solid var(--adr-deck-line) !important;
+}
+/* Only the short navigation sticks; progress and settings scroll naturally. */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 8 !important;
+    box-shadow: 0 5px 18px var(--arb-shadow) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs button,
+html #adr044-drawer .adr-top-tabs button {
+    min-width: 0 !important;
+    min-height: 44px !important;
+    padding: 9px 5px !important;
+    border-radius: 13px !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    letter-spacing: .025em !important;
+    color: var(--adr-deck-muted) !important;
+    -webkit-text-fill-color: var(--adr-deck-muted) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs button.active,
+html #adr044-drawer .adr-top-tabs button.active {
+    color: var(--adr-deck-ink) !important;
+    -webkit-text-fill-color: var(--adr-deck-ink) !important;
+    border-color: var(--adr-deck-line) !important;
+    box-shadow: 0 2px 8px rgba(80, 54, 110, .08), inset 0 -2px 0 rgba(187, 154, 214, .48) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs #adr044-tab-cd,
+html #adr044-drawer .adr-top-tabs #adr044-tab-cd {
+    font-size: 13px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs #adr044-tab-cd::after,
+html #adr044-drawer .adr-top-tabs #adr044-tab-cd::after {
+    content: none !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-pane[hidden],
+html #adr044-drawer .adr-top-pane[hidden] {
+    display: none !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress,
+html #adr044-drawer .adr-top-progress {
+    margin: 0 0 12px !important;
+    min-width: 0;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .adr044-auto-counter,
+html #adr044-drawer .adr-top-progress .adr044-auto-counter {
+    position: relative;
+    margin: 0 !important;
+    padding: 17px 18px 10px !important;
+    border-radius: 19px !important;
+    border: 1px solid var(--adr-deck-line) !important;
+    background: var(--adr-deck-card) !important;
+    box-shadow: 0 6px 24px rgba(81, 52, 116, .045) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .arb-ct-top,
+html #adr044-drawer .adr-top-progress .arb-ct-top {
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .arb-ct-label,
+html #adr044-drawer .adr-top-progress .arb-ct-label {
+    font-size: 12px !important;
+    letter-spacing: .09em !important;
+    color: var(--adr-deck-accent) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .arb-ct-nums b,
+html #adr044-drawer .adr-top-progress .arb-ct-nums b {
+    font-size: 32px !important;
+    line-height: 1.1;
+    font-weight: 650 !important;
+    font-variant-numeric: tabular-nums;
+    color: var(--adr-deck-ink) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .arb-ct-bar,
+html #adr044-drawer .adr-top-progress .arb-ct-bar {
+    height: 6px !important;
+    margin: 14px 0 12px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .arb-ct-line,
+html #adr044-drawer .adr-top-progress .arb-ct-line {
+    font-size: 12px !important;
+    line-height: 1.7 !important;
+}
+/* Technical count information stays available without dominating the first screen. */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-counter-details,
+html #adr044-drawer .adr-counter-details {
+    margin: 4px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-counter-details > summary,
+html #adr044-drawer .adr-counter-details > summary {
+    display: flex !important;
+    align-items: center;
+    gap: 7px;
+    min-height: 36px;
+    margin: 0 !important;
+    padding: 0 !important;
+    list-style: none;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    letter-spacing: .02em !important;
+    color: var(--adr-deck-muted) !important;
+    cursor: pointer;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-counter-details > summary::before,
+html #adr044-drawer .adr-counter-details > summary::before {
+    content: "›" !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    transform: rotate(0deg);
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-counter-details[open] > summary::before,
+html #adr044-drawer .adr-counter-details[open] > summary::before { transform: rotate(90deg); }
+.adr-counter-details > summary::-webkit-details-marker { display: none; }
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-counter-details .arb-ct-tech,
+html #adr044-drawer .adr-counter-details .arb-ct-tech {
+    margin: 0 0 8px !important;
+    color: var(--adr-deck-muted) !important;
+    overflow-wrap: anywhere;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .adrx-drawer,
+html #adr044-drawer .adr-top-progress .adrx-drawer {
+    margin: 8px 0 0 !important;
+    border-radius: 14px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer > summary,
+html #adr044-drawer .adrx-drawer > summary {
+    min-height: 44px !important;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    color: var(--adr-deck-muted) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-progress .adr044-cd-status-line,
+html #adr044-drawer .adr-top-progress .adr044-cd-status-line {
+    margin: 8px 0 0 !important;
+    min-height: 44px;
+    overflow-wrap: anywhere;
+}
+/* Reduce nested-card weight; keep the familiar pastel palette. */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr044-template-compact,
+html #adr044-drawer .adr044-template-compact {
+    background: transparent !important;
+    border-color: var(--adr-deck-line) !important;
+    box-shadow: none !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body #adr044-master-toggle,
+html #adr044-drawer #adr044-master-toggle {
+    margin: 0 0 12px !important;
+    min-height: 44px !important;
+    border-radius: 14px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer[data-drawer-id="shared-main"],
+html #adr044-drawer .adrx-drawer[data-drawer-id="shared-main"] {
+    margin: 0 0 14px !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body :is(input, select, textarea, button),
+html #adr044-drawer :is(input, select, textarea, button) {
+    scroll-margin-top: 74px;
+}
+html #adr044-drawer :is(button, summary):focus-visible,
+html #adr048-popup-panel[data-arb-theme] summary:focus-visible {
+    outline: 2px solid #ad85c5 !important;
+    outline-offset: 3px !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    html #adr048-popup-panel[data-arb-theme] *,
+    html #adr044-drawer * {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Main switches keep their capsule shape even after moving into a disclosure. */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"]) > .adr048-check input[type="checkbox"],
+html #adr044-drawer .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"]) > .adr044-check input[type="checkbox"] {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 22px !important;
+    min-height: 22px !important;
+    flex: 0 0 40px !important;
+    border-radius: 999px !important;
+    background: radial-gradient(circle at 11px 50%, #fff 0 7px, transparent 7.6px), rgba(130, 120, 155, .22) !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"]) > .adr048-check input[type="checkbox"]:checked,
+html #adr044-drawer .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"]) > .adr044-check input[type="checkbox"]:checked {
+    background: radial-gradient(circle at calc(100% - 11px) 50%, #fff 0 7px, transparent 7.6px), linear-gradient(90deg, #e9b6d4, #bda2e6 55%, #97a5ea) !important;
+}
+@media (max-width: 600px) and (pointer: coarse) {
+    /* 16px prevents iOS zooming the whole panel while editing a field. */
+    html #adr048-popup-panel[data-arb-theme] #adr048-popup-body :is(input[type="text"], input[type="password"], input[type="number"], input:not([type]), select, textarea),
+    html #adr044-drawer :is(input[type="text"], input[type="password"], input[type="number"], input:not([type]), select, textarea) {
+        font-size: 16px !important;
+    }
+}
