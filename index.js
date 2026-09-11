@@ -1,6 +1,6 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.29.2｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.29.3｜ripple & GPT & Claude
  * v1.29.2 轻收纳：API / 预设折叠，重新对表提至进度下方，抽卡同样整理（ripple & GPT）
  * v1.29.1 秀气版：缩字号 / 字重 / 留白，恢复浮标流波；浮标只跟随面板日夜（ripple & GPT）
  * v1.29.0 雾珠月汐：界面光感与留白精修，浮标自动昼夜 / 跟随面板（ripple & GPT）
@@ -5361,7 +5361,7 @@
         var st = settings();
         var checkClass = popup ? 'adr048-check' : 'adr044-check';
         var noteClass = popup ? 'adr048-note' : 'adr044-note';
-        return adrxDrawerStart('trigger-' + type, '自动触发设置', false)
+        return adrxDrawerStart('trigger-' + type, '独立开关与层数', false)
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-auto-trigger-' + type + '"' + (st[type === "plot" ? "autoTriggerPlot" : "autoTriggerEmotion"] ? " checked" : "") + '> ' + (type === "plot" ? "让统筹定期来看一眼大局（默认关）" : "启用情感导演自动触发") + '</label>'
             + '<label>自动触发间隔</label>'
             + '<select id="adr044-auto-trigger-range-' + type + '">'
@@ -5380,11 +5380,11 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.29.2</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.29.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
-            + adrDTopDeckHTML(false)
             + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
+            + adrDTopDeckHTML(false)
 
             + adrxDrawerStart("shared-main", "共享设置", false)
             + '<label>导演回看多少楼</label><select id="adr044-range">'
@@ -7133,8 +7133,8 @@
             + '<button type="button" id="adr048-popup-close" aria-label="关闭导演室">×</button>'
             + '</div>'
             + '<div id="adr048-popup-body">'
-            + adrDTopDeckHTML(true)
             + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
+            + adrDTopDeckHTML(true)
 
             + adrxDrawerStart("shared-main", "共享设置", false)
             + '<label>导演回看多少楼</label><select id="adr044-range">'

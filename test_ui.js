@@ -1,4 +1,4 @@
-// v1.29.2: layout changes must keep settings, counters and both panel surfaces in sync.
+// v1.29.3: layout changes must keep settings, counters and both panel surfaces in sync.
 // Run: npm install --no-save jsdom && node test_ui.js
 const fs = require('fs');
 const assert = require('node:assert/strict');
@@ -44,8 +44,9 @@ function build() {
         const click = el => el.dispatchEvent(new w.MouseEvent('click', { bubbles: true }));
         const counter = (scope, type) => scope.querySelector('#adr044-auto-counter-' + type);
         for (const [name, scope] of [['浮窗', root()], ['抽屉', drawer]]) {
-            check(scope.firstElementChild.classList.contains('adr-top-tabs'), name + '第一项为导演切换');
-            check(scope.firstElementChild.nextElementSibling.classList.contains('adr-top-progress'), name + '进度紧跟切换');
+            check(scope.firstElementChild.id === 'adr044-master-toggle', name + '第一项为运行总开关');
+            check(scope.firstElementChild.nextElementSibling.classList.contains('adr-top-tabs'), name + '总开关后为导演切换');
+            check(scope.querySelector('.adr-top-tabs').nextElementSibling.classList.contains('adr-top-progress'), name + '进度紧跟切换');
             check(!scope.querySelector('[data-drawer-id="shared-main"]').open, name + '共享设置默认收起');
             for (const type of ['emotion', 'plot']) {
                 for (const kind of ['api', 'preset']) {
