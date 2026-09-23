@@ -157,6 +157,15 @@ function build() {
         click(d.querySelector('#adr048-theme-toggle'));
         check(fab.dataset.arbTheme === 'dusk' && fab.dataset.adrPalette === 'dusk', '月亮按钮立即同步浮标夜色');
         check(!root().querySelector('#adr044-fab-theme-mode'), '不再显示容易混淆的时钟设置');
+        // v1.37.0: the FAB motion switch lives in shared settings on both surfaces and flips one attribute without rebuilding the FAB.
+        const motion = root().querySelector('#adr044-fab-motion');
+        check(motion && motion.checked && drawer.querySelector('#adr044-fab-motion').checked, '浮标动效开关两端都有且默认开');
+        check(fab.dataset.arbMotion === 'on', '默认浮标动效开着');
+        motion.checked = false; motion.dispatchEvent(new w.Event('change', { bubbles: true }));
+        check(fab.dataset.arbMotion === 'off' && e.extensionSettings[KEY].fabMotion === false, '关掉动效：浮标立即静止并保存');
+        check(fab.firstElementChild === svg, '关动效不重建浮标');
+        motion.checked = true; motion.dispatchEvent(new w.Event('change', { bubbles: true }));
+        check(fab.dataset.arbMotion === 'on' && e.extensionSettings[KEY].fabMotion === true, '再开动效：浮标恢复流动');
         check(e.timers.filter(t => t.ms === 60000).length === 0, '不安装浮标时钟轮询');
         check(fab.firstElementChild === svg, '换色不重建浮标，不丢拖动监听');
         check([fab.style.left, fab.style.top, fab.style.right, fab.style.bottom].join('|') === position, '换色保留浮标位置');

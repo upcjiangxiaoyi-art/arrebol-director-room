@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.36.3｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.37.0｜ripple & GPT & Claude
+ * v1.37.0 浮标动效开关：共享设置里一勾，水波、亮流、脉冲全停，给怀疑手机发烫的人做对比实验（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.36.3 晴空粉霞主按钮、开关、计数条与浮标同调：粉为主、尾巴一点蓝，字色落墨（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.36.2 晴空粉霞浮标重调：前四分之三都是粉，宝蓝只在尾巴上收一下，字色落墨（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.36.1 test_stream.js 时序抖动修复：用完不关的收集器窗口堵住事件循环、基准线检查跑晚；段落结束关窗口、开窗清 localStorage（提议 江；施工 波哥 Claude Fable 5.1）
@@ -86,6 +87,7 @@
         autoInjectPlot: true,
         injectMode: "visible",
         showFloatingWindow: true,
+        fabMotion: true,            // v1.37.0 浮标动效开关：关掉后水波与亮流全停，给怀疑手机发烫的人做实验
         themePalette: "",          // dusk / sunset / pearl / celadon / wine / morandi / skyrose; empty migrates the previous light switch.
         dawnTheme: false,           // v1.14.4 开灯：浮窗朝霞浅色皮，默认关（暗河红霞）
         showAutoTriggerPopup: true,
@@ -733,6 +735,9 @@
 
         var sfw = qForm("adr044-show-floating-window");
         if (sfw) save("showFloatingWindow", !!sfw.checked);
+
+        var fmo = qForm("adr044-fab-motion");
+        if (fmo) save("fabMotion", !!fmo.checked);
 
         adr048ApplyFabTheme();
 
@@ -6433,6 +6438,7 @@
             + opt(st.injectMode, "folded", "隐形标记（配合美化正则）")
             + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-fab-motion"' + (st.fabMotion !== false ? " checked" : "") + '> 浮标流动动效（怀疑手机发烫可以关掉对比）</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
             + adrxDrawerStart("shared-adv", "⚙️ 进阶开关（默认已调好，一般不用动）", false)
@@ -6558,6 +6564,7 @@
             adrDSetAllById("adr044-content-tags", st.contentTagNames || "content");
             adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
             adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
+            adrDSetAllById("adr044-fab-motion", "", st.fabMotion !== false);
             adrDSetAllById("adr044-float-inject", "", st.floatInjectEnabled !== false);
             adrDSetAllById("adr044-float-depth", String(st.floatDepth != null ? st.floatDepth : 2));
             adrDSetAllById("adr044-director-log", "", st.directorLogEnabled !== false);
@@ -7873,6 +7880,16 @@
             });
         }
 
+        var fabMotion = qForm("adr044-fab-motion");
+        if (fabMotion && !fabMotion.__adr044Bound) {
+            fabMotion.__adr044Bound = true;
+            fabMotion.addEventListener("change", function () {
+                save("fabMotion", !!fabMotion.checked);
+                saveNow();
+                adr048ApplyFabTheme();   // 立即生效，不重建浮标
+            });
+        }
+
         var showAutoPopup = qForm("adr044-show-auto-trigger-popup");
         if (showAutoPopup && !showAutoPopup.__adr044Bound) {
             showAutoPopup.__adr044Bound = true;
@@ -8196,6 +8213,7 @@
             + opt(st.injectMode, "folded", "隐形标记（配合美化正则）")
             + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-fab-motion"' + (st.fabMotion !== false ? " checked" : "") + '> 浮标流动动效（怀疑手机发烫可以关掉对比）</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
 
@@ -8580,6 +8598,8 @@
             var btn = d.querySelector("#adr048-fab");
             if (!btn) return;
             btn.setAttribute("data-adr-palette", palette);
+            // v1.37.0：动效开关只挂一个属性，style.css 据此把水波、亮流与脉冲全停；按钮与拖动监听不重建。
+            btn.setAttribute("data-arb-motion", settings().fabMotion === false ? "off" : "on");
             var theme = adr048FabTheme();
             if (btn.getAttribute("data-arb-theme") !== theme) btn.setAttribute("data-arb-theme", theme);
         } catch (e) {}

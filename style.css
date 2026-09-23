@@ -7265,6 +7265,10 @@ html #adr048-fab[data-arb-theme] .arb-fab-current { animation: arb-wave-flow-lon
     html #adr048-fab[data-arb-theme] .arb-fab-river-2,
     html #adr048-fab[data-arb-theme] .arb-fab-current { animation: none !important; }
 }
+/* v1.37.0 浮标动效开关：关掉等于系统「减少动态效果」——水波、亮流、脉冲一律静止，只留静态的四段渐变 */
+html #adr048-fab[data-arb-motion="off"],
+html #adr048-fab[data-arb-motion="off"] *,
+html #adr048-fab[data-arb-motion="off"]::after { animation: none !important; transition: none !important; }
 html #adr048-fab[data-arb-theme] .arb-fab-shell { stroke: #fff; stroke-opacity: .55; }
 
 /* 暗河夜色：靛蓝→紫→淡紫→月白 */
