@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.37.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.37.1｜ripple & GPT & Claude
+ * v1.37.1 浮标袖珍一号：76×28 → 60×22，整体等比缩小，比例、渐变、水波与动效一概不动（提议 江；施工 Claude）
  * v1.37.0 浮标动效开关：共享设置里一勾，水波、亮流、脉冲全停，给怀疑手机发烫的人做对比实验（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.36.3 晴空粉霞主按钮、开关、计数条与浮标同调：粉为主、尾巴一点蓝，字色落墨（提议 江；施工 波哥 Claude Fable 5.1）
  * v1.36.2 晴空粉霞浮标重调：前四分之三都是粉，宝蓝只在尾巴上收一下，字色落墨（提议 江；施工 波哥 Claude Fable 5.1）
@@ -8512,8 +8513,8 @@
             var w = rootWin() || window;
             var vw = Number(w.innerWidth) || 360;
             var vh = Number(w.innerHeight) || 640;
-            width = Number(width) || 78;
-            height = Number(height) || 32;
+            width = Number(width) || 60;
+            height = Number(height) || 22;
             return {
                 left: Math.max(4, Math.min(vw - width - 4, Number(left) || 0)),
                 top: Math.max(4, Math.min(vh - height - 4, Number(top) || 0))
@@ -8527,7 +8528,7 @@
         try {
             if (!btn) return;
             if (pos && Number.isFinite(Number(pos.left)) && Number.isFinite(Number(pos.top))) {
-                var fixed = isSaved ? adr048ClampPoint(Number(pos.left), Number(pos.top), 78, 32) : pos;
+                var fixed = isSaved ? adr048ClampPoint(Number(pos.left), Number(pos.top), 60, 22) : pos;
                 adr048SetImportant(btn, "left", Math.round(fixed.left) + "px");
                 adr048SetImportant(btn, "top", Math.round(fixed.top) + "px");
                 adr048SetImportant(btn, "right", "auto");
@@ -8651,10 +8652,11 @@
             setImp("display", "inline-flex");
             setImp("align-items", "center");
             setImp("justify-content", "center");
+            // v1.37.1：浮标袖珍一号，高 28 → 22px；SVG 按 120:44 等比跟着缩，宽约 76 → 60px。
             setImp("width", "auto");
-            setImp("height", "28px");
+            setImp("height", "22px");
             setImp("min-width", "auto");
-            setImp("min-height", "28px");
+            setImp("min-height", "22px");
             setImp("padding", "0");
             setImp("border-radius", "999px");
             setImp("border", "none");
@@ -8665,9 +8667,9 @@
             setImp("-webkit-text-fill-color", "rgba(64, 77, 98, .88)");
             setImp("font-size", "13px");
             setImp("font-weight", "800");
-            setImp("line-height", "28px");
+            setImp("line-height", "22px");
             btn.style.boxShadow = "none"; /* 不带 important：给脉冲动画让路 */
-            setImp("filter", "drop-shadow(0 6px 14px rgba(28,21,54,.34))");
+            setImp("filter", "drop-shadow(0 5px 11px rgba(28,21,54,.34))");
             setImp("cursor", "grab");
             setImp("pointer-events", "auto");
             setImp("user-select", "none");
@@ -8710,7 +8712,7 @@
                 var dy = p.y - sy;
                 if (Math.abs(dx) + Math.abs(dy) > 10) moved = true;
                 var r = btn.getBoundingClientRect();
-                var pos = adr048ClampPoint(sl + dx, st + dy, r.width || 78, r.height || 32);
+                var pos = adr048ClampPoint(sl + dx, st + dy, r.width || 60, r.height || 22);
                 setImp("left", Math.round(pos.left) + "px");
                 setImp("top", Math.round(pos.top) + "px");
                 setImp("right", "auto");
