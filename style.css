@@ -7214,11 +7214,12 @@ html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="skyrose"] #adr
         radial-gradient(circle at 6px 50%, #e73e70 0 3.2px, transparent 3.8px),
         radial-gradient(circle at 6px 50%, rgba(231, 62, 112, .28) 0 6.5px, transparent 7px);
 }
-/* 标题珠：v1.37.3 宝蓝尾巴淡成雾蓝，外环与光晕改粉，不再像百事可乐；--arb-ring 本身不动，聚焦环照旧 */
+/* 标题珠：v1.37.3 去掉宝蓝、也拆掉玫红与纸白的斜分界（那道弯本身就是百事的形状），
+   换成与浮标同源的纯粉珍珠：霞白→烟粉→玫粉；外环与光晕改粉。--arb-ring 本身不动，聚焦环照旧 */
 html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="skyrose"] #adr048-popup-head .adr048-head-txt::before {
     background:
         radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .95) 0 14%, transparent 34%),
-        linear-gradient(145deg, #f8b4c7, #e73e70 42%, #fbfbfb 60%, #b4c2e8);
+        linear-gradient(145deg, #fdeaef, #f6b9ca 45%, #ea8aa6);
     box-shadow: 0 0 0 3px rgba(231, 62, 112, .14), 0 4px 12px rgba(231, 62, 112, .20);
 }
 /* 胶囊开关、方形勾与计数条：v1.36.3 与主按钮、浮标同调，粉为主、尾巴一点蓝 */
