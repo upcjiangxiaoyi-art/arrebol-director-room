@@ -1,10 +1,14 @@
-# Arrebol D 暗河红霞导演系统 v1.37.3
+# Arrebol D 暗河红霞导演系统 v1.38.0
 
 SillyTavern 扩展。情感导演 + 统筹双导演自动触发，外加**剧情小风铃**抽卡模块。
 
 **历史版本记录搬到了 [CHANGELOG.md](CHANGELOG.md)**，这里只讲这插件是什么、怎么用。
 
 ---
+
+### A 社官网直连（v1.38.0）
+
+两位导演、择池／择卡、剧情展开的 API 地址直接填 `https://api.anthropic.com`、钥匙填官网 `sk-ant-…` 就能用，模型名填 `claude-opus-5-5` 这类官网模型 ID（点「加载模型」也能拉到列表）。此前填官网地址一律「Failed to fetch」：小红霞是在浏览器里直接发请求的，A 社对浏览器来的请求先做 CORS 预检，请求头里没有 `anthropic-dangerous-direct-browser-access: true` 就直接拒掉，钥匙对不对、余额够不够根本走不到。现在凡是域名落在 anthropic.com 的地址都自动带上这枚头；聊天走 A 社的 OpenAI 兼容口 `/v1/chat/completions`（仍是 Bearer），模型列表 `/v1/models` 是原生口，改用 `x-api-key` + `anthropic-version`。中转站、DS、Gemini 兼容口等其余地址的请求头一个字都没变。注意：这枚头的名字里就写着 dangerous，意思是钥匙在你自己的浏览器里发出去，和填中转站钥匙是同一回事，别把酒馆页面给别人用。
 
 ### 剧情展开推进（v1.34.0–1.34.3）
 

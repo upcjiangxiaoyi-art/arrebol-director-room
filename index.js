@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.37.3｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.38.0｜ripple & GPT & Claude
+ * v1.38.0 A 社官网直连：浏览器直连头 anthropic-dangerous-direct-browser-access 过 CORS 预检；/v1/models 改 x-api-key；只对 anthropic.com 生效（报告 江「官网 API 拉不了」；施工 Claude）
  * v1.37.3 晴空粉霞标题珠：去掉宝蓝与红白斜分界，换成纯粉珍珠，不再像百事可乐（提议 江；施工 Claude）
  * v1.37.2 浮标再袖珍一号：60×22 → 42×15.4，再等比缩 30%，样子一概不动（提议 江；施工 Claude）
  * v1.37.1 浮标袖珍一号：76×28 → 60×22，整体等比缩小，比例、渐变、水波与动效一概不动（提议 江；施工 Claude）
@@ -650,6 +651,39 @@
         var b = normalizeBase(base);
         return b ? b + "/models" : "";
     }
+
+    // v1.38.0：A 社官网直连。小红霞是在浏览器里直接 fetch 的，api.anthropic.com 对浏览器来的请求先做 CORS 预检，
+    // 没带 anthropic-dangerous-direct-browser-access: true 就回 "Disallowed CORS origin"，浏览器只给 "Failed to fetch"，
+    // 钥匙对不对、余额够不够都看不到。聊天口 /v1/chat/completions 是 A 社的 OpenAI 兼容层，认 Bearer；
+    // 模型列表 /v1/models 是原生口，只认 x-api-key + anthropic-version，Bearer 过去是 401 "invalid x-api-key"。
+    // 其余任何中转站、DS、Gemini 兼容口一律不受影响：只有域名落在 anthropic.com 才多这几行头。
+    var ADR_D_ANTHROPIC_VERSION = "2023-06-01";
+
+    function adrDIsAnthropicDirect(url) {
+        var host = "";
+        try { host = new URL(String(url || "")).hostname; } catch (eHost) { return false; }
+        return /(^|\.)anthropic\.com$/i.test(host);
+    }
+
+    // mode："chat"（默认）走 Bearer；"native" 走 x-api-key，给 /v1/models 用。
+    function adrDAuthHeaders(headers, key, url, mode) {
+        headers = headers || {};
+        var direct = adrDIsAnthropicDirect(url);
+        if (direct) headers["anthropic-dangerous-direct-browser-access"] = "true";
+        if (key) {
+            if (direct && mode === "native") {
+                headers["x-api-key"] = key;
+                headers["anthropic-version"] = ADR_D_ANTHROPIC_VERSION;
+            } else {
+                headers.Authorization = "Bearer " + key;
+            }
+        }
+        return headers;
+    }
+
+    try {
+        rootWin().__adrDAuthTest = { isAnthropicDirect: adrDIsAnthropicDirect, authHeaders: adrDAuthHeaders, chatUrl: chatUrl, modelsUrl: modelsUrl };
+    } catch (eAuthHook) {}
 
     function activeRange() {
         var st = settings();
@@ -1412,7 +1446,7 @@
         // v1.27.1：开关。关掉就回到整份 JSON 的老路（stream:false），给不支持流式的中转站留门；收集器本来就认整份 JSON。
         var useStream = st.streamEnabled !== false;
         var headers = { "Content-Type": "application/json", "Accept": useStream ? "text/event-stream, application/json" : "application/json" };
-        if (key) headers.Authorization = "Bearer " + key;
+        adrDAuthHeaders(headers, key, url);
 
         adrDAbortWasManual = false;
         if (typeof AbortController !== "undefined") aborter = new AbortController();
@@ -2737,7 +2771,7 @@
 
         try {
             var headers = {};
-            if (key) headers.Authorization = "Bearer " + key;
+            adrDAuthHeaders(headers, key, url, "native");
 
             var res = await fetch(url, { method: "GET", headers: headers });
             var raw = await res.text();
@@ -3781,7 +3815,7 @@
         }
 
         var headers = { "Content-Type": "application/json" };
-        if (key) headers.Authorization = "Bearer " + key;
+        adrDAuthHeaders(headers, key, url);
         var opts = {
             method: "POST",
             headers: headers,
@@ -3945,7 +3979,7 @@
         }
 
         var headers = { "Content-Type": "application/json" };
-        if (st.cdApiKey) headers.Authorization = "Bearer " + st.cdApiKey;
+        adrDAuthHeaders(headers, st.cdApiKey, url);
         var optsC = {
             method: "POST",
             headers: headers,
@@ -4422,7 +4456,7 @@
         var st = settings();
         var useStream = st.streamEnabled !== false && cfg.stream !== false;
         var headers = { "Content-Type": "application/json", "Accept": useStream ? "text/event-stream, application/json" : "application/json" };
-        if (cfg.key) headers.Authorization = "Bearer " + cfg.key;
+        adrDAuthHeaders(headers, cfg.key, url);
         var body = { model: cfg.model, messages: cfg.messages, temperature: typeof cfg.temperature === "number" ? cfg.temperature : 0.7, stream: useStream };
         if (cfg.maxTokens) body.max_tokens = cfg.maxTokens;
         var ab = typeof AbortController !== "undefined" ? new AbortController() : null;
@@ -4827,7 +4861,7 @@
         var tid = null, timedOut = false;
         if (ab) tid = setTimeout(function () { timedOut = true; try { ab.abort(); } catch (e) {} }, ADR_CD_PICK_TIMEOUT_MS);
         var headers = { "Content-Type": "application/json" };
-        if (st.cdApiKey) headers.Authorization = "Bearer " + st.cdApiKey;
+        adrDAuthHeaders(headers, st.cdApiKey, url);
         var opts = {
             method: "POST", headers: headers,
             body: JSON.stringify({
@@ -5770,7 +5804,7 @@
             status("cd", "正在测试连接…", "#8ed99d");
             var t0 = Date.now();
             var headers = { "Content-Type": "application/json" };
-            if (st.cdApiKey) headers.Authorization = "Bearer " + st.cdApiKey;
+            adrDAuthHeaders(headers, st.cdApiKey, url);
             var res = await fetch(url, {
                 method: "POST",
                 headers: headers,

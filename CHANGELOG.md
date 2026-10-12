@@ -6,6 +6,10 @@
 
 ---
 
+## v1.38.0
+
+A 社官网直连（报告：江「小红霞拉不了 A 社的 API，我确定 API 有效，官网还有钱」；施工：Claude）。查下来钥匙和余额都不是事，卡在更前面一步：小红霞是浏览器里直接 fetch 的，api.anthropic.com 对浏览器发来的请求先做 CORS 预检，请求头里没有 anthropic-dangerous-direct-browser-access: true 就回 400「Disallowed CORS origin」，浏览器层面只表现为「Failed to fetch」，鉴权根本没走到；就算预检过了，「加载模型」打的 /v1/models 是 A 社原生口，只认 x-api-key + anthropic-version，Bearer 过去是 401「invalid x-api-key」。两点都在容器里用 curl 带 Origin 实测过：不带头预检 400，带头预检 200；/v1/chat/completions 是 A 社的 OpenAI 兼容层，Bearer 能走到鉴权。修法：八处发请求的地方（情感／统筹导演、模型列表、择池、择卡、兑现判定、展开、测试连接）统一经 adrDAuthHeaders 组头，只在 URL 域名落在 anthropic.com 时多加直连头，模型列表那一路改 x-api-key；其余任何地址一个头都不多，请求体、流式收集、超时闸一概不动。新增 test_anthropic.js 34 项：域名识别（路径里出现 anthropic.com、notanthropic.com 不算）、两种口的头、jsdom 真跑官网模型列表与导演请求、中转站请求头逐字不变。
+
 ## v1.37.3
 
 晴空粉霞标题珠改纯粉珍珠（提议：江「这个圆圆珍珠标能不能去掉蓝色，现在像百事可乐」；淡蓝一版看过后「还像百事可乐，再淡一点或者没有」；施工：Claude）。面板标题旁那颗 17px 的珠子原是霞粉→玫红→纸白→宝蓝 #3759A7，外环取 --arb-ring（这套里也是宝蓝），底下再压一圈宝蓝光晕，确实像百事可乐。先试过只把宝蓝淡成雾蓝 #B4C2E8，还是像：玫红与纸白斜着一分为二，那道弯本身就是百事的形状，蓝去掉了形还在。于是连分界一起拆，换成与浮标同源的纯粉珍珠：霞白 #FDEAEF → 烟粉 #F6B9CA → 玫粉 #EA8AA6，左上的白色高光照旧；外环与光晕改为淡玫粉。只作用于标题珠：--arb-ring 变量本身不动，输入框聚焦环照旧；头部霞线、面板底色、按钮与浮标一概不动。真浏览器把「淡蓝／蓝换纸白／蓝换烟粉／纯粉珍珠／粉珠带白光」几版并排比过，只有纯粉珍珠彻底不像。
