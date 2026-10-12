@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.38.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.38.1｜ripple & GPT & Claude
+ * v1.38.1 新一代 Claude 不收 temperature：官网直连一律摘掉；中转站见到那句 400 摘掉重试一次（报告 江；施工 Claude）
  * v1.38.0 A 社官网直连：浏览器直连头 anthropic-dangerous-direct-browser-access 过 CORS 预检；/v1/models 改 x-api-key；只对 anthropic.com 生效（报告 江「官网 API 拉不了」；施工 Claude）
  * v1.37.3 晴空粉霞标题珠：去掉宝蓝与红白斜分界，换成纯粉珍珠，不再像百事可乐（提议 江；施工 Claude）
  * v1.37.2 浮标再袖珍一号：60×22 → 42×15.4，再等比缩 30%，样子一概不动（提议 江；施工 Claude）
@@ -681,8 +682,23 @@
         return headers;
     }
 
+    // v1.38.1：新一代 Claude（Opus 4.7+ / Sonnet 5+ / Fable 5+ / Opus 5+）不再收 temperature，发了直接 400
+    // "`temperature` is deprecated for this model."。官网直连一律摘掉；别家地址原样送。
+    // 中转站后面挂着这些模型的，callAPI 与 adrDChatCompletionText 见到这句 400 会摘掉再试一次。
+    function adrDRequestBody(body, url) {
+        if (body && adrDIsAnthropicDirect(url)) {
+            delete body.temperature;
+            delete body.top_p;
+        }
+        return JSON.stringify(body);
+    }
+
+    function adrDIsTemperatureRejected(status, raw) {
+        return status === 400 && /temperature|top_p/i.test(String(raw || ""));
+    }
+
     try {
-        rootWin().__adrDAuthTest = { isAnthropicDirect: adrDIsAnthropicDirect, authHeaders: adrDAuthHeaders, chatUrl: chatUrl, modelsUrl: modelsUrl };
+        rootWin().__adrDAuthTest = { isAnthropicDirect: adrDIsAnthropicDirect, authHeaders: adrDAuthHeaders, requestBody: adrDRequestBody, temperatureRejected: adrDIsTemperatureRejected, chatUrl: chatUrl, modelsUrl: modelsUrl };
     } catch (eAuthHook) {}
 
     function activeRange() {
@@ -1466,7 +1482,7 @@
         var opts = {
             method: "POST",
             headers: headers,
-            body: JSON.stringify(body)
+            body: adrDRequestBody(body, url)
         };
         if (localAborter) opts.signal = localAborter.signal;
 
@@ -1490,7 +1506,16 @@
             res = await fetch(url, opts);
             if (!res.ok) {
                 raw = await res.text();
-            } else {
+                // v1.38.1：中转站后面是新一代 Claude、不收 temperature 的，摘掉再试一次。
+                if (adrDIsTemperatureRejected(res.status, raw) && "temperature" in body) {
+                    delete body.temperature;
+                    opts.body = JSON.stringify(body);
+                    armIdleTimer();
+                    res = await fetch(url, opts);
+                    raw = res.ok ? "" : await res.text();
+                }
+            }
+            if (res.ok) {
                 await adrDReadBody(res, function (txt) {
                     armIdleTimer();
                     col.push(txt);
@@ -3819,7 +3844,7 @@
         var opts = {
             method: "POST",
             headers: headers,
-            body: JSON.stringify({
+            body: adrDRequestBody({
                 model: model,
                 messages: [
                     { role: "system", content: sys },
@@ -3828,7 +3853,7 @@
                 temperature: 0.4,
                 max_tokens: ADR_CD_REPLY_TOKENS,
                 stream: false
-            })
+            }, url)
         };
         if (aborterCd) opts.signal = aborterCd.signal;
 
@@ -3983,7 +4008,7 @@
         var optsC = {
             method: "POST",
             headers: headers,
-            body: JSON.stringify({
+            body: adrDRequestBody({
                 model: st.cdModel || "deepseek-chat",
                 messages: [
                     { role: "system", content: sys },
@@ -3992,7 +4017,7 @@
                 temperature: 0.4,
                 max_tokens: ADR_CD_REPLY_TOKENS,
                 stream: false
-            })
+            }, url)
         };
         if (aborterC) optsC.signal = aborterC.signal;
 
@@ -4460,7 +4485,7 @@
         var body = { model: cfg.model, messages: cfg.messages, temperature: typeof cfg.temperature === "number" ? cfg.temperature : 0.7, stream: useStream };
         if (cfg.maxTokens) body.max_tokens = cfg.maxTokens;
         var ab = typeof AbortController !== "undefined" ? new AbortController() : null;
-        var opts = { method: "POST", headers: headers, body: JSON.stringify(body) };
+        var opts = { method: "POST", headers: headers, body: adrDRequestBody(body, url) };
         if (ab) opts.signal = ab.signal;
         var timeoutId = null, didTimeout = false;
         var idleMs = cfg.idleMs || ADR_CD_EXPAND_IDLE_MS;
@@ -4475,7 +4500,15 @@
         try {
             res = await fetch(url, opts);
             if (!res.ok) raw = await res.text();
-            else {
+            // v1.38.1：中转站后面是新一代 Claude、不收 temperature 的，摘掉再试一次。
+            if (!res.ok && adrDIsTemperatureRejected(res.status, raw) && "temperature" in body) {
+                delete body.temperature;
+                opts.body = JSON.stringify(body);
+                arm();
+                res = await fetch(url, opts);
+                raw = res.ok ? "" : await res.text();
+            }
+            if (res.ok) {
                 await adrDReadBody(res, function (txt) {
                     arm();
                     col.push(txt);
@@ -4864,11 +4897,11 @@
         adrDAuthHeaders(headers, st.cdApiKey, url);
         var opts = {
             method: "POST", headers: headers,
-            body: JSON.stringify({
+            body: adrDRequestBody({
                 model: st.cdModel || "deepseek-chat",
                 messages: [{ role: "system", content: sys }, { role: "user", content: body }],
                 temperature: 0, max_tokens: ADR_CD_REPLY_TOKENS, stream: false
-            })
+            }, url)
         };
         if (ab) opts.signal = ab.signal;
         var raw;

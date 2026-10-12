@@ -97,6 +97,16 @@ function build(settings) {
     ok(h.Authorization === "Bearer sk-ds" && !h["x-api-key"], "非官网模型口照旧 Bearer");
     h = H.authHeaders({}, "", "https://api.anthropic.com/v1/chat/completions");
     ok(h["anthropic-dangerous-direct-browser-access"] === "true" && !h.Authorization && !h["x-api-key"], "空钥匙：只带直连头，不造空 Bearer");
+
+    section("纯函数：请求体（v1.38.1 temperature）");
+    let b = JSON.parse(H.requestBody({ model: "claude-opus-5-5", messages: [], temperature: 0.6, top_p: 0.9, stream: true }, "https://api.anthropic.com/v1/chat/completions"));
+    ok(!("temperature" in b) && !("top_p" in b), "官网：temperature / top_p 摘掉");
+    ok(b.model === "claude-opus-5-5" && b.stream === true, "官网：其余字段不动");
+    b = JSON.parse(H.requestBody({ model: "deepseek-chat", messages: [], temperature: 0.6, stream: true }, "https://relay.example.com/v1/chat/completions"));
+    ok(b.temperature === 0.6, "中转站：temperature 原样送");
+    ok(H.temperatureRejected(400, '{"error":{"message":"`temperature` is deprecated for this model."}}') === true, "认得 A 社那句 400");
+    ok(H.temperatureRejected(400, '{"error":{"message":"model not found"}}') === false, "别的 400 不算");
+    ok(H.temperatureRejected(401, "temperature") === false, "401 不算");
     T0.stop();
 
     section("真跑：官网模型列表");
@@ -134,6 +144,7 @@ function build(settings) {
     ok(c.headers["anthropic-dangerous-direct-browser-access"] === "true", "带浏览器直连头");
     ok(!c.headers["x-api-key"], "聊天口不带 x-api-key");
     ok(c.body && c.body.model === "claude-opus-5-5" && c.body.stream === false, "请求体照旧（model / stream:false）");
+    ok(c.body && !("temperature" in c.body), "官网请求体不带 temperature");
     T2.stop();
 
     section("真跑：中转站一字不变");
@@ -150,7 +161,43 @@ function build(settings) {
     ok(r.url === "https://relay.example.com/v1/chat/completions", "中转站地址照旧", r.url);
     ok(r.headers.Authorization === "Bearer sk-relay", "中转站 Bearer 照旧");
     ok(Object.keys(r.headers).sort().join(",") === "Accept,Authorization,Content-Type", "中转站请求头只有 Accept / Authorization / Content-Type", Object.keys(r.headers).join(","));
+    ok(r.body && r.body.temperature === 0.6, "中转站请求体仍带 temperature 0.6");
     T3.stop();
+
+    section("真跑：中转站后面挂新 Claude，400 temperature 摘掉重试");
+    const T4 = build({ emotionApiEndpoint: "https://relay.example.com/v1", emotionApiKey: "sk-relay", emotionModel: "claude-opus-5-5", streamEnabled: false });
+    T4.setResponder(rec => {
+        if ("temperature" in rec.body) return { ok: false, status: 400, text: async () => JSON.stringify({ error: { code: "invalid_request_error", message: "`temperature` is deprecated for this model.", type: "invalid_request_error" } }) };
+        return { ok: true, status: 200, text: async () => JSON.stringify({ choices: [{ message: { content: "【情感方向】\n维持" } }] }) };
+    });
+    for (let i = 0; i < 3; i++) {
+        T4.chat.push({ is_user: true, mes: "他把话说到一半就停住了。" });
+        T4.chat.push({ is_user: false, name: "陆冀北", mes: "屋里安静下来。", swipe_id: 0, swipes: ["屋里安静下来。"] });
+    }
+    const root4 = await openPanel(T4);
+    const gen4 = root4 && root4.querySelector("#adr044-emotion-generate");
+    click(T4, gen4); await delay(600); click(T4, gen4);
+    await waitFor(() => T4.calls.length >= 2, 5000);
+    ok(T4.calls.length === 2, "发了两次：第一次带 temperature 被拒，第二次重试", String(T4.calls.length));
+    ok(T4.calls[0] && T4.calls[0].body.temperature === 0.6, "第一次带 temperature");
+    ok(T4.calls[1] && !("temperature" in T4.calls[1].body), "第二次摘掉 temperature");
+    await waitFor(() => /维持/.test((root4.querySelector("#adr044-emotion-preview") || {}).value || ""), 3000);
+    ok(/维持/.test((root4.querySelector("#adr044-emotion-preview") || {}).value || ""), "重试结果落进稿子");
+    T4.stop();
+
+    section("真跑：中转站别的 400 不重试");
+    const T5 = build({ emotionApiEndpoint: "https://relay.example.com/v1", emotionApiKey: "sk-relay", emotionModel: "nope", streamEnabled: false });
+    T5.setResponder(() => ({ ok: false, status: 400, text: async () => JSON.stringify({ error: { message: "model not found" } }) }));
+    for (let i = 0; i < 3; i++) {
+        T5.chat.push({ is_user: true, mes: "他把话说到一半就停住了。" });
+        T5.chat.push({ is_user: false, name: "陆冀北", mes: "屋里安静下来。", swipe_id: 0, swipes: ["屋里安静下来。"] });
+    }
+    const root5 = await openPanel(T5);
+    const gen5 = root5 && root5.querySelector("#adr044-emotion-generate");
+    click(T5, gen5); await delay(600); click(T5, gen5);
+    await waitFor(() => T5.calls.length >= 1, 5000); await delay(300);
+    ok(T5.calls.length === 1, "只发一次，不重试", String(T5.calls.length));
+    T5.stop();
 
     console.log("\n" + PASS + " passed, " + FAIL + " failed" + (FAIL ? "\n  " + failures.join("\n  ") : ""));
     process.exit(FAIL ? 1 : 0);

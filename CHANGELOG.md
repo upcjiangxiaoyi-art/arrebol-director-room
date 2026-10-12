@@ -6,6 +6,10 @@
 
 ---
 
+## v1.38.1
+
+新一代 Claude 不收 temperature（报告：江，统筹挂 claude-fable-5-1 后 400「`temperature` is deprecated for this model.」；施工：Claude）。Opus 4.7 起、Sonnet 5 起、Fable 5 起的模型把采样参数整个拿掉了，带 temperature 就拒。小红霞五处请求体（情感／统筹导演 0.6、择池／择卡 0.4、兑现判定 0、展开按滑杆、通用对话 0.7）统一经 adrDRequestBody 出去：URL 落在 anthropic.com 就摘掉 temperature 与 top_p，别家地址原样送。中转站后面挂着这些模型的，callAPI 与 adrDChatCompletionText 收到 400 且错误文里有 temperature，摘掉再发一次，只重试这一回；别的 400 不动。test_anthropic.js 34 → 47 项：官网请求体不带 temperature、中转站仍带 0.6、中转站 400 temperature 两次请求第二次摘掉且结果落稿、别的 400 只发一次。
+
 ## v1.38.0
 
 A 社官网直连（报告：江「小红霞拉不了 A 社的 API，我确定 API 有效，官网还有钱」；施工：Claude）。查下来钥匙和余额都不是事，卡在更前面一步：小红霞是浏览器里直接 fetch 的，api.anthropic.com 对浏览器发来的请求先做 CORS 预检，请求头里没有 anthropic-dangerous-direct-browser-access: true 就回 400「Disallowed CORS origin」，浏览器层面只表现为「Failed to fetch」，鉴权根本没走到；就算预检过了，「加载模型」打的 /v1/models 是 A 社原生口，只认 x-api-key + anthropic-version，Bearer 过去是 401「invalid x-api-key」。两点都在容器里用 curl 带 Origin 实测过：不带头预检 400，带头预检 200；/v1/chat/completions 是 A 社的 OpenAI 兼容层，Bearer 能走到鉴权。修法：八处发请求的地方（情感／统筹导演、模型列表、择池、择卡、兑现判定、展开、测试连接）统一经 adrDAuthHeaders 组头，只在 URL 域名落在 anthropic.com 时多加直连头，模型列表那一路改 x-api-key；其余任何地址一个头都不多，请求体、流式收集、超时闸一概不动。新增 test_anthropic.js 34 项：域名识别（路径里出现 anthropic.com、notanthropic.com 不算）、两种口的头、jsdom 真跑官网模型列表与导演请求、中转站请求头逐字不变。
