@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.38.2｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.38.3｜ripple & GPT & Claude
+ * v1.38.3 运行状态条只留「轻触暂停」胶囊可点，整条不再吃触摸；v1.38.2 听岔了，× 挪回原位（报告 江；施工 Claude）
  * v1.38.2 台头按钮分家：× 挪到最左、☼ 独守最右，不再并排挤在右手拇指区；标题与 DOM 不动，只改 flex order（提议 江；施工 Claude）
  * v1.38.1 新一代 Claude 不收 temperature：官网直连一律摘掉；中转站见到那句 400 摘掉重试一次（报告 江；施工 Claude）
  * v1.38.0 A 社官网直连：浏览器直连头 anthropic-dangerous-direct-browser-access 过 CORS 预检；/v1/models 改 x-api-key；只对 anthropic.com 生效（报告 江「官网 API 拉不了」；施工 Claude）

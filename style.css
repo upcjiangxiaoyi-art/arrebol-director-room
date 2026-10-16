@@ -7374,11 +7374,30 @@ html #adr044-drawer #adr044-cd-expand-panel .adr044-cd-step-text { width: 100% !
 .adr044-cd-step-analysis { margin-top: 6px; font-size: 11.5px; opacity: .85; }
 .adr044-cd-step-analysis > div { white-space: pre-wrap; margin-top: 4px; }
 
-/* v1.38.2 台头按钮分家：× 挪到最左（Material 全屏对话框的关闭位），☼ 独守最右。
-   两枚不再并排挤在右手拇指滚动的起手区：想关要刻意往左伸，滚动时顺手蹭到的只剩可逆的换色，
-   也不会再出现想点 × 结果点到 ☼。标题一字不动。DOM 顺序不动，只改 flex order，
-   两端测试与各套配色规则一概不受影响。 */
-#adr048-popup-head { gap: 10px !important; }
-#adr048-popup-head #adr048-popup-close { order: -1 !important; flex: 0 0 auto !important; margin: 0 2px 0 0 !important; }
-#adr048-popup-head .adr048-head-txt { order: 0 !important; flex: 1 1 auto !important; }
-#adr048-popup-head #adr048-theme-toggle { order: 1 !important; flex: 0 0 auto !important; margin: 0 0 0 6px !important; }
+/* v1.38.3 运行状态条只留小胶囊可点（v1.38.2 听岔了把 × 挪到左边，这版挪回原位）。
+   「小红霞正在运行 ｜ 轻触暂停」整条是一枚 <button>，整条 46px 高、通栏宽都能点，
+   滚动起手、拇指一搭就把小红霞暂停了。现在整条 pointer-events: none，只有右边那枚
+   「轻触暂停 / 轻触唤醒」胶囊接触摸；胶囊外加一圈 8px 透明边当命中垫（border 透明 +
+   background-clip: padding-box + inset 阴影画原来的 1px 描边），样子一个像素不变，
+   命中区从 22px 高长到 38px。键盘 Tab 到整条按 Enter 照旧。两端（浮窗、内嵌抽屉）同改。 */
+#adr048-popup-body #adr044-master-toggle,
+#adr044-drawer #adr044-master-toggle {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+#adr048-popup-body #adr044-master-toggle::after,
+#adr044-drawer #adr044-master-toggle::after {
+    pointer-events: auto;
+    cursor: pointer;
+    border: 8px solid transparent;
+    margin: -8px -8px -8px 0;
+    background-clip: padding-box;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body #adr044-master-toggle::after {
+    border: 8px solid transparent;
+    box-shadow: inset 0 0 0 1px var(--arb-line);
+}
+html #adr044-drawer #adr044-master-toggle::after {
+    border: 8px solid transparent;
+    box-shadow: inset 0 0 0 1px var(--adrx-line);
+}
