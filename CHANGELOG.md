@@ -6,6 +6,10 @@
 
 ---
 
+## v1.38.2
+
+台头按钮分家（报告：用户反馈经江转达「台头这里太长了，会不小心误触」；提议：江「把按钮挪左边」；施工：Claude）。查下来台头文字本身没绑任何点击，能误触的只有右上角并排的两枚：☼ 换色和 × 关闭，32px 一对、中间 10px，正好落在右手拇指滚动的起手区，想关点到换色、想滚把窗关了都有可能。江不想把标题缩短，那就只动按钮：× 挪到最左（Material 全屏对话框的关闭位），☼ 独守最右，两枚之间隔着整条标题，不可能再点错；滚动起手区只剩可逆的换色。标题、珠子、副标题一字不动；DOM 顺序不动，只在 style.css 末尾加四行 flex order，各套配色与两端测试一概不受影响。真浏览器按 393 与 360 宽各截过晴空粉霞与暗河夜色，360 下标题中文照旧隐去、英文与副标题完整。
+
 ## v1.38.1
 
 新一代 Claude 不收 temperature（报告：江，统筹挂 claude-fable-5-1 后 400「`temperature` is deprecated for this model.」；施工：Claude）。Opus 4.7 起、Sonnet 5 起、Fable 5 起的模型把采样参数整个拿掉了，带 temperature 就拒。小红霞五处请求体（情感／统筹导演 0.6、择池／择卡 0.4、兑现判定 0、展开按滑杆、通用对话 0.7）统一经 adrDRequestBody 出去：URL 落在 anthropic.com 就摘掉 temperature 与 top_p，别家地址原样送。中转站后面挂着这些模型的，callAPI 与 adrDChatCompletionText 收到 400 且错误文里有 temperature，摘掉再发一次，只重试这一回；别的 400 不动。test_anthropic.js 34 → 47 项：官网请求体不带 temperature、中转站仍带 0.6、中转站 400 temperature 两次请求第二次摘掉且结果落稿、别的 400 只发一次。

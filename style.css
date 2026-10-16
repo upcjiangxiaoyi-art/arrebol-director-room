@@ -7373,3 +7373,12 @@ html #adr044-drawer #adr044-cd-expand-panel .adr044-cd-step-text { width: 100% !
 .adr044-cd-step-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .adr044-cd-step-analysis { margin-top: 6px; font-size: 11.5px; opacity: .85; }
 .adr044-cd-step-analysis > div { white-space: pre-wrap; margin-top: 4px; }
+
+/* v1.38.2 台头按钮分家：× 挪到最左（Material 全屏对话框的关闭位），☼ 独守最右。
+   两枚不再并排挤在右手拇指滚动的起手区：想关要刻意往左伸，滚动时顺手蹭到的只剩可逆的换色，
+   也不会再出现想点 × 结果点到 ☼。标题一字不动。DOM 顺序不动，只改 flex order，
+   两端测试与各套配色规则一概不受影响。 */
+#adr048-popup-head { gap: 10px !important; }
+#adr048-popup-head #adr048-popup-close { order: -1 !important; flex: 0 0 auto !important; margin: 0 2px 0 0 !important; }
+#adr048-popup-head .adr048-head-txt { order: 0 !important; flex: 1 1 auto !important; }
+#adr048-popup-head #adr048-theme-toggle { order: 1 !important; flex: 0 0 auto !important; margin: 0 0 0 6px !important; }
