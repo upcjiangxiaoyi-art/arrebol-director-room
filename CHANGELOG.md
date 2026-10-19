@@ -6,6 +6,10 @@
 
 ---
 
+## v1.38.4
+
+中途换聊天漏洞（报告：江「换角色卡的时候，情感导演如果没触发，另一张的导演会贴耳常驻到这一张来」；施工：Claude）。查下来 CHAT_CHANGED 后 900ms 的浮动稿恢复本身没错：新聊天没稿就清空、有稿就贴回。漏的是正在飞的那一趟：run() 开跑时没记自己在哪把聊天，callAPI 一等几十秒，用户换了卡，稿子回来 adrDWriteDirectorInjection 照样写进 ctx().chat——此时已经是新聊天——最后一楼，adrDUpdateFloatFromInjection 把它存进新聊天的 arrebol_d.float 并 setExtensionPrompt 贴上，于是上一张卡的情感指导成了这张卡的常驻浮动稿，刷新、换设备都在。修法三层：run() 进门记 homeKey = adrDChatKey()，API 回来（含等生成写完）再对一次表，不一致就 failureKind = "chat-switched"：不挂、不贴、不存，状态行写明"中途切换了聊天，这份稿是上一把的"，预览框保留，不弹失败窗、不进补拍；CHAT_CHANGED 监听里加 adrDAbortRunIfChatSwitched：请求还挂着且家不对就 aborter.abort()，catch 里按 chat-switched 静默收场，processing 照常放开；adrDCheckAutoTrigger 整趟记 homeKey，读全量、抽卡检查、每位导演开跑前与跑完后都对表，不一致就 return / break，旧聊天的 count 与拍子不会拿去给新聊天开导演。抽卡小能手 adrCdPerformDraw 顶上记 homeKey，择卡、择池两处 await 回来对表，不一致作废（v1.34 展开那段原有的 homeKey 并入同一个）。新增 test_switch.js 27 项：对照组稿子正常挂进 A 并存 A；请求挂着换到 B 再回稿，B 的楼、B 的浮动稿、B 的聊天文件一概干净，不弹失败窗，晚到的 CHAT_CHANGED 恢复出来仍是空；请求挂着时 CHAT_CHANGED 到了当场 abort、静默、B 自己到点照常建账为 1 并发自己的请求；A 有稿换到 B 清空、换回 A 贴回。SPEED=10 连跑三遍全过，原有 13 套全过。
+
 ## v1.38.3
 
 运行状态条只留胶囊可点（报告：江「是轻触暂停，不是 ×」；施工：Claude）。v1.38.2 听岔了：用户说的「台头太长会误触」是「小红霞正在运行 ｜ 轻触暂停」那条，不是浮窗台头。那条整个是一枚 <button>，通栏宽、46px 高，哪儿都能点，右手拇指滚动起手一搭就把小红霞暂停了。修法：整条 pointer-events: none，只有右边 ::after 那枚「轻触暂停 / 轻触唤醒」胶囊 pointer-events: auto；胶囊的 1px 描边改用 inset 阴影画，腾出来的 border 换成 8px 透明边当命中垫（background-clip: padding-box，负 margin 抵掉占位），样子一个像素不变，命中区从 22px 高长到 38px、左右各宽 8px。浮窗与内嵌抽屉同改；键盘 Tab 到整条按 Enter 照旧。江提议把胶囊挪到左边，这版没挪：误触的根子是整条都吃点，不是胶囊在哪；点+文字在左、动作在右是状态行的标准读序，先把命中区收窄，真还误触再挪。台头 × 挪回原位，v1.38.2 那四行 flex order 撤掉。真浏览器核对：整条左半段 elementFromPoint 不再命中按钮、触摸不切换；胶囊处命中并切换；浮窗与抽屉各截一张与改前比对无差。

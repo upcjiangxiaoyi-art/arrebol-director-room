@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.38.3｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.38.4｜ripple & GPT & Claude
+ * v1.38.4 中途换聊天漏洞：导演等 API 期间换了角色卡，上一把的稿子会挂进新聊天并存成常驻浮动稿；现开跑记家、回稿对表、换聊天当场掐请求，自动检查与抽卡同防（报告 江；施工 Claude）
  * v1.38.3 运行状态条只留「轻触暂停」胶囊可点，整条不再吃触摸；v1.38.2 听岔了，× 挪回原位（报告 江；施工 Claude）
  * v1.38.2 台头按钮分家：× 挪到最左、☼ 独守最右，不再并排挤在右手拇指区；标题与 DOM 不动，只改 flex order（提议 江；施工 Claude）
  * v1.38.1 新一代 Claude 不收 temperature：官网直连一律摘掉；中转站见到那句 400 摘掉重试一次（报告 江；施工 Claude）
@@ -169,6 +170,9 @@
     var processing = false;
     var aborter = null;
     var adrDAbortWasManual = false;
+    // v1.38.4：导演开跑时记下"家"在哪把聊天。中途换了聊天，稿子不挂、浮动稿不贴、请求能掐就掐。
+    var adrDRunChatKey = "";
+    var adrDAbortWasChatSwitch = false;
 
     // v1.9.26：自动触发失败保拍后的首报/退避状态。
     // 只服务于“这一拍没结算时稍后重试”，不参与 baseline 数学。
@@ -700,6 +704,7 @@
     }
 
     try {
+        rootWin().__adrDSwitchTest = { runChatKey: function () { return adrDRunChatKey; }, abortIfSwitched: adrDAbortRunIfChatSwitched };
         rootWin().__adrDAuthTest = { isAnthropicDirect: adrDIsAnthropicDirect, authHeaders: adrDAuthHeaders, requestBody: adrDRequestBody, temperatureRejected: adrDIsTemperatureRejected, chatUrl: chatUrl, modelsUrl: modelsUrl };
     } catch (eAuthHook) {}
 
@@ -1618,6 +1623,12 @@
         syncShared();
         syncType(type);
 
+        // v1.38.4：记下开跑时的聊天。API 一等几十秒，用户这时候换了角色卡，回来的稿子是上一把的，
+        // 绝不能挂到新聊天的楼里、更不能存进新聊天的浮动稿（那就常驻了）。
+        var homeKey = adrDChatKey();
+        adrDRunChatKey = homeKey;
+        adrDAbortWasChatSwitch = false;
+
         processing = true;
         setButtons(type);
         adr048SetFabBusy(true);
@@ -1634,11 +1645,16 @@
 
             var st = settings();
             var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
-            if (st[autoKey]) {
-                if (adrDGenStreaming) {
-                    status(type, "分析完成，这一楼还在生成，等写完再挂…", "#d6b177");
-                    await adrDWaitForGenerationIdle(180000);
-                }
+            if (st[autoKey] && adrDGenStreaming && adrDChatKey() === homeKey) {
+                status(type, "分析完成，这一楼还在生成，等写完再挂…", "#d6b177");
+                await adrDWaitForGenerationIdle(180000);
+            }
+            if (adrDChatKey() !== homeKey) {
+                failureKind = "chat-switched";
+                failureMsg = "中途切换了聊天";
+                status(type, "分析完成，但你中途切换了聊天：这份稿是上一把的，不挂到这把（预览框里还在）", "#d6b177");
+                try { console.warn("[Arrebol D] director result discarded: chat switched mid-run", { type: type, from: homeKey, to: adrDChatKey() }); } catch (eSwLog) {}
+            } else if (st[autoKey]) {
                 var ok = isAutoRun ? await injectDirectorAsync(type, out) : injectDirector(type, out);
                 if (ok) {
                     success = true;
@@ -1660,20 +1676,37 @@
             else if (e && e.name === "AbortError") failureKind = "abort";
             else failureKind = "api";
 
+            if (e && e.name === "AbortError" && adrDAbortWasChatSwitch) failureKind = "chat-switched";
+
             var msg = (failureKind === "manual-abort" || failureKind === "abort") ? "请求已打断" : failureMsg;
-            status(type, "失败：" + msg, "#d4726a");
+            if (failureKind === "chat-switched") status(type, "你中途切换了聊天，上一把的分析已取消", "#d6b177");
+            else status(type, "失败：" + msg, "#d4726a");
             success = false;
         }
 
         processing = false;
         aborter = null;
+        adrDRunChatKey = "";
+        adrDAbortWasChatSwitch = false;
         adr048SetFabBusy(false);
         setButtons(type);
 
-        if (!success && failureKind !== "manual-abort" && failureKind !== "abort") {
+        if (!success && failureKind !== "manual-abort" && failureKind !== "abort" && failureKind !== "chat-switched") {
             adrDReportFailure(failureKind, type, failureMsg, isAutoRun ? beatKey : "");
         }
         return success;
+    }
+
+    // v1.38.4：换聊天时若导演还在等 API，直接掐掉——回来的稿子反正不能用，省一截流量，也不让它占着 processing。
+    function adrDAbortRunIfChatSwitched(reason) {
+        try {
+            if (!processing || !adrDRunChatKey) return false;
+            if (adrDChatKey() === adrDRunChatKey) return false;
+            adrDAbortWasChatSwitch = true;
+            try { console.warn("[Arrebol D] chat switched mid-run, aborting director request", reason || ""); } catch (eLog) {}
+            if (aborter) { try { aborter.abort(); } catch (eAb) {} }
+            return true;
+        } catch (e) { return false; }
     }
 
     function abortRun(type) {
@@ -4110,6 +4143,7 @@
         opts = opts || {};
         var st = settings();
         var state = adrCdChatState();
+        var homeKey = adrDChatKey();   // v1.38.4：问小眼睛、展开都要等 API，期间换了聊天，这张卡作废，state 是上一把的不能落到新聊天
         var slotPools = adrCdBuildSlotPools(adrCdEnabledSlotTexts(state));
         if (!slotPools.length) return { ok: false, reason: "没有启用的仓库，或启用的仓库里没有卡" };
 
@@ -4136,6 +4170,7 @@
                     usedMode = "择卡·唯一候选";
                 } else {
                     var idxC = await adrCdPickCardViaDS(cands, state);
+                    if (adrDChatKey() !== homeKey) { console.warn("[抽卡小能手] 择卡期间切换了聊天，本次作废"); return { ok: false, reason: "择卡期间切换了聊天" }; }
                     console.log("[抽卡小能手] 小眼睛选卡：第 " + idxC + " 张"
                         + "（候选 " + cands.length + " 张，耗时 " + (Date.now() - tC) + "ms）");
                     chosen = cands[idxC - 1];
@@ -4160,6 +4195,7 @@
                     console.log("[抽卡小能手] 名单只有一个池，不问小眼睛直接投：" + pick);
                 } else {
                     pick = await adrCdPickPoolViaDS(slotPools, state);
+                    if (adrDChatKey() !== homeKey) { console.warn("[抽卡小能手] 择池期间切换了聊天，本次作废"); return { ok: false, reason: "择池期间切换了聊天" }; }
                     console.log("[抽卡小能手] 小眼睛点池：" + pick + "（耗时 " + (Date.now() - t0) + "ms）");
                 }
 
@@ -4213,7 +4249,6 @@
         // v1.34.0 剧情展开推进：先让导演把这张卡切成 N 幕，再落账。失败就按整张卡投，不停摆。
         var expandInfo = null;
         if (adrCdExpandWanted(result)) {
-            var homeKey = adrDChatKey();
             adrCdExpandStatus("抽到「" + adrCdTruncate(result.card, 20) + "」，导演正在把它展开成分幕…", "#8ed99d");
             try {
                 expandInfo = await adrCdExpandCard(result.card);
@@ -9588,7 +9623,11 @@
                 return;
             }
 
+            // v1.38.4：进门记下这把聊天。下面每个 await 回来都对一次表，换了聊天就整趟作废——
+            // 旧聊天的 count / 基准线 / 拍子都不能拿去给新聊天开导演、投卡。
+            var homeKey = adrDChatKeyReady() ? adrDChatKey() : "";
             var count = await adrDRefreshFullAssistantRoundCount("auto-check:" + (reason || ""));
+            if (homeKey && adrDChatKey() !== homeKey) { try { console.warn("[Arrebol D] auto check abandoned: chat switched while counting"); } catch (eSw1) {} return; }
             if (!adrDCountReady()) {
                 try { console.log("[Arrebol D] auto trigger waits for first full history count", reason || ""); } catch (eReadyLog) {}
                 adrDUpdateAutoCounters();
@@ -9607,6 +9646,7 @@
 
             // v1.10.0：先投卡后导演——统筹随后盘账能看见最新一张投卡。抽卡失败不影响导演。
             try { await adrCdAutoCheck(count, reason, inStartupGrace); } catch (eCd) { try { console.warn("[抽卡小能手] 自动检查失败", eCd); } catch (eCd2) {} }
+            if (adrDChatKey() !== homeKey) { try { console.warn("[Arrebol D] auto check abandoned: chat switched during card check"); } catch (eSw2) {} return; }
 
             var nEmotion = autoTriggerRange("emotion");
             var nPlot = autoTriggerRange("plot");
@@ -9678,8 +9718,10 @@
                 if (!Number.isFinite(triggerCount) || triggerCount < 0) triggerCount = count;
                 var beatKey = item.beatKey;
                 var extra = "自动触发：已新增约 " + n + " 个助手正文轮次。请基于当前精准读取上下文输出下一阶段方向。";
+                if (adrDChatKey() !== homeKey) { try { console.warn("[Arrebol D] auto trigger abandoned: chat switched before", type); } catch (eSw3) {} break; }
                 console.log("[Arrebol D] auto triggering", type, "reason=", reason, "count=", triggerCount, "N=", n);
                 var okRun = await run(type, extra, { autoTrigger: true, beatKey: beatKey });
+                if (adrDChatKey() !== homeKey) { try { console.warn("[Arrebol D] auto trigger result dropped: chat switched during", type); } catch (eSw4) {} break; }
                 if (okRun) {
                     var stAfter = settings();
                     adrDAdvanceAutoBaseline(type, triggerCount);
@@ -9839,7 +9881,10 @@
                     es.on(types.MESSAGE_SWIPED, function () { setTimeout(function () { adrDCheckNg("event"); }, 400); });
                 }
                 if (types.CHAT_CHANGED) {
-                    es.on(types.CHAT_CHANGED, function () { setTimeout(function () { adrDRestoreFloatForCurrentChat("chat-changed"); adrDRefreshToneFields(); }, 900); });
+                    es.on(types.CHAT_CHANGED, function () {
+                        try { adrDAbortRunIfChatSwitched("chat-changed"); } catch (eSw) {}
+                        setTimeout(function () { adrDRestoreFloatForCurrentChat("chat-changed"); adrDRefreshToneFields(); }, 900);
+                    });
                 }
             }
         } catch (e) {}
