@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.38.4｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.38.5｜ripple & GPT & Claude
+ * v1.38.5 导演不抢半楼：3 分钟保险丝改为看证据（停止按钮亮着 / 最后一楼字数还在长）再降旗；漏事件时楼安静 4 秒才读；等生成写完的上限 3 → 20 分钟（报告 用户经江转达；施工 Claude）
  * v1.38.4 中途换聊天漏洞：导演等 API 期间换了角色卡，上一把的稿子会挂进新聊天并存成常驻浮动稿；现开跑记家、回稿对表、换聊天当场掐请求，自动检查与抽卡同防（报告 江；施工 Claude）
  * v1.38.3 运行状态条只留「轻触暂停」胶囊可点，整条不再吃触摸；v1.38.2 听岔了，× 挪回原位（报告 江；施工 Claude）
  * v1.38.2 台头按钮分家：× 挪到最左、☼ 独守最右，不再并排挤在右手拇指区；标题与 DOM 不动，只改 flex order（提议 江；施工 Claude）
@@ -1603,15 +1604,20 @@
     // 旧写法回来就往"最后一个有正文的助手楼"里塞，那一楼可能正在流式生成——
     // 写进去的稿被下一个 chunk 冲掉，saveChat 和重绘还会撞上生成中。
     // 生成中就把稿留在预览里等 GENERATION_ENDED，最多等 3 分钟（与降旗保险丝同长）。
+    // v1.38.5：等的是"看起来还在生成"（旗子 / 停止按钮 / 字数刚变过），不只等旗子；
+    // 上限放到 20 分钟——会思考的模型一楼出好几分钟，3 分钟一到就往流式的楼里塞稿才是真丢稿。
     function adrDWaitForGenerationIdle(maxMs) {
+        var cap = Math.max(Number(maxMs) || 0, ADR_D_GEN_IDLE_WAIT_CAP_MS);
         return new Promise(function (resolve) {
             var started = Date.now();
             (function tick() {
-                if (!adrDGenStreaming || Date.now() - started >= maxMs) return resolve(!adrDGenStreaming);
+                var live = adrDGenerationLooksLive();
+                if (!live || Date.now() - started >= cap) return resolve(!live);
                 setTimeout(tick, 500);
             })();
         });
     }
+    var ADR_D_GEN_IDLE_WAIT_CAP_MS = 1200000;
 
     async function run(type, extra, opts) {
         if (processing) return false;
@@ -1645,7 +1651,7 @@
 
             var st = settings();
             var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
-            if (st[autoKey] && adrDGenStreaming && adrDChatKey() === homeKey) {
+            if (st[autoKey] && adrDChatKey() === homeKey && adrDGenerationLooksLive()) {
                 status(type, "分析完成，这一楼还在生成，等写完再挂…", "#d6b177");
                 await adrDWaitForGenerationIdle(180000);
             }
@@ -7576,7 +7582,7 @@
                     status(type, "没有内容可注入", "#d4726a");
                     return;
                 }
-                if (adrDGenStreaming) {
+                if (adrDGenerationLooksLive()) {
                     status(type, "这一楼还在生成，等写完再注入…", "#d6b177");
                     adrDWaitForGenerationIdle(180000).then(function () {
                         var ok2 = injectDirector(type, text);
@@ -9581,7 +9587,95 @@
     function adrDMarkGenStreaming(on) {
         adrDGenStreaming = !!on;
         adrDGenStreamingSince = on ? Date.now() : 0;
+        if (!on) {
+            // v1.38.5：降旗那一刻先采一次样，再记结束时间——此后字数没再变，就说明楼是真落定了。
+            try { adrDFloorPulse(); } catch (ePulse) {}
+            adrDGenEndedAt = Date.now();
+        }
     }
+
+    // v1.38.5：旗子之外再看两样证据。旧写法 GENERATION_STARTED 升旗、3 分钟没等到结束事件就强制降旗——
+    // 会思考的模型、慢中转站一楼出 5 分钟很平常，保险丝一烧，导演就拿着半楼正文开分析，
+    // 稿子还往正在流式的那一楼里塞，下一个 chunk 把它冲掉。现在降旗前先看：
+    // ① 酒馆的停止按钮 #mes_stop 还亮着？② 最后一个助手楼的字数最近还在长？两样都没有才算真的没在生成。
+    // 另外不管旗子在不在，最后一楼字数 4 秒内还变过就等等——漏掉事件也不会抢跑。
+    var ADR_D_GEN_FUSE_MS = 180000;        // 旗子超过这么久才开始核对证据
+    var ADR_D_GEN_QUIET_MS = 4000;         // 最后一楼至少安静这么久才算落定
+    var ADR_D_GEN_EVIDENCE_MS = 30000;     // 超过保险丝后，字数这么久没长且停止按钮没亮，才降旗
+    // sig = 楼序号:字数。grewAt 只在"同一楼字数变了"时更新——换聊天、加新楼是序号变，不算生成证据。
+    var adrDFloorPulseState = { sig: "", idx: -1, len: -1, changedAt: 0, grewAt: 0, sampledAt: 0 };
+    var adrDGenEndedAt = 0;                // 最近一次 MESSAGE_RECEIVED / GENERATION_ENDED / STOPPED 的时间
+
+    function adrDLastAssistantSignature() {
+        try {
+            var chat = ctx().chat;
+            if (!chat || !chat.length) return "";
+            for (var i = chat.length - 1; i >= 0; i--) {
+                var m = chat[i];
+                if (!m || m.is_user) continue;
+                return i + ":" + String(m.mes || "").length;
+            }
+        } catch (e) {}
+        return "";
+    }
+
+    // 采一次样：最后一个助手楼的（序号:字数）变了就记下时间。轮询、等待循环、检查进门都会采。
+    function adrDFloorPulse() {
+        var now = Date.now();
+        var sig = adrDLastAssistantSignature();
+        if (sig !== adrDFloorPulseState.sig) {
+            var parts = sig.split(":");
+            var idx = parts.length === 2 ? Number(parts[0]) : -1;
+            var len = parts.length === 2 ? Number(parts[1]) : -1;
+            if (idx >= 0 && idx === adrDFloorPulseState.idx && len !== adrDFloorPulseState.len) adrDFloorPulseState.grewAt = now;
+            adrDFloorPulseState.sig = sig;
+            adrDFloorPulseState.idx = idx;
+            adrDFloorPulseState.len = len;
+            adrDFloorPulseState.changedAt = now;
+        }
+        adrDFloorPulseState.sampledAt = now;
+        return adrDFloorPulseState;
+    }
+
+    function adrDStopButtonVisible() {
+        try {
+            var d = rootDoc();
+            var el = d.querySelector("#mes_stop");
+            if (!el) return false;
+            var w = d.defaultView || rootWin();
+            var disp = (w && typeof w.getComputedStyle === "function") ? w.getComputedStyle(el).display : (el.style ? el.style.display : "");
+            return disp !== "none" && disp !== "";
+        } catch (e) { return false; }
+    }
+
+    // 还在生成吗？旗子 / 停止按钮 / 字数刚变过，三样有一样就算在。
+    // 字数那条只在"结束事件之后字数还在变"时才算：事件齐全的正常回合，MESSAGE_RECEIVED 一到就能开工，不多等。
+    function adrDGenerationLooksLive() {
+        var now = Date.now();
+        var pulse = adrDFloorPulse();
+        var quiet = now - pulse.grewAt;   // 距上一次"同一楼字数变化"多久
+        if (adrDStopButtonVisible()) return true;
+        if (adrDGenStreaming) {
+            if (now - adrDGenStreamingSince < ADR_D_GEN_FUSE_MS) return true;
+            // 过了保险丝：有证据就续旗，没证据才降。
+            if (quiet < ADR_D_GEN_EVIDENCE_MS) return true;
+            try { console.warn("[Arrebol D] generation flag cleared: no end event, stop button hidden, floor quiet for " + Math.round(quiet / 1000) + "s"); } catch (eLog) {}
+            adrDMarkGenStreaming(false);
+            return false;
+        }
+        // 旗子不在：结束事件之后字数又变过、且还没安静够，说明有人在没打招呼地往楼里写（漏事件 / 别的脚本），等等。
+        if (pulse.grewAt > adrDGenEndedAt && quiet < ADR_D_GEN_QUIET_MS) return true;
+        return false;
+    }
+
+    try {
+        rootWin().__adrDGenTest = {
+            looksLive: adrDGenerationLooksLive, pulse: adrDFloorPulse, flag: function () { return adrDGenStreaming; },
+            setFuseMs: function (ms) { ADR_D_GEN_FUSE_MS = Number(ms) || 180000; },
+            setQuietMs: function (ms) { ADR_D_GEN_QUIET_MS = Number(ms) || 4000; },
+            setEvidenceMs: function (ms) { ADR_D_GEN_EVIDENCE_MS = Number(ms) || 30000; }
+        };
+    } catch (eGenHook) {}
 
     function adrDScheduleAutoTriggerCheck(reason) {
         try {
@@ -9601,12 +9695,11 @@
             return;
         }
 
-        if (adrDGenStreaming) {
-            if (Date.now() - adrDGenStreamingSince < 180000) {
-                adrDScheduleAutoTriggerCheck("wait-generation");
-                return;
-            }
-            adrDMarkGenStreaming(false); // 保险丝：3 分钟没等到结束事件，强制降旗防死锁
+        // v1.38.5：正在生成（旗子 / 停止按钮 / 最后一楼字数刚变过）就等，4.2 秒后再来看。
+        // 字数那条也是"安静期"：楼写完之后至少稳 4 秒才读，不抢半楼。
+        if (adrDGenerationLooksLive()) {
+            adrDScheduleAutoTriggerCheck("wait-generation");
+            return;
         }
 
         // v1.23.2：旗子在进门就升。旧写法要到导演真开跑才升，前面读全量、抽卡检查、
@@ -9904,6 +9997,7 @@
                             adrDScheduleAutoTriggerCheck("poll-chat-key-change");
                             adrDRestoreFloatForCurrentChat("poll-chat-key-change");
                         }
+                        try { adrDFloorPulse(); } catch (ePulse) {}   // v1.38.5：顺手采一次最后一楼的字数
                         var len = adrDCurrentMessageTailForPoll();
                         if (adrDLastChatLengthSeen >= 0 && len !== adrDLastChatLengthSeen) {
                             // v1.16.3：同聊天内活会话看到楼数缩水，只可能是真删除

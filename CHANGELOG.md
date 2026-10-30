@@ -6,6 +6,10 @@
 
 ---
 
+## v1.38.5
+
+导演不抢半楼（报告：用户反馈经江转达「到了触发层数的时候，这一层的内容还没出完，小红霞就开始分析了，分析出来的剧情跟最新回复这一层的正文两模两样」；施工：Claude）。查下来升旗等生成的机制一直在：GENERATION_STARTED 升旗，检查遇旗就 4.2 秒后再来，MESSAGE_RECEIVED / GENERATION_ENDED / STOPPED 降旗。漏在保险丝：旗子超过 3 分钟没等到结束事件就强制降旗，v1.16.0 加的时候是防死锁，现在会思考的模型、慢中转站一楼出 5 分钟很平常，保险丝一烧，检查放行、count 把半楼算进去、到点就 run，buildPrompt 读的是半楼，稿子回来 findLastMessageIndex 找到的还是那个正在流式的楼，写进去被下一个 chunk 冲掉，只剩浮动稿贴着一份跟正文对不上的指导。修法：adrDGenerationLooksLive 代替裸旗子，三样证据任一成立就算在生成——① 酒馆停止按钮 #mes_stop 亮着（getComputedStyle display ≠ none）；② 旗子在且没过保险丝；③ 旗子过了保险丝但最后一个助手楼的字数 30 秒内长过（同一楼序号、字数变化才算，换聊天与加新楼是序号变不算），三样都没有才降旗并记一笔日志。旗子不在时另有一条：结束事件之后字数又变过、且没安静够 4 秒，也等——事件漏了、别的脚本在往楼里写都兜住；事件齐全的正常回合，降旗那一刻先采样再记结束时间，字数不再变就立刻放行，节奏一点不变。字数采样挂在轮询（9 秒）、检查进门与等待循环（0.5 秒）上。adrDWaitForGenerationIdle 改等 looksLive，上限 3 → 20 分钟，流式的楼里不再塞稿；run() 回稿后等生成、手动「把这份稿挂上」同改。新增 test_settle.js 13 项：旗子升了结束事件永远不来、保险丝 1.5 秒烧掉、楼每 250ms 长一截 3.5 秒——期间不开分析、旗子不降，楼停下安静期过了才发请求、导演读到含最后一句的整楼、日志记了按证据降旗；事件齐全的回合 MESSAGE_RECEIVED 后 3 秒内就发、读到整楼；只有停止按钮亮着（事件全漏、字数不长）就不发，灭了才发。test_v124 两把聊天建账一度被安静期拖慢，按"同一楼字数变才算"修正后全过；原有 14 套全过，test_settle 连跑两遍稳定。
+
 ## v1.38.4
 
 中途换聊天漏洞（报告：江「换角色卡的时候，情感导演如果没触发，另一张的导演会贴耳常驻到这一张来」；施工：Claude）。查下来 CHAT_CHANGED 后 900ms 的浮动稿恢复本身没错：新聊天没稿就清空、有稿就贴回。漏的是正在飞的那一趟：run() 开跑时没记自己在哪把聊天，callAPI 一等几十秒，用户换了卡，稿子回来 adrDWriteDirectorInjection 照样写进 ctx().chat——此时已经是新聊天——最后一楼，adrDUpdateFloatFromInjection 把它存进新聊天的 arrebol_d.float 并 setExtensionPrompt 贴上，于是上一张卡的情感指导成了这张卡的常驻浮动稿，刷新、换设备都在。修法三层：run() 进门记 homeKey = adrDChatKey()，API 回来（含等生成写完）再对一次表，不一致就 failureKind = "chat-switched"：不挂、不贴、不存，状态行写明"中途切换了聊天，这份稿是上一把的"，预览框保留，不弹失败窗、不进补拍；CHAT_CHANGED 监听里加 adrDAbortRunIfChatSwitched：请求还挂着且家不对就 aborter.abort()，catch 里按 chat-switched 静默收场，processing 照常放开；adrDCheckAutoTrigger 整趟记 homeKey，读全量、抽卡检查、每位导演开跑前与跑完后都对表，不一致就 return / break，旧聊天的 count 与拍子不会拿去给新聊天开导演。抽卡小能手 adrCdPerformDraw 顶上记 homeKey，择卡、择池两处 await 回来对表，不一致作废（v1.34 展开那段原有的 homeKey 并入同一个）。新增 test_switch.js 27 项：对照组稿子正常挂进 A 并存 A；请求挂着换到 B 再回稿，B 的楼、B 的浮动稿、B 的聊天文件一概干净，不弹失败窗，晚到的 CHAT_CHANGED 恢复出来仍是空；请求挂着时 CHAT_CHANGED 到了当场 abort、静默、B 自己到点照常建账为 1 并发自己的请求；A 有稿换到 B 清空、换回 A 贴回。SPEED=10 连跑三遍全过，原有 13 套全过。
