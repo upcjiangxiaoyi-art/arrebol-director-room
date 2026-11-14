@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.41.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.41.2｜ripple & GPT & Claude
+ * v1.41.2 浮窗记位：关了再开、切页再切回来，落回上次停的地方（按锚点记，不怕上面长了短了）；掌灯页没记忆时直接落到对话区（报告 江「每次回到蛐蛐页面都在最顶上」；施工 Claude）
  * v1.41.1 掌灯按钮排布：发送独占一行、按高 48px；打断与清空退到下一行并排；改好给我在改稿模式里再单独一行（报告 江「发送和打断并排总误触」；施工 Claude）
  * v1.41.0 自动蛐蛐（可选，默认关）：新楼落地她自己随手发一条 60 字以内的吐槽，弹个小窗，写进蛐蛐账；每楼一次、重 roll 算新一版、楼还在出字就等、总开关关着不来；同角色连续消息合并（提议 江；施工 Claude）
  * v1.40.1 蛐蛐模式里「替换后自动清空本轮对话」那枚勾选收不起来：皮肤规则 display: inline-flex !important 比 .adr-lamp-hide 重，藏的规则按同一套写法往上压一级；真浏览器核对两端两模式（发现 Claude 截图自查；施工 Claude）
@@ -7859,7 +7860,8 @@
             });
             if (changed) {
                 var body = d.querySelector("#adr048-popup-body");
-                if (body) body.scrollTop = 0;
+                // v1.41.2：切回来的页落回上次停的地方；掌灯页没记忆就落到对话区；其余照旧回顶
+                if (body && !adr048RestoreScroll()) body.scrollTop = 0;
             }
 
             // 抽屉与浮窗会同时存在，且内部 id 重复。
@@ -9723,15 +9725,98 @@
             bindDirect();
             adrDRestorePanelRuntimeState();
 
-            try { if (body) body.scrollTop = 0; } catch (e1) {}
+            // v1.41.2：重建完先落回上次停的地方（没记忆的掌灯页落到对话区），布局落定后再对一次
+            try {
+                if (body) {
+                    adr048InstallScrollMemo(body);
+                    if (!adr048RestoreScroll()) body.scrollTop = 0;
+                    setTimeout(function () { try { adr048RestoreScroll(); } catch (eR2) {} }, 160);
+                }
+            } catch (e1) {}
         } catch (e) {
             console.error("[ADR0483] open popup failed", e);
             try { alert("暗河红霞面板打开失败：" + (e.message || String(e))); } catch (_) {}
         }
     }
 
+
+    // ================= v1.41.2 浮窗记位 =================
+    // 浮窗每次打开都重建 DOM，滚动位置归零；掌灯的聊天区在页面下半截，每次打开都得往下划。
+    // 记法不记像素记锚点：当前页里最后一个"顶边已经滚过视口顶"的区块（抽屉 / 对话区 / 输入框 / 发送行）
+    // 加一个偏移。上面的素材长了短了、对话区多了几句，锚点一找照样落回原处。按页各记各的，只活在本次会话里。
+    var adr048ScrollMemo = {};
+
+    function adr048TopWithin(body, el) {
+        return el.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop;
+    }
+
+    function adr048ScrollAnchors(body) {
+        var list = Array.prototype.slice.call(body.querySelectorAll('[data-drawer-id], #adr044-lamp-thread, #adr044-lamp-input, .adr-lamp-send-row, #adr044-lamp-draft-wrap'));
+        return list.filter(function (el) { try { return el.getClientRects().length > 0; } catch (e) { return false; } });
+    }
+
+    function adr048AnchorKey(el) {
+        if (el.id) return "#" + el.id;
+        var did = el.getAttribute && el.getAttribute("data-drawer-id");
+        if (did) return '[data-drawer-id="' + did + '"]';
+        return "." + String(el.className || "").split(/\s+/)[0];
+    }
+
+    function adr048RememberScroll() {
+        try {
+            var body = rootDoc().querySelector("#adr048-popup-body");
+            if (!body) return;
+            var tab = settings().activeTab || "emotion";
+            var top = body.scrollTop;
+            var best = null, bestTop = -Infinity;
+            adr048ScrollAnchors(body).forEach(function (el) {
+                var t = adr048TopWithin(body, el);
+                if (t <= top + 8 && t > bestTop) { bestTop = t; best = el; }
+            });
+            adr048ScrollMemo[tab] = { top: top, anchor: best ? adr048AnchorKey(best) : "", delta: best ? top - bestTop : 0, t: Date.now() };
+        } catch (e) {}
+    }
+
+    // 有记忆按记忆落；没记忆的掌灯页直接落到对话区（它在下半截，第一次打开也不该从素材头上开始划）
+    function adr048RestoreScroll() {
+        try {
+            var body = rootDoc().querySelector("#adr048-popup-body");
+            if (!body) return false;
+            var tab = settings().activeTab || "emotion";
+            var m = adr048ScrollMemo[tab];
+            var target = null;
+            if (m) {
+                var el = null;
+                if (m.anchor) { try { el = body.querySelector(m.anchor); } catch (eQ) { el = null; } }
+                if (el && el.getClientRects().length) target = adr048TopWithin(body, el) + m.delta;
+                else target = m.top;
+            } else if (tab === "lamp") {
+                var th = body.querySelector("#adr044-lamp-thread");
+                if (th && th.getClientRects().length) target = adr048TopWithin(body, th) - 56;
+            }
+            if (target == null) return false;
+            body.scrollTop = Math.max(0, Math.round(target));
+            return true;
+        } catch (e) { return false; }
+    }
+
+    function adr048InstallScrollMemo(body) {
+        try {
+            if (!body || body.__adr048ScrollMemo) return;
+            body.__adr048ScrollMemo = true;
+            var timer = null;
+            body.addEventListener("scroll", function () {
+                if (timer) return;
+                timer = setTimeout(function () { timer = null; adr048RememberScroll(); }, 150);
+            }, { passive: true });
+        } catch (e) {}
+    }
+
+    try { rootWin().__adr048ScrollTest = { memo: adr048ScrollMemo, remember: adr048RememberScroll, restore: adr048RestoreScroll }; } catch (eScrollHook) {}
+
     function adr048ClosePopupPanel() {
         try {
+            try { adr048RememberScroll(); } catch (eMemo) {}   // v1.41.2 关之前记一下停在哪
             // 关闭浮窗前先强制同步一次表单，避免移动端输入框/长文本框的 debounced save 尚未落盘。
             try {
                 syncAll();
