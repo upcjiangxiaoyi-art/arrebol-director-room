@@ -2459,14 +2459,8 @@ html #adr048-popup-panel[data-arb-theme="dusk"] #adr048-popup-body .adr044-cd-ch
    伪元素即 flex 子项、随文档流，裁不掉。
    外扩光圈保留：自由漂浮时依然全圈呼吸。
    ============================================================ */
-#adr048-fab.adr048-analyzing::after {
-    content: "";
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #A2AFC4;
-    box-shadow: 0 0 5px rgba(162, 175, 196, .85);
-    margin-left: 4px; align-self: center; flex: none;
-    animation: adr048-lamp-breathe 1.2s ease-in-out infinite;
-}
+/* v1.45.3：这粒随文档流的小灯退役了（它一亮按钮就变宽，胶囊会被挤着挪位）。
+   现在是左右两盏绝对定位的灯，规则在文件末尾 v1.45.3 那一段；下面这组呼吸关键帧两盏灯还在用。 */
 @keyframes adr048-lamp-breathe {
     0%, 100% { opacity: .35; }
     50%      { opacity: 1; }
@@ -5042,10 +5036,6 @@ html #adr048-popup-panel[data-arb-theme] #adr044-master-toggle:focus-visible {
     50%      { box-shadow: 0 0 0 9px rgba(183, 157, 220, 0); }
 }
 
-#adr048-fab.adr048-analyzing::after {
-    background: #d9bde8;
-    box-shadow: 0 0 6px rgba(217, 189, 232, .9);
-}
 
 /* ============================================================
    v1.25.0 「琉璃暗河」· 酒馆内嵌抽屉（浅色瓷面）
@@ -6367,6 +6357,7 @@ html #adr048-fab[data-arb-theme] .arb-fab-halo { animation: arb-pearl-breathe 5s
 @media (prefers-reduced-motion: reduce) {
     html #adr048-fab[data-arb-theme],
     html #adr048-fab[data-arb-theme] *,
+    html #adr048-fab[data-arb-theme]::before,
     html #adr048-fab[data-arb-theme]::after { animation: none !important; transition: none !important; }
 }
 
@@ -7270,6 +7261,7 @@ html #adr048-fab[data-arb-theme] .arb-fab-current { animation: arb-wave-flow-lon
 /* v1.37.0 浮标动效开关：关掉等于系统「减少动态效果」——水波、亮流、脉冲一律静止，只留静态的四段渐变 */
 html #adr048-fab[data-arb-motion="off"],
 html #adr048-fab[data-arb-motion="off"] *,
+html #adr048-fab[data-arb-motion="off"]::before,
 html #adr048-fab[data-arb-motion="off"]::after { animation: none !important; transition: none !important; }
 html #adr048-fab[data-arb-theme] .arb-fab-shell { stroke: #fff; stroke-opacity: .55; }
 
@@ -7611,8 +7603,8 @@ html #adr044-drawer#adr044-drawer .adr044-box .adr-top-tabs.adr-top-tabs.adr-top
     text-overflow: clip !important;
 }
 
-/* v1.45.1 剧场开演时浮标也亮灯：还是那一圈呼吸，小灯换成霞粉，和导演的雾紫区分开。
-   只有剧场在跑时才挂 adr048-staging；导演也在跑就按导演的颜色亮。动效开关关着时不呼吸，只留一粒静态小灯。 */
+/* v1.45.1 剧场开演时浮标也亮：只有剧场在跑时挂 adr048-staging，那一圈呼吸换成霞粉，和导演的雾紫区分开；
+   导演也在跑就按导演的颜色呼吸。动效开关关着时不呼吸，只留静态小灯。小灯本身的规则见下面 v1.45.3。 */
 #adr048-fab:not([data-arb-motion="off"]).adr048-analyzing.adr048-staging {
     animation-name: adr048-cap-pulse-stage !important;
 }
@@ -7620,20 +7612,52 @@ html #adr044-drawer#adr044-drawer .adr044-box .adr-top-tabs.adr-top-tabs.adr-top
     0%, 100% { box-shadow: 0 0 0 0 rgba(246, 169, 194, .68); }
     50%      { box-shadow: 0 0 0 9px rgba(246, 169, 194, 0); }
 }
-#adr048-fab.adr048-analyzing.adr048-staging::after {
-    background: #f6a9c2 !important;
-    box-shadow: 0 0 6px rgba(246, 169, 194, .95) !important;
-}
 
-/* v1.45.2 导演和剧场同时在跑：并排两粒灯，左边雾紫是导演，右边霞粉是剧场。
-   还是原来那个 ::after（随文档流的 flex 子项，泊位里裁不掉、屏幕左边缘也不会跑出去），只是加宽成两粒的位置，
-   两粒都用径向渐变画。导演单独跑时一个像素不变；剧场单独跑时是 v1.45.1 的那一粒霞粉。 */
-#adr048-fab.adr048-analyzing.adr048-duet::after {
-    width: 18px !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    background:
-        radial-gradient(circle at 3.5px 50%, #d9bde8 0, #d9bde8 3px, rgba(217, 189, 232, 0) 3.6px),
-        radial-gradient(circle at 14.5px 50%, #f6a9c2 0, #f6a9c2 3px, rgba(246, 169, 194, 0) 3.6px) !important;
-    filter: drop-shadow(0 0 3px rgba(236, 190, 218, .95));
+/* v1.45.3 浮标两盏灯一左一右：左边雾紫是导演，右边霞粉是剧场（江：「他俩在浮标的一左一右就好啦」）。
+   v1.45.2 把两粒并排挤在右边，会错意了，那条规则连同 v1.45.1 的单粒换色一起撤掉，灯全在这一段。
+   · 两盏都是绝对定位的伪元素，挂在胶囊外侧 4px 处，不占文档流：亮灯熄灯时胶囊一个像素不挪，按钮的框也不变。
+   · 按钮带着 overflow:hidden（早年文字胶囊留下的），会把外侧的灯裁掉，所以**只在亮灯时**放开。
+     一直放开的话，熄灯时胶囊边缘会比以前多出一丝描边（那道裁剪顺带修着 SVG 的外沿），熄灯的样子就和旧版不是一模一样了；
+     只在亮灯时放开，熄灯状态逐像素不变（七套配色、深浅两种底比对过）。里头的 SVG 只画在自己的框里，放开不会露出别的东西。
+   · 灯画成两粒小珠子：亮心、边缘深一度。光晕只在深色页面上显，浅色页面上靠珠子自己的颜色站得住（逐套配色、深浅两种底都截图看过）。
+   · 浮标贴着屏幕边、外侧挂不下时（index.js 量过，data-lamp="in"），两盏一起收进胶囊两头，小一号，
+     描一圈白边再压一道极细的深线——深色胶囊靠白边、浅色胶囊靠深线，七套配色上都认得出。
+     只收贴边那一盏会一里一外，所以要收就一起收。没拖动过的浮标停在左上角贴边，出厂就是这个样子。
+   · 各自单独跑时也守着自己那一侧：只有导演在跑亮左灯，只有剧场在跑亮右灯。 */
+html #adr048-fab[data-anchor="own-lazy-fixed"].adr048-analyzing { overflow: visible !important; }
+#adr048-fab.adr048-lamp-d::before,
+#adr048-fab.adr048-lamp-t::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    margin: -3.5px 0 0;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: adr048-lamp-breathe 1.2s ease-in-out infinite;
+}
+#adr048-fab.adr048-lamp-d::before {
+    left: -11px;
+    background: radial-gradient(circle at 38% 34%, #f5ecff 0%, #c79ef1 46%, #9d72de 100%);
+    box-shadow: 0 0 6px rgba(201, 160, 240, .9);
+}
+#adr048-fab.adr048-lamp-t::after {
+    right: -11px;
+    background: radial-gradient(circle at 38% 34%, #fff0f5 0%, #f797b8 46%, #e8648f 100%);
+    box-shadow: 0 0 6px rgba(246, 150, 185, .95);
+}
+#adr048-fab[data-lamp="in"].adr048-lamp-d::before,
+#adr048-fab[data-lamp="in"].adr048-lamp-t::after {
+    width: 5px;
+    height: 5px;
+    margin-top: -2.5px;
+}
+#adr048-fab[data-lamp="in"].adr048-lamp-d::before {
+    left: 4.5px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .95), 0 0 0 1.7px rgba(74, 44, 120, .32), 0 0 5px 1.5px rgba(201, 160, 240, .9);
+}
+#adr048-fab[data-lamp="in"].adr048-lamp-t::after {
+    right: 4.5px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .95), 0 0 0 1.7px rgba(130, 36, 74, .32), 0 0 5px 1.5px rgba(246, 150, 185, .95);
 }

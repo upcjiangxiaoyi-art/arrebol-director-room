@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.45.2｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.45.3｜ripple & GPT & Claude
+ * v1.45.3 浮标两盏灯一左一右：左边雾紫是导演，右边霞粉是剧场，挂在胶囊外侧；亮灯熄灯胶囊不再挪位；贴屏幕边时两盏一起收进胶囊两头（提议 江「他俩在浮标的一左一右就好啦」；施工 Claude）
  * v1.45.2 导演和剧场同时在跑时浮标并排亮两粒灯：左边雾紫是导演，右边霞粉是剧场；各自单独跑时灯的位置不变（提议 江「同时跑可以一左一右呀」；施工 Claude）
  * v1.45.1 剧场开演时浮标也亮灯：同一圈呼吸，小灯是霞粉色；灯按导演 / 剧场分别记账，谁跑完都不熄对方的（提议 江；施工 Claude）
  * v1.45.0 红霞剧场搬到自己的一页（第五个页签「剧场」），自己的 API 位「剧场位」：默认跟掌灯聊天位，也能借别人的或自己填，温度单独调（提议 江；施工 Claude）
@@ -108,7 +109,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.45.2";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.45.3";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -1370,21 +1371,49 @@
     /* v1.15.1 分析忙碌脉冲：导演分析进行中给胶囊浮标点灯（挂类，样式在 style.css） */
     // v1.45.1：灯按"谁在跑"分别记账。以前只有导演会点灯，一个布尔够用；现在剧场开演也点，
     // 两边可能同时在跑——导演跑完不能把剧场的灯顺手熄了，反过来也一样。任何一家在跑灯就亮；
-    // 只有剧场在跑时多挂一个 adr048-staging，小灯换成霞粉，一眼看出是剧场不是导演。
-    // v1.45.2：两家同时在跑挂 adr048-duet，并排亮两粒——左边雾紫是导演，右边霞粉是剧场（江：「同时跑可以一左一右呀」）。
+    // 只有剧场在跑时多挂一个 adr048-staging，那一圈呼吸换成霞粉，一眼看出是剧场不是导演。
+    // v1.45.3：两盏灯各占一侧，挂在胶囊外面——左边雾紫是导演（adr048-lamp-d），右边霞粉是剧场（adr048-lamp-t）。
+    // 江：「他俩在浮标的一左一右就好啦」。v1.45.2 那版把两粒并排挤在右边，会错意了，这版改掉。
+    // 灯不再占文档流（绝对定位的伪元素），所以亮灯、熄灯时胶囊本身一个像素都不挪，按钮的框也不变，拖动与存位置照旧。
     var adr048FabBusy = { director: false, theater: false };
+
+    // 灯挂在胶囊外侧要 11px（4px 间隙 + 7px 灯）。哪一侧离屏幕边不到 12px 就挂不下——
+    // 这时两盏一起收进胶囊两头（data-lamp="in"），左右的意思不变、样子也对称，只是不会跑出屏幕。
+    // 只收贴边那一盏会一里一外，看着像坏了，所以要收就一起收。
+    // 没拖动过的浮标落在左上角（离左边 4px），所以出厂位置就是收进去的样子；往里拖一点两盏就挂到外面。
+    // left / right 可以直接传（拖动时用算好的落点，不多读一次布局）；不传就量按钮现在的位置。
+    function adr048PlaceFabLamps(btn, left, right) {
+        try {
+            if (!btn) return;
+            if (!Number.isFinite(left) || !Number.isFinite(right)) {
+                var r = btn.getBoundingClientRect();
+                if (!r || !(r.width > 0)) return;
+                left = r.left; right = r.right;
+            }
+            var w = rootWin() || window;
+            var vw = Number(w.innerWidth) || 360;
+            try {
+                var cw = Number(rootDoc().documentElement.clientWidth);
+                if (cw > 0 && cw < vw) vw = cw;
+            } catch (eCw) {}
+            var mode = (left < 12 || (vw - right) < 12) ? "in" : "out";
+            if (btn.getAttribute("data-lamp") !== mode) btn.setAttribute("data-lamp", mode);
+        } catch (e) {}
+    }
 
     function adr048ApplyFabBusy() {
         try {
-            var any = adr048FabBusy.director || adr048FabBusy.theater;
-            var stageOnly = adr048FabBusy.theater && !adr048FabBusy.director;
-            var duet = adr048FabBusy.theater && adr048FabBusy.director;
+            var dOn = !!adr048FabBusy.director;
+            var tOn = !!adr048FabBusy.theater;
             var els = rootDoc().querySelectorAll("#adr048-fab");
             for (var i = 0; i < els.length; i++) {
                 try {
-                    els[i].classList.toggle("adr048-analyzing", !!any);
-                    els[i].classList.toggle("adr048-staging", !!stageOnly);
-                    els[i].classList.toggle("adr048-duet", !!duet);
+                    if (dOn || tOn) adr048PlaceFabLamps(els[i]);
+                    els[i].classList.toggle("adr048-analyzing", dOn || tOn);   // 那一圈呼吸：谁在跑都亮
+                    els[i].classList.toggle("adr048-staging", tOn && !dOn);    // 只有剧场在跑：圈换成霞粉
+                    els[i].classList.toggle("adr048-lamp-d", dOn);             // 左灯：导演
+                    els[i].classList.toggle("adr048-lamp-t", tOn);             // 右灯：剧场
+                    els[i].classList.remove("adr048-duet");                    // v1.45.2 的并排两粒，作废
                 } catch (e) {}
             }
         } catch (e) {}
@@ -1395,7 +1424,7 @@
         adr048ApplyFabBusy();
     }
 
-    try { rootWin().__adr048FabBusyTest = { set: adr048SetFabBusy, state: adr048FabBusy, apply: adr048ApplyFabBusy }; } catch (eFabBusyHook) {}
+    try { rootWin().__adr048FabBusyTest = { set: adr048SetFabBusy, state: adr048FabBusy, apply: adr048ApplyFabBusy, place: adr048PlaceFabLamps }; } catch (eFabBusyHook) {}
 
     // v1.27.0：导演请求改流式接收（提议：江；施工：波哥）。
     // 非流式时，会思考的模型要把整段思考跑完才回第一个字节——中转站／网关的空闲超时（常见 60–100 秒）
@@ -11190,6 +11219,8 @@
                 setImp("right", "auto");
                 setImp("bottom", "auto");
                 btn.setAttribute("data-user-moved", "1");
+                // v1.45.3：亮着灯拖动时，灯跟着落点决定挂外面还是收进胶囊两头（用算好的落点，不多读一次布局）
+                if (btn.classList.contains("adr048-analyzing")) adr048PlaceFabLamps(btn, pos.left, pos.left + (r.width || 42));
                 try { ev.preventDefault(); ev.stopPropagation(); } catch(e) {}
             }
 
