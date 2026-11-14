@@ -7143,9 +7143,9 @@
     }
 
     function adrLampTopLineText(idx, msgs, draft) {
-        if (idx < 0) return "🕯️ 掌灯 · 没有可聊的楼";
+        if (idx < 0) return "🏮 掌灯 · 没有可聊的楼";
         var said = msgs.filter(function (m) { return m.r !== "n"; }).length;
-        return "🕯️ 掌灯 · 对着 #" + idx + (said ? " · 聊了 " + said + " 句" : " · 还没开口") + (draft ? " · 有一版改稿待看" : "");
+        return "🏮 掌灯 · 对着 #" + idx + (said ? " · 聊了 " + said + " 句" : " · 还没开口") + (draft ? " · 有一版改稿待看" : "");
     }
 
     function adrLampPaintLive(text, chars, thought) {
@@ -7250,7 +7250,7 @@
                 + '</div>'
                 + '<div class="adr044-template-status" id="adr044-' + p + '-status"></div>';
         }
-        return secOpen("🕯️ 本篇 · 她看得见的素材", false, "lamp-mat")
+        return secOpen("🏮 本篇 · 她看得见的素材", false, "lamp-mat")
             + '<div class="' + noteClass + '">掌灯不是导演：不数楼、不自动触发、不投卡，你点她才开口。她读的就是下面这三块，一字不多。</div>'
             + '<label>聊哪一楼（酒馆楼号 #；空着＝最新一楼助手正文）</label>'
             + '<div class="adr-lamp-row"><input type="number" id="adr044-lamp-floor" min="0" placeholder="最新" value="' + (Number(adrLampState().floor) >= 0 ? esc(String(adrLampState().floor)) : "") + '">'
@@ -7492,7 +7492,7 @@
             if (type === 'lamp') {
                 // v1.39.0 掌灯不是导演：没有计数、没有基准线，顶上只有一行"对着哪一楼、聊了几句"。
                 html += '<div class="adr-top-pane" data-director="lamp"' + (active === type ? '' : ' hidden') + '>'
-                    + '<div class="adr-lamp-topline" id="adr044-lamp-topline">🕯️ 掌灯</div></div>';
+                    + '<div class="adr-lamp-topline" id="adr044-lamp-topline">🏮 掌灯</div></div>';
                 return;
             }
             html += '<div class="adr-top-pane" data-director="' + type + '"' + (active === type ? '' : ' hidden') + '>'
