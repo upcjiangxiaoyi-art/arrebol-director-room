@@ -7624,3 +7624,16 @@ html #adr044-drawer#adr044-drawer .adr044-box .adr-top-tabs.adr-top-tabs.adr-top
     background: #f6a9c2 !important;
     box-shadow: 0 0 6px rgba(246, 169, 194, .95) !important;
 }
+
+/* v1.45.2 导演和剧场同时在跑：并排两粒灯，左边雾紫是导演，右边霞粉是剧场。
+   还是原来那个 ::after（随文档流的 flex 子项，泊位里裁不掉、屏幕左边缘也不会跑出去），只是加宽成两粒的位置，
+   两粒都用径向渐变画。导演单独跑时一个像素不变；剧场单独跑时是 v1.45.1 的那一粒霞粉。 */
+#adr048-fab.adr048-analyzing.adr048-duet::after {
+    width: 18px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background:
+        radial-gradient(circle at 3.5px 50%, #d9bde8 0, #d9bde8 3px, rgba(217, 189, 232, 0) 3.6px),
+        radial-gradient(circle at 14.5px 50%, #f6a9c2 0, #f6a9c2 3px, rgba(246, 169, 194, 0) 3.6px) !important;
+    filter: drop-shadow(0 0 3px rgba(236, 190, 218, .95));
+}
