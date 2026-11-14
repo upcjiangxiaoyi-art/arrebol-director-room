@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.45.4｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.45.5｜ripple & GPT & Claude
+ * v1.45.5 红霞剧场加人设层：她是谁、文字要什么质感、排版要多好看，每一场都带着；能自己改，留空用出厂；规矩（不是正文、怎么输出、排版安全）仍由代码接管（提议 江「咱们剧场也有一个基础人设层吧」；施工 Claude）
  * v1.45.4 泊在避风塘顶栏里灯不亮的修复：两盏灯改成随文档流、不靠定位的画法，泊位里收在胶囊两头；红霞剧场加「打断」，等楼落定和请求挂着时都能断，重开浮窗状态行不丢（报告与提议 江；施工 Claude）
  * v1.45.3 浮标两盏灯一左一右：左边雾紫是导演，右边霞粉是剧场，挂在胶囊外侧；亮灯熄灯胶囊不再挪位；贴屏幕边时两盏一起收进胶囊两头（提议 江「他俩在浮标的一左一右就好啦」；施工 Claude）
  * v1.45.2 导演和剧场同时在跑时浮标并排亮两粒灯：左边雾紫是导演，右边霞粉是剧场；各自单独跑时灯的位置不变（提议 江「同时跑可以一左一右呀」；施工 Claude）
@@ -110,7 +111,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.45.4";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.45.5";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -220,7 +221,8 @@
         stageApiEndpoint: "",
         stageApiKey: "",
         stageModel: "",
-        theaterTemp: 0.9
+        theaterTemp: 0.9,
+        theaterPersona: ""          // v1.45.5 剧场人设层：留空用出厂；规矩（不是正文、怎么输出、排版安全）由代码接管，不在这里
     };
 
     var initialized = false;
@@ -7937,11 +7939,26 @@
     var ADR_THEATER_STRIP_REGEX_TEXT = '/\\s*<details class="arrebol-d-theater"[\\s\\S]*?<\\/details>/g';
     function adrTheaterBlockRe() { return /\s*<details class="arrebol-d-theater"[\s\S]*?<\/details>/g; }
 
-    var ADR_THEATER_PRESET_HEAD = [
-        "你是 Arrebol，小红霞。你在给这篇文的每一楼配「红霞剧场」——贴在正文后面的一小段场外内容，给作者看着乐的。",
-        "它不是正文：不推进剧情、不替角色做正文里没做的决定、不剧透后面、不给修改意见。",
+    // v1.45.5 人设层（提议：江「咱们剧场也有一个基础人设层吧。你是 Arrebol，文字的缔造者，作为高级作家，
+    // 根据小剧场创作的要求，语言文艺呀或者活泼……最起码能保证文字质感，万一有渲染也好看。我感觉人设层很重要」）。
+    // 系统提示从此分三层：① 人设（她是谁、文字要什么质感、排版要多好看；能改，留空用出厂）
+    // ② 规矩（剧场是什么、不是正文、只写这一楼、怎么输出、排版安全；代码接管，不给改，改坏了剧场会插不进去或者把页面带歪）
+    // ③ 素材（基调、角色卡 / 世界书 / 人设、此前各楼摘要、本篇全文）。每场的主题在 user 那条里，叠在人设上面。
+    var ADR_THEATER_PERSONA = [
+        "你是 Arrebol，小红霞，文字的缔造者。正经的、不正经的你都写得漂亮。现在你给这篇文的每一楼配一场「红霞剧场」：贴在正文后面的一小段场外内容，作者看了会笑出声，或者心口被轻轻戳一下。",
         "",
-        "规矩：",
+        "你是高级作家，不是段子生成器。本场主题要什么腔调，你就拿出什么腔调：要文艺，就有留白、有意象，句子会呼吸；要活泼，就短、快、脆，包袱响在最后几个字；要毒舌、要沙雕、要一本正经地胡说八道，你都接得住。腔调跟着主题换，质感是你自己的底线，哪种腔调都不能丢：",
+        "· 用词准。一个具体的名词、动词能说清的，不堆形容词，不拿「仿佛」「似乎」「不由得」垫场。",
+        "· 有细节。梗要长在这一楼真发生过的事上：一个动作、一句原话、一件小东西。放在哪篇文后面都成立的万能吐槽，不写。",
+        "· 有节奏。长短句错开，该停的地方停。每一条、每一格都有自己的看点，凑数的那条删掉。",
+        "· 像人写的。不说教、不总结、不升华，不解释笑点，不用「总之」「值得一提的是」这种腔。",
+        "",
+        "主题点名要排版时，你同时是美编。好看的标准是耐看，不是花哨：一场只用一套配色，两三种颜色，深浅有层次；卡片自己带底色和字色，别赌酒馆的背景是深是浅；字号、行距、留白让手机上读着不累；圆角、阴影、渐变点到为止，装饰永远给文字让路。宁可素净，不要廉价的热闹。"
+    ].join("\n");
+
+    var ADR_THEATER_RULES_HEAD = [
+        "【红霞剧场 · 规矩】",
+        "红霞剧场贴在这篇文每一楼的正文后面，是给作者看的场外内容，不是正文：不推进剧情、不替角色做正文里没做的决定、不剧透后面、不给修改意见。",
         "① 只针对本篇这一楼刚发生的事，引用细节要准，别凭印象编；此前剧情只用来接梗、翻旧账。",
         "② 短小，一屏以内。主题里写了条数 / 格数就照它来；没写就 120–200 字。",
         "③ 好笑或者戳人，二选一，别端着；可以损，但损的是剧情和角色，不损作者。",
@@ -7952,12 +7969,20 @@
     // v1.44.0 允许排版时的第六条：默认还是纯文本，主题点名要 HTML / CSS 才给
     var ADR_THEATER_RULE_RICH = "⑥ 默认纯文本，用换行分条分格，可以有少量 emoji，不要 markdown 标题、不要代码块。只有本场主题明确要求用 HTML / CSS 排版时才输出 HTML：一段自包含的片段，样式写在标签的 style 属性里，或者放一个 <style> 块且每条选择器都以你自己起的类名开头（比如 .hx-danmu）；不要 script、不要 iframe、不要外链图片和字体、不要 position:fixed、不要 <details>、不要整页的 html / body 标签，宽度不超过容器。";
     var ADR_THEATER_RULE_TAIL = "⑦ 只输出剧场正文本身：不要标题行、不要「好的」、不要解释你在干什么。";
-    var ADR_THEATER_PRESET = ADR_THEATER_PRESET_HEAD.concat([ADR_THEATER_RULE_PLAIN, ADR_THEATER_RULE_TAIL]).join("\n");
 
     function adrTheaterRichAllowed() { try { return settings().theaterRich !== false; } catch (e) { return true; } }
-    function adrTheaterPresetText() {
-        return ADR_THEATER_PRESET_HEAD.concat([adrTheaterRichAllowed() ? ADR_THEATER_RULE_RICH : ADR_THEATER_RULE_PLAIN, ADR_THEATER_RULE_TAIL]).join("\n");
+    function adrTheaterRulesText(rich) {
+        return ADR_THEATER_RULES_HEAD.concat([rich ? ADR_THEATER_RULE_RICH : ADR_THEATER_RULE_PLAIN, ADR_THEATER_RULE_TAIL]).join("\n");
     }
+    // 自己写过就用自己的（整段替换出厂人设），留空或只有空白就用出厂
+    function adrTheaterPersonaCustom() {
+        try { return String(settings().theaterPersona || "").trim(); } catch (e) { return ""; }
+    }
+    function adrTheaterPersonaText() { return adrTheaterPersonaCustom() || ADR_THEATER_PERSONA; }
+    function adrTheaterPresetText() {
+        return adrTheaterPersonaText() + "\n\n" + adrTheaterRulesText(adrTheaterRichAllowed());
+    }
+    var ADR_THEATER_PRESET = ADR_THEATER_PERSONA + "\n\n" + adrTheaterRulesText(false);   // 出厂人设 + 纯文本规矩（测试钩子用）
 
     var ADR_THEATER_FACTORY = {
         "弹幕吐槽": "模拟视频网站的弹幕飘过这一楼：8–12 条，每条一行，短、快、带梗。可以有「前排」「+1」「哈哈哈哈」「高能预警」「课代表来了」这类弹幕腔，也要有两三条真在吐槽这楼细节的。不写 ID、不写颜色、不编号。",
@@ -8032,6 +8057,43 @@
             if (s0 && s0.text && s0.key === adrDChatKey()) return s0;
         } catch (e) {}
         return { text: ADR_THEATER_STATUS_HINT, color: "" };
+    }
+
+    // ---- v1.45.5 人设层的面板 ----
+    function adrTheaterPersonaNote() {
+        var c = adrTheaterPersonaCustom();
+        return c ? "现在用的是你写的人设（" + c.length + " 字）。规矩和素材照旧跟在它后面。" : "现在用的是出厂人设。";
+    }
+
+    function adrTheaterPersonaSay(text, color) { adrCdSetTextAll("adr044-theater-persona-note", text, color || "#8ed99d"); }
+
+    function adrTheaterPersonaSet(text, say) {
+        save("theaterPersona", String(text || ""));
+        saveNow();
+        adrCdSetValueSafe("adr044-theater-persona", String(text || ""));
+        // 刚按过按钮的那一侧，文本框可能还带着「正在打字」的记号被跳过：直接写两端
+        try {
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-theater-persona")).forEach(function (el) { el.value = String(text || ""); });
+        } catch (e) {}
+        adrTheaterPersonaSay(say || adrTheaterPersonaNote());
+    }
+
+    // 把出厂人设填进文本框，好在它上面改（手机上从折叠块里长按复制太费劲）。自己写过东西就先问一句，免得盖掉。
+    function adrTheaterPersonaFill(btn) {
+        var cur = adrTheaterPersonaCustom();
+        var go = function () { adrTheaterPersonaSet(ADR_THEATER_PERSONA, "出厂人设填进来了，在上面直接改，点别处就存下。想跟着以后的出厂更新走，点「恢复出厂人设」"); };
+        if (!cur || cur === ADR_THEATER_PERSONA) { go(); return true; }
+        return adrDTwoStepConfirm("theater-persona-fill", btn || qForm("adr044-theater-persona-fill"), "确定盖掉？", "再点一次：用出厂人设盖掉你现在写的",
+            function (msg) { adrTheaterPersonaSay(msg, "#d6a26a"); }, go);
+    }
+
+    function adrTheaterPersonaReset(btn) {
+        var cur = adrTheaterPersonaCustom();
+        var go = function () { adrTheaterPersonaSet("", "已恢复出厂人设 ✓"); };
+        if (!cur) { adrTheaterPersonaSet("", "本来就是出厂人设"); return true; }
+        if (cur === ADR_THEATER_PERSONA) { go(); return true; }
+        return adrDTwoStepConfirm("theater-persona-reset", btn || qForm("adr044-theater-persona-reset"), "确定恢复？", "再点一次：删掉你写的人设，回到出厂",
+            function (msg) { adrTheaterPersonaSay(msg, "#d6a26a"); }, go);
     }
 
     // v1.45.4 打断（江：「我想在等霞姐开口的时候有一个打断，万一 api 出问题了呢」）。
@@ -8396,6 +8458,8 @@
             Array.prototype.slice.call(d.querySelectorAll("#adr044-stage-self")).forEach(function (el) { el.classList.toggle("adr-lamp-hide", adrTheaterBorrow() !== "self"); });
             adrCdSetTextAll("adr044-theater-api-note", adrTheaterApiNote());
             adrTheaterSetButtons();
+            adrCdSetValueSafe("adr044-theater-persona", st.theaterPersona || "");
+            adrCdSetTextAll("adr044-theater-rules-view", adrTheaterRulesText(adrTheaterRichAllowed()));
             if (fillText !== false) {
                 var active = d.activeElement;
                 var store = adrTheaterStore();
@@ -8663,6 +8727,15 @@
             + '<div class="adr044-template-status" id="adr044-theater-count">主题仓现有 ' + names.length + ' 个主题</div>'
             + secClose()
 
+            + secOpen("🖋️ 霞姐的人设 · 剧场的底色", true, "theater-persona")
+            + '<div class="' + noteClass + '">每一场都带着这一层：她是谁、文字要什么质感、排版要多好看。主题仓里的主题叠在它上面，腔调跟主题走，质感靠这一层兜底。留空用出厂；自己写了就整段换成你的。「剧场不是正文、只写这一楼、怎么输出、排版别把页面带歪」这些规矩由代码接管，不在这里，改人设改不坏。</div>'
+            + '<textarea id="adr044-theater-persona" rows="7" placeholder="留空＝出厂人设">' + esc(st.theaterPersona || "") + '</textarea>'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-persona-fill">填入出厂人设来改</button><button type="button" id="adr044-theater-persona-reset">恢复出厂人设</button></div>'
+            + '<div class="adr044-template-status" id="adr044-theater-persona-note">' + esc(adrTheaterPersonaNote()) + '</div>'
+            + '<details class="adr-lamp-fold"><summary>看看出厂人设全文</summary><div class="adr-lamp-mat">' + esc(ADR_THEATER_PERSONA) + '</div></details>'
+            + '<details class="adr-lamp-fold"><summary>看看代码接管的规矩（不在这里改）</summary><div class="adr-lamp-mat" id="adr044-theater-rules-view">' + esc(adrTheaterRulesText(adrTheaterRichAllowed())) + '</div></details>'
+            + secClose()
+
             + secOpen("✂️ 剥离正则 · 别让主模型看见剧场", true, "theater-regex")
             + '<div class="' + noteClass + '">酒馆「正则」扩展新建一条：查找填下面这行，替换留空，作用范围勾「AI 输出」，下面只勾「仅格式提示词」。懒得手填，扩展目录里有现成的 regex/arrebol-theater-strip.json，「导入脚本」选它。小红霞自己读楼（导演、掌灯、蛐蛐）本来就当剧场不存在，不用另配。</div>'
             + '<input type="text" id="adr044-theater-regex" readonly value="' + esc(ADR_THEATER_STRIP_REGEX_TEXT) + '">'
@@ -8710,6 +8783,8 @@
         if (id === "adr044-theater-delete") { adrTheaterDeleteFromFields(btn); return true; }
         if (id === "adr044-theater-now") { adrTheaterNow("manual", true).catch(function () {}); return true; }
         if (id === "adr044-theater-stop") { adrTheaterAbort(); return true; }
+        if (id === "adr044-theater-persona-fill") { adrTheaterPersonaFill(btn); return true; }
+        if (id === "adr044-theater-persona-reset") { adrTheaterPersonaReset(btn); return true; }
         if (id === "adr044-theater-remove") { adrTheaterRemoveLatest(); return true; }
         if (id === "adr044-theater-regex-copy") { adrTheaterCopyRegex(); return true; }
         if (id === "adr044-theater-import") { adrTheaterTriggerImport(); return true; }
@@ -8752,6 +8827,7 @@
                 tap(el);
                 el.addEventListener("change", function () {
                     adrCdTouch(el); save("theaterRich", !!el.checked); saveNow();
+                    adrCdSetTextAll("adr044-theater-rules-view", adrTheaterRulesText(adrTheaterRichAllowed()));
                     adrTheaterStatus(el.checked ? "允许 HTML / CSS 排版：主题里点名要排版，她才会回带样式的 HTML" : "一律纯文本：她回来的标签会当成普通字显示", "#8ed99d");
                 });
             });
@@ -8770,6 +8846,18 @@
             });
             each("adr044-theater-name", function (el) { typing(el); });
             each("adr044-theater-text", function (el) { typing(el); });
+            // v1.45.5 人设层：改完点别处就存；另一端同步
+            each("adr044-theater-persona", function (el) {
+                typing(el);
+                el.addEventListener("change", function () {
+                    var v = String(el.value || "");
+                    save("theaterPersona", v); saveNow();
+                    try {
+                        Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-theater-persona")).forEach(function (other) { if (other !== el) other.value = v; });
+                    } catch (e) {}
+                    adrTheaterPersonaSay(adrTheaterPersonaCustom() ? "存下了 ✓ " + adrTheaterPersonaNote() : "留空了：用出厂人设");
+                });
+            });
             each("adr044-theater-import-file", function (el) {
                 el.addEventListener("change", function () { adrTheaterHandleImportFile(el); });
             });
@@ -8811,6 +8899,7 @@
         rootWin().__adrTheaterTest = {
             now: adrTheaterNow, onMessage: adrTheaterOnMessage, block: adrTheaterBlock, strip: adrTheaterStrip, has: adrTheaterHas, clean: adrTheaterClean,
             pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, preset: ADR_THEATER_PRESET, presetText: adrTheaterPresetText,
+            persona: ADR_THEATER_PERSONA, personaText: adrTheaterPersonaText, rulesText: adrTheaterRulesText,
             regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite, abort: adrTheaterAbort,
             paint: adrTheaterPaint, show: adrTheaterShow, saveSoon: adrTheaterSaveSoon, lampDirty: function () { return adrLampDirty; },
             apiCfg: adrTheaterApiCfg, apiNote: adrTheaterApiNote, topLine: adrTheaterTopLineText,
@@ -10329,6 +10418,7 @@
         // v1.43.0 红霞剧场按钮：同样双注册
         ["adr044-theater-save", "adr044-theater-delete", "adr044-theater-now", "adr044-theater-stop", "adr044-theater-remove", "adr044-theater-regex-copy",
          "adr044-theater-import", "adr044-theater-export", "adr044-theater-clear", "adr044-theater-restore",
+         "adr044-theater-persona-fill", "adr044-theater-persona-reset",
          "adr044-tab-theater", "adr044-stage-load-models", "adr044-stage-test"].forEach(function (tid) {
             ids[tid] = function () { adrTheaterHandleButtonId(tid, qForm(tid)); };
         });

@@ -150,7 +150,10 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     ok(e.calls.length === 1, "新楼落地发了一次请求", String(e.calls.length));
     const c1 = e.calls[0];
     ok(c1.url.indexOf("plot.example") >= 0 && c1.body.model === "plot-model", "走聊天位（默认借统筹）");
-    ok(c1.body.messages[0].role === "system" && c1.body.messages[0].content.indexOf("你是 Arrebol，小红霞。你在给这篇文的每一楼配「红霞剧场」") === 0, "系统提示是剧场规矩");
+    ok(c1.body.messages[0].role === "system" && c1.body.messages[0].content.indexOf("你是 Arrebol，小红霞，文字的缔造者。") === 0, "系统提示以人设层开头（v1.45.5）");
+    const sys1 = c1.body.messages[0].content;
+    ok(sys1.indexOf(T.persona) === 0 && sys1.indexOf("【红霞剧场 · 规矩】") > T.persona.length && sys1.indexOf("【本篇原文 · #5") > sys1.indexOf("【红霞剧场 · 规矩】"), "三层按顺序排：人设 → 规矩 → 素材");
+    ok(sys1.indexOf("不是正文：不推进剧情") > 0 && sys1.indexOf("⑦ 只输出剧场正文本身") > 0, "规矩那一层照旧都在");
     ok(c1.body.messages[0].content.indexOf("【本篇原文 · #5") >= 0 && c1.body.messages[0].content.indexOf("三天前就该到的人") >= 0, "本篇全文在里面");
     ok(c1.body.messages[0].content.indexOf("【此前剧情") >= 0 && c1.body.messages[0].content.indexOf("他收到了一封信") >= 0 && c1.body.messages[0].content.indexOf("隐藏楼的摘要") < 0, "此前剧情读未隐藏楼的摘要，隐藏楼不读（范围同掌灯）");
     ok(c1.body.messages[0].content.indexOf("【角色卡 / 世界书 / 人设") >= 0 && c1.body.messages[0].content.indexOf("嘴硬心软") >= 0, "角色卡也在");
@@ -605,6 +608,60 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     sb.value = "lamp"; change(W, sb); await tick(50);
     ok(T.apiCfg().from === "lamp" && P("#adr044-stage-self").classList.contains("adr-lamp-hide"), "改回跟掌灯聊天位");
     W.__adrDGenTest.setQuietMs(4000);
+
+    section("人设层（v1.45.5）");
+    {
+        W.__adrDGenTest.setQuietMs(60);
+        const pa = () => P("#adr044-theater-persona"), paD = () => d.querySelector("#adr044-drawer #adr044-theater-persona");
+        const note = () => P("#adr044-theater-persona-note").textContent;
+        const lastSys = () => e.calls[e.calls.length - 1].body.messages[0].content;
+        const runOnce = async () => { await tick(500); click(W, P("#adr044-theater-now")); await tick(1500); };
+        ok(!!pa() && !!paD() && pa().value === "" && paD().value === "" && pa().getAttribute("placeholder") === "留空＝出厂人设", "两端都有人设文本框，默认空着（＝出厂）");
+        ok(note() === "现在用的是出厂人设。" && e.st().theaterPersona === "", "说明行写明现在用的是出厂人设", note());
+        ok(T.persona.indexOf("文字的缔造者") > 0 && T.persona.indexOf("高级作家") > 0 && T.persona.indexOf("质感") > 0 && T.persona.indexOf("美编") > 0, "出厂人设四样都有：文字的缔造者、高级作家、文字质感、排版要好看");
+        ok(T.persona.indexOf("要文艺") > 0 && T.persona.indexOf("要活泼") > 0 && T.persona.indexOf("腔调跟着主题换") > 0, "腔调跟主题走：文艺、活泼都点到");
+        ok(P("#adr044-theater-rules-view").textContent.indexOf("【红霞剧场 · 规矩】") === 0 && P("#adr044-theater-rules-view").textContent.indexOf("⑦ 只输出剧场正文本身") > 0, "面板里看得到代码接管的规矩全文");
+        // 自己写
+        e.setScript((n, body) => isTheater(body) ? "人设层测试的一场" : "在");
+        const mine = "你是鲁迅先生借住在这篇文里的一支笔。冷眼，短句，一针见血。";
+        pa().value = "  " + mine + "\n"; change(W, pa()); await tick(80);
+        ok(e.st().theaterPersona.trim() === mine && paD().value.trim() === mine && note().indexOf("你写的人设") >= 0, "自己写一段：存进设置，抽屉那份同步，说明行改口", note());
+        await runOnce();
+        ok(lastSys().indexOf(mine) === 0 && lastSys().indexOf("文字的缔造者") < 0, "下一场的系统提示以你写的人设开头，出厂人设整段让位", lastSys().slice(0, 60));
+        ok(lastSys().indexOf("【红霞剧场 · 规矩】") > 0 && lastSys().indexOf("⑦ 只输出剧场正文本身") > 0 && lastSys().indexOf("【本篇原文 · #") > 0 && isTheater(e.calls[e.calls.length - 1].body), "规矩和素材照旧跟在后面：人设怎么改都改不掉");
+        ok(T.presetText().indexOf(mine) === 0 && T.personaText() === mine, "取人设的函数给的也是这一段");
+        // 浮窗重建
+        click(W, d.querySelector("#adr048-popup-close")); await tick(400); click(W, d.querySelector("#adr048-fab")); await tick(600);
+        ok(pa().value.trim() === mine && note().indexOf("你写的人设") >= 0, "关掉浮窗再打开：写的人设还在框里");
+        // 填入出厂：自己写过，要点两下
+        await tick(500); click(W, P("#adr044-theater-persona-fill")); await tick(100);
+        ok(e.st().theaterPersona.trim() === mine && note().indexOf("再点一次") >= 0 && P("#adr044-theater-persona-fill").textContent === "确定盖掉？", "「填入出厂人设来改」：自己写过东西，先问一句不直接盖", note());
+        await tick(500); click(W, P("#adr044-theater-persona-fill")); await tick(100);
+        ok(e.st().theaterPersona === T.persona && pa().value === T.persona && paD().value === T.persona, "再点一次才盖：出厂人设全文进了两端的框，也存下了");
+        pa().value = T.persona + "\n另外：每场结尾留一句只有老读者才懂的暗号。"; change(W, pa()); await tick(80);
+        await runOnce();
+        ok(lastSys().indexOf(T.persona + "\n另外：每场结尾留一句只有老读者才懂的暗号。") === 0, "在出厂人设上接着改：发出去的就是改过的那一份");
+        // 恢复出厂：两步
+        await tick(500); click(W, P("#adr044-theater-persona-reset")); await tick(100);
+        ok(e.st().theaterPersona !== "" && note().indexOf("再点一次") >= 0, "「恢复出厂人设」：有自己写的内容，也先问一句", note());
+        await tick(500); click(W, P("#adr044-theater-persona-reset")); await tick(100);
+        ok(e.st().theaterPersona === "" && pa().value === "" && paD().value === "" && note().indexOf("已恢复出厂人设") >= 0, "再点一次恢复：两端清空，设置清掉", note());
+        await runOnce();
+        ok(lastSys().indexOf(T.persona) === 0, "恢复之后发出去的又是出厂人设");
+        // 只有空白＝没写
+        pa().value = "   \n  "; change(W, pa()); await tick(80);
+        ok(T.personaText() === T.persona && note().indexOf("出厂人设") >= 0, "只敲了空格回车：当没写，用出厂", note());
+        pa().value = ""; change(W, pa()); await tick(80);
+        await tick(500); click(W, P("#adr044-theater-persona-reset")); await tick(100);
+        ok(e.st().theaterPersona === "" && note() === "本来就是出厂人设", "本来就是出厂时点恢复：不用确认，说一句就完", note());
+        // 排版开关只动规矩第六条，不动人设
+        const richBox = P("#adr044-theater-rich"); const wasRich = richBox.checked;
+        richBox.checked = false; change(W, richBox); await tick(80);
+        ok(T.presetText().indexOf(T.persona) === 0 && T.presetText().indexOf("不要任何 HTML 标签") > 0 && P("#adr044-theater-rules-view").textContent.indexOf("不要任何 HTML 标签") > 0, "关掉排版：人设不变，规矩第六条换成纯文本，面板里的规矩全文跟着变");
+        richBox.checked = wasRich; change(W, richBox); await tick(80);
+        ok(P("#adr044-theater-rules-view").textContent.indexOf("才输出 HTML") > 0, "开回来规矩全文也跟着变回去");
+        W.__adrDGenTest.setQuietMs(4000);
+    }
 
     section("打断（v1.45.4）");
     {
