@@ -7475,6 +7475,12 @@ html #adr044-drawer .adr-lamp-row > button { flex: 0 0 auto; width: auto !import
 @media (prefers-reduced-motion: reduce) { .adr-lamp-live::after { animation: none; } }
 .adr-lamp-empty { font-size: 12px; opacity: .65; padding: 12px 8px; text-align: center; line-height: 1.6; }
 .adr-lamp-hide { display: none !important; }
+/* v1.40.1 勾选标签那几条 display: inline-flex !important 的皮肤规则（#adr048-popup-panel #adr048-popup-shell .adr048-check、
+   #adr044-drawer .adr044-check）比单个类名重，蛐蛐模式里「替换后自动清空」收不起来。藏的规则按同一套写法往上压一级。 */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-shell .adr-lamp-hide.adr-lamp-hide.adr-lamp-hide,
+html #adr048-popup-panel #adr048-popup-shell .adr-lamp-hide.adr-lamp-hide.adr-lamp-hide,
+html #adr044-drawer .adr-lamp-hide.adr-lamp-hide.adr-lamp-hide,
+html #adr044-drawer .adr044-page > details > .adr-lamp-hide.adr-lamp-hide.adr-lamp-hide { display: none !important; }
 
 /* v1.40.0 掌灯两种模式：改稿 / 蛐蛐 */
 .adr-lamp-modes {
