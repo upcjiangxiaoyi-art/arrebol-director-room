@@ -1,0 +1,17 @@
+{
+    "id": "b7c1d6e2-4a39-4f0e-9c5d-2f6a8e1b3c47",
+    "scriptName": "红霞剧场·剥离（发给模型时摘掉）",
+    "findRegex": "/\\s*<details class=\"arrebol-d-theater\"[\\s\\S]*?<\\/details>/g",
+    "replaceString": "",
+    "trimStrings": [],
+    "placement": [
+        2
+    ],
+    "disabled": false,
+    "markdownOnly": false,
+    "promptOnly": true,
+    "runOnEdit": false,
+    "substituteRegex": 0,
+    "minDepth": null,
+    "maxDepth": null
+}

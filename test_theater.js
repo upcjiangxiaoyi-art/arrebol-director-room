@@ -150,6 +150,15 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     ok(twoBlocks.replace(new RegExp(mre[1], mre[2]), "") === before5 + TAIL, "一楼里夹着导演稿、前后各一块，也只摘剧场、导演稿原样留着");
     ok(T.block("乙", "三", true).indexOf('<details class="arrebol-d-theater"><summary>') === 2, "折叠版不带 open");
 
+    section("随扩展附带的导入脚本 regex/arrebol-theater-strip.json");
+    const rj = JSON.parse(fs.readFileSync("regex/arrebol-theater-strip.json", "utf8"));
+    ok(rj.findRegex === T.regexText, "脚本里的查找正则与面板上那条逐字相同", rj.findRegex);
+    ok(rj.replaceString === "" && Array.isArray(rj.trimStrings) && rj.trimStrings.length === 0, "替换留空、不修剪");
+    ok(Array.isArray(rj.placement) && rj.placement.length === 1 && rj.placement[0] === 2, "作用范围只有 AI 输出");
+    ok(rj.promptOnly === true && rj.markdownOnly === false && rj.disabled === false, "只勾「仅格式提示词」：发给模型时剥，画面与聊天文件照留");
+    const rjm = /^\/(.*)\/([a-z]*)$/.exec(rj.findRegex);
+    ok(typeof rj.scriptName === "string" && rj.scriptName.length > 0 && /^[0-9a-f-]{36}$/.test(rj.id) && m5.mes.replace(new RegExp(rjm[1], rjm[2]), "") === before5, "有名字有 id，拿它建正则套到插了剧场的楼上恢复原样");
+
     section("小红霞自己读楼时当它不存在");
     const mat = W.__adrLampTest.materials();
     ok(mat.body.indexOf("前排围观") < 0 && mat.body.indexOf("三天前就该到的人") >= 0, "掌灯的本篇原文不含剧场");
