@@ -37,7 +37,7 @@ function build(opts) {
 
     const calls = [];
     let script = () => "好的";
-    let hang = null;
+    let hang = null, lastHang = null;
     let saveChatCalls = 0, redraws = [], emits = [], reloads = 0;
     // 酒馆画好的楼：#chat .mes[mesid] .mes_text，里面有它自己渲染出来的节点
     function addMes(idx) {
@@ -90,7 +90,8 @@ function build(opts) {
         win, doc: win.document, chat, calls, logs, context,
         st: () => extensionSettings[SET_KEY],
         setScript(f) { script = f; },
-        hangNext() { hang = {}; return hang; }, unhang() { hang = null; },
+        hangNext() { hang = {}; lastHang = hang; return hang; }, unhang() { hang = null; },
+        release() { if (lastHang && typeof lastHang.resolve === "function") lastHang.resolve(); },
         saves: () => saveChatCalls, redraws: () => redraws, handlers,
         T: () => win.__adrTheaterTest,
         fire() { (handlers["message_received"] || []).forEach(f => { try { f(); } catch (x) {} }); }
@@ -311,6 +312,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     const lamp = () => [fab.classList.contains("adr048-analyzing"), fab.classList.contains("adr048-staging"), fab.classList.contains("adr048-lamp-d"), fab.classList.contains("adr048-lamp-t")].join();
     FB.set(true);
     ok(lamp() === "true,false,true,false", "只有导演在跑：只亮左灯", lamp());
+    ok(fab.getAttribute("data-lamp") === "in", "量不出浮标位置时按最稳妥的画法：收在胶囊两头（v1.45.4）", fab.getAttribute("data-lamp"));
     FB.set(true, "theater");
     ok(lamp() === "true,false,true,true", "导演和剧场同时在跑：左右各亮一盏（v1.45.3）", lamp());
     ok(!fab.classList.contains("adr048-duet"), "v1.45.2 那个「两粒并排挤在右边」的类不再挂");
@@ -322,7 +324,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     ok(lamp() === "true,false,true,false", "反过来剧场先演完：右灯熄，只剩左边导演那盏", lamp());
     FB.set(false);
     ok(lamp() === "false,false,false,false", "都跑完才全熄", lamp());
-    // 贴边：灯挂在胶囊外侧要 11px，哪一侧离屏幕边不到 12px 就两盏一起收进胶囊两头（data-lamp="in"）
+    // 自由漂浮（还挂在 body 下、position 是 fixed）时才往外挂；贴边：灯挂在胶囊外侧要 11px，哪一侧离屏幕边不到 12px 就两盏一起收进胶囊两头（data-lamp="in"）
     const vw = W.innerWidth;
     const rectAt = (left) => { fab.getBoundingClientRect = () => ({ left, right: left + 42, top: 40, bottom: 55.4, width: 42, height: 15.4, x: left, y: 40 }); };
     const mode = () => fab.getAttribute("data-lamp");
@@ -345,6 +347,23 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     mouse(d, "mousemove", 320, 48);
     ok(mode() === "out" && fab.style.getPropertyValue("left") === "300px", "再拖回中间：两盏当场挂回外面", [mode(), fab.style.getPropertyValue("left")]);
     mouse(d, "mouseup", 320, 48); await tick(80);
+    // v1.45.4 泊进避风塘顶栏：别的扩展把按钮搬进它自己的容器，不再是定位元素。江：「灯不亮」——
+    // v1.45.3 的灯是绝对定位挂在框外的，泊位里跑到别处被裁掉。泊位里一律收在胶囊两头（随文档流、画在按钮自己的框里）。
+    ok(FB.isFree(fab) === true, "还挂在 body 下、position 是 fixed：算自由漂浮");
+    const harbor = d.createElement("div"); harbor.id = "extensionHarborDock"; d.body.appendChild(harbor);
+    rectAt(200); harbor.appendChild(fab); FB.apply();
+    ok(mode() === "in" && FB.isFree(fab) === false, "被搬进泊位：左右再宽敞，两盏也收在胶囊两头", mode());
+    ok(lamp() === "true,false,true,true", "泊位里哪盏亮照旧：左导演、右剧场", lamp());
+    mouse(fab, "mousedown", 220, 48); mouse(d, "mousemove", 320, 48);
+    ok(mode() === "in", "泊位里亮着灯拖动，也不会把灯挂到外面去", mode());
+    mouse(d, "mouseup", 320, 48); await tick(80);
+    FB.set(false); FB.set(false, "theater"); FB.set(true, "theater");
+    ok(mode() === "in" && lamp() === "true,true,false,true", "泊位里熄了再亮（只有剧场）：还是收在两头，只亮右灯", [mode(), lamp()]);
+    d.body.appendChild(fab); fab.style.setProperty("position", "static", "important"); FB.set(true);
+    ok(mode() === "in" && FB.isFree(fab) === false, "还在 body 下但已经不是 fixed（定位被别人改了）：同样收在两头", mode());
+    fab.style.setProperty("position", "fixed", "important"); FB.apply();
+    ok(mode() === "out" && FB.isFree(fab) === true, "回到自由漂浮：两盏又挂到外面", mode());
+    harbor.remove();
     FB.set(false); FB.set(false, "theater"); rectAt(4);
     fab.setAttribute("data-lamp", "out"); mouse(fab, "mousedown", 20, 48); mouse(d, "mousemove", 60, 48); mouse(d, "mouseup", 60, 48); await tick(80);
     ok(mode() === "out", "灯没亮时拖动不去量、不改灯位（不白干活）", mode());
@@ -586,6 +605,62 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     sb.value = "lamp"; change(W, sb); await tick(50);
     ok(T.apiCfg().from === "lamp" && P("#adr044-stage-self").classList.contains("adr-lamp-hide"), "改回跟掌灯聊天位");
     W.__adrDGenTest.setQuietMs(4000);
+
+    section("打断（v1.45.4）");
+    {
+    W.__adrDGenTest.setQuietMs(60);
+    const stopP = () => P("#adr044-theater-stop"), stopD = () => d.querySelector("#adr044-drawer #adr044-theater-stop");
+    ok(!!stopP() && !!stopD() && stopP().disabled === true && stopD().disabled === true, "两端都有「打断」，没在演时是灰的");
+    ok(stopP().parentElement === P("#adr044-theater-now").parentElement && P("#adr044-theater-remove").parentElement !== stopP().parentElement, "「打断」和「现在来一场」同一行，「撤掉最新一楼的」单独一行（不会点打断时误撤）");
+    ok(T.abort() === false && P("#adr044-theater-status").textContent.indexOf("不用打断") >= 0, "没在演时打断：只说一句，不出事", P("#adr044-theater-status").textContent);
+    const lastIdx = e.chat.length - 1;
+    const floorBefore = e.chat[lastIdx].mes, nBefore = e.calls.length;
+    e.setScript((n, body) => isTheater(body) ? "不该写进楼里的一场" : "在");
+    e.hangNext();
+    await tick(500); click(W, P("#adr044-theater-now")); await tick(900);
+    ok(e.calls.length === nBefore + 1 && T.state.busy === true && isTheater(e.calls[e.calls.length - 1].body), "请求发出去，挂着不回");
+    ok(stopP().disabled === false && stopD().disabled === false, "演着的时候两端的「打断」都点得动");
+    ok(fab.classList.contains("adr048-lamp-t") && fab.classList.contains("adr048-analyzing"), "这时浮标右灯亮着");
+    click(W, d.querySelector("#adr048-popup-close")); await tick(400); click(W, d.querySelector("#adr048-fab")); await tick(600);
+    ok(stopP().disabled === false && P("#adr044-theater-status").textContent.indexOf("开演") >= 0, "中途关掉浮窗再打开（浮窗是重建的）：「打断」还点得动，状态行还写着在演什么", P("#adr044-theater-status").textContent);
+    await tick(500); click(W, stopP()); await tick(300);
+    ok(T.state.busy === false && P("#adr044-theater-status").textContent.indexOf("打断了") >= 0, "点「打断」：请求掐掉，状态行说打断了", P("#adr044-theater-status").textContent);
+    ok(e.chat[lastIdx].mes === floorBefore && e.calls.length === nBefore + 1, "楼里什么都没写，也没有偷偷重发");
+    ok(stopP().disabled === true && stopD().disabled === true, "打断之后两端的「打断」变回灰的");
+    ok(!fab.classList.contains("adr048-analyzing") && !fab.classList.contains("adr048-lamp-t"), "浮标的灯也熄了");
+    e.unhang();
+    e.setScript((n, body) => isTheater(body) ? "打断之后重来的一场" : "在");
+    await tick(500); click(W, P("#adr044-theater-now")); await tick(1500);
+    ok(e.chat[lastIdx].mes.indexOf("打断之后重来的一场") > 0 && stopP().disabled === true && T.state.busy === false, "打断之后再点「现在来一场」照常演");
+    click(W, d.querySelector("#adr048-popup-close")); await tick(400); click(W, d.querySelector("#adr048-fab")); await tick(600);
+    ok(P("#adr044-theater-status").textContent.indexOf("已插在楼尾") >= 0, "演完再重开浮窗：状态行留着上一场的结果，不是变回出厂提示", P("#adr044-theater-status").textContent);
+    // 保险：按「打断」时手里没有掐请求的那一把（理论上不会），稿子回来了也不往楼里写
+    {
+        const floor0 = e.chat[lastIdx].mes, n0 = e.calls.length;
+        e.setScript((n, body) => isTheater(body) ? "打断后才回来的稿子" : "在");
+        e.hangNext();
+        await tick(500); click(W, P("#adr044-theater-now")); await tick(900);
+        T.state.abort = null;   // 模拟：手里没有掐请求的那一把
+        ok(e.calls.length === n0 + 1 && T.abort() === true && P("#adr044-theater-status").textContent.indexOf("正在打断") >= 0, "没有那一把时点打断：先记下来，状态行说正在打断", P("#adr044-theater-status").textContent);
+        e.unhang(); e.release();   // 放行那次挂着的请求，让稿子回来
+        await tick(600);
+        ok(T.state.busy === false && e.chat[lastIdx].mes === floor0 && P("#adr044-theater-status").textContent.indexOf("打断了") >= 0 && e.calls.length === n0 + 1, "稿子回来了也不写进楼里，状态行说打断了", P("#adr044-theater-status").textContent);
+    }
+    // 请求还没发、在等这一楼落定的那一段，也能打断
+    W.__adrDGenTest.setQuietMs(4000);
+    W.__adrDGenTest.looksLive();
+    e.chat[lastIdx].mes += "\n";   // 楼的字数刚变过：算「还在出字」
+    const nWait = e.calls.length;
+    await tick(500); click(W, P("#adr044-theater-now")); await tick(600);
+    ok(T.state.busy === true && e.calls.length === nWait && P("#adr044-theater-status").textContent.indexOf("还在出字") >= 0, "楼还在出字：先等着、不发请求，状态行说明在等什么", P("#adr044-theater-status").textContent);
+    ok(stopP().disabled === false, "等的时候「打断」也点得动");
+    await tick(500); click(W, stopP()); await tick(300);
+    ok(T.state.busy === false && e.calls.length === nWait && P("#adr044-theater-status").textContent.indexOf("打断了") >= 0, "等的时候点「打断」：马上放行，这一场不演，没发请求", P("#adr044-theater-status").textContent);
+    await tick(4800);
+    ok(e.calls.length === nWait && T.state.busy === false, "之后楼落定了，也不会偷偷补演");
+    await tick(500); click(W, P("#adr044-theater-now")); await tick(1500);
+    ok(e.calls.length === nWait + 1 && T.state.busy === false, "再点「现在来一场」又能演");
+    }
 
     section("收尾");
     ok(e.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "全程没有 console.error", e.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));

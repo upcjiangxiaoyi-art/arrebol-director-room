@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.45.3｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.45.4｜ripple & GPT & Claude
+ * v1.45.4 泊在避风塘顶栏里灯不亮的修复：两盏灯改成随文档流、不靠定位的画法，泊位里收在胶囊两头；红霞剧场加「打断」，等楼落定和请求挂着时都能断，重开浮窗状态行不丢（报告与提议 江；施工 Claude）
  * v1.45.3 浮标两盏灯一左一右：左边雾紫是导演，右边霞粉是剧场，挂在胶囊外侧；亮灯熄灯胶囊不再挪位；贴屏幕边时两盏一起收进胶囊两头（提议 江「他俩在浮标的一左一右就好啦」；施工 Claude）
  * v1.45.2 导演和剧场同时在跑时浮标并排亮两粒灯：左边雾紫是导演，右边霞粉是剧场；各自单独跑时灯的位置不变（提议 江「同时跑可以一左一右呀」；施工 Claude）
  * v1.45.1 剧场开演时浮标也亮灯：同一圈呼吸，小灯是霞粉色；灯按导演 / 剧场分别记账，谁跑完都不熄对方的（提议 江；施工 Claude）
@@ -109,7 +110,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.45.3";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.45.4";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -1372,31 +1373,54 @@
     // v1.45.1：灯按"谁在跑"分别记账。以前只有导演会点灯，一个布尔够用；现在剧场开演也点，
     // 两边可能同时在跑——导演跑完不能把剧场的灯顺手熄了，反过来也一样。任何一家在跑灯就亮；
     // 只有剧场在跑时多挂一个 adr048-staging，那一圈呼吸换成霞粉，一眼看出是剧场不是导演。
-    // v1.45.3：两盏灯各占一侧，挂在胶囊外面——左边雾紫是导演（adr048-lamp-d），右边霞粉是剧场（adr048-lamp-t）。
+    // v1.45.3：两盏灯各占一侧——左边雾紫是导演（adr048-lamp-d），右边霞粉是剧场（adr048-lamp-t）。
     // 江：「他俩在浮标的一左一右就好啦」。v1.45.2 那版把两粒并排挤在右边，会错意了，这版改掉。
-    // 灯不再占文档流（绝对定位的伪元素），所以亮灯、熄灯时胶囊本身一个像素都不挪，按钮的框也不变，拖动与存位置照旧。
+    // 两盏灯都不撑宽按钮（净宽为零），所以亮灯、熄灯时胶囊本身一个像素都不挪，按钮的框也不变，拖动与存位置照旧。
     var adr048FabBusy = { director: false, theater: false };
 
-    // 灯挂在胶囊外侧要 11px（4px 间隙 + 7px 灯）。哪一侧离屏幕边不到 12px 就挂不下——
-    // 这时两盏一起收进胶囊两头（data-lamp="in"），左右的意思不变、样子也对称，只是不会跑出屏幕。
+    // v1.45.4：灯怎么画，分两种。
+    // · data-lamp="out"：两盏挂在胶囊外侧（各要 11px：4px 间隙 + 7px 灯）。只在「自由漂浮」时用——
+    //   按钮还挂在 body 下、position 还是 fixed，而且左右离屏幕边都不少于 12px。
+    // · data-lamp="in"：两盏收在胶囊两头。其余情况一律用它：泊进避风塘顶栏（#extensionHarborDock，
+    //   别的扩展把按钮搬进它自己的容器里）、贴着屏幕边、或者量不出位置。
+    //   泊位里按钮怎么摆是人家说了算（不再是定位元素、容器 overflow:hidden），所以 "in" 的画法
+    //   不靠定位、不靠溢出、不改按钮宽度：两盏都是随文档流、净宽为零的 flex 子项，画在按钮自己的框里。
+    //   样式表里不带 data-lamp 时的默认画法也是它，所以这段 JS 哪怕没跑到，灯也看得见。
+    // v1.45.3 的灯是绝对定位、挂在框外的：泊位里按钮不是定位元素，灯跟着别的祖先跑到泊位外面被裁掉了（江：「灯不亮」）。
     // 只收贴边那一盏会一里一外，看着像坏了，所以要收就一起收。
-    // 没拖动过的浮标落在左上角（离左边 4px），所以出厂位置就是收进去的样子；往里拖一点两盏就挂到外面。
-    // left / right 可以直接传（拖动时用算好的落点，不多读一次布局）；不传就量按钮现在的位置。
+    // left / right 可以直接传（拖动时用算好的落点，不多读一次布局、也不读样式）；不传就量按钮现在的位置。
+    function adr048FabIsFree(btn, skipStyle) {
+        try {
+            var d = rootDoc();
+            var par = btn ? btn.parentElement : null;
+            if (!par || (par !== d.body && par !== d.documentElement)) return false;   // 被搬进了别人的容器：泊位
+            if (skipStyle) return true;
+            var w = rootWin() || window;
+            var cs = typeof w.getComputedStyle === "function" ? w.getComputedStyle(btn) : null;
+            return !!cs && String(cs.position || "") === "fixed";
+        } catch (e) { return false; }
+    }
+
     function adr048PlaceFabLamps(btn, left, right) {
         try {
             if (!btn) return;
-            if (!Number.isFinite(left) || !Number.isFinite(right)) {
-                var r = btn.getBoundingClientRect();
-                if (!r || !(r.width > 0)) return;
-                left = r.left; right = r.right;
+            var given = Number.isFinite(left) && Number.isFinite(right);
+            var mode = "in";
+            if (adr048FabIsFree(btn, given)) {
+                if (!given) {
+                    var r = btn.getBoundingClientRect();
+                    if (r && r.width > 0) { left = r.left; right = r.right; given = true; }
+                }
+                if (given) {
+                    var w = rootWin() || window;
+                    var vw = Number(w.innerWidth) || 360;
+                    try {
+                        var cw = Number(rootDoc().documentElement.clientWidth);
+                        if (cw > 0 && cw < vw) vw = cw;
+                    } catch (eCw) {}
+                    mode = (left < 12 || (vw - right) < 12) ? "in" : "out";
+                }
             }
-            var w = rootWin() || window;
-            var vw = Number(w.innerWidth) || 360;
-            try {
-                var cw = Number(rootDoc().documentElement.clientWidth);
-                if (cw > 0 && cw < vw) vw = cw;
-            } catch (eCw) {}
-            var mode = (left < 12 || (vw - right) < 12) ? "in" : "out";
             if (btn.getAttribute("data-lamp") !== mode) btn.setAttribute("data-lamp", mode);
         } catch (e) {}
     }
@@ -1424,7 +1448,7 @@
         adr048ApplyFabBusy();
     }
 
-    try { rootWin().__adr048FabBusyTest = { set: adr048SetFabBusy, state: adr048FabBusy, apply: adr048ApplyFabBusy, place: adr048PlaceFabLamps }; } catch (eFabBusyHook) {}
+    try { rootWin().__adr048FabBusyTest = { set: adr048SetFabBusy, state: adr048FabBusy, apply: adr048ApplyFabBusy, place: adr048PlaceFabLamps, isFree: adr048FabIsFree }; } catch (eFabBusyHook) {}
 
     // v1.27.0：导演请求改流式接收（提议：江；施工：波哥）。
     // 非流式时，会思考的模型要把整段思考跑完才回第一个字节——中转站／网关的空闲超时（常见 60–100 秒）
@@ -7974,7 +7998,9 @@
 
     function adrTheaterPickMode() { return settings().theaterPick === "random" ? "random" : "fixed"; }
 
-    var adrTheaterState = { busy: false, lastSig: "", lastName: "", timer: null };
+    // v1.45.4：abort = 现在按下「打断」该调的那一把（等楼落定时是放行等待，请求挂着时是掐断请求）；
+    // cancel = 这一场被打断了；status = 状态行最后一句（浮窗每次打开都重建，重建时把它写回去，不然等着的时候重开浮窗就不知道在干嘛）。
+    var adrTheaterState = { busy: false, lastSig: "", lastName: "", timer: null, abort: null, cancel: false, status: null };
 
     // 这一场用哪个主题：固定＝选中的那个；随机＝仓里抽一个，仓里不止一个时不连着抽到同一个
     function adrTheaterPickTheme(rng) {
@@ -7992,7 +8018,39 @@
         return { name: name, text: String(store[name] || "") };
     }
 
-    function adrTheaterStatus(text, color) { adrCdSetTextAll("adr044-theater-status", text, color || "#d6b177"); }
+    var ADR_THEATER_STATUS_HINT = "没开也能点「现在来一场」试试手感；一楼只留一场，再来一场会换掉旧的。";
+
+    function adrTheaterStatus(text, color) {
+        try { adrTheaterState.status = { text: String(text || ""), color: color || "#d6b177", key: adrDChatKey() }; } catch (e) {}
+        adrCdSetTextAll("adr044-theater-status", text, color || "#d6b177");
+    }
+
+    // 浮窗重建时状态行写什么：这把聊天里说过话就接着显示那一句，没说过就是出厂提示
+    function adrTheaterStatusForRender() {
+        try {
+            var s0 = adrTheaterState.status;
+            if (s0 && s0.text && s0.key === adrDChatKey()) return s0;
+        } catch (e) {}
+        return { text: ADR_THEATER_STATUS_HINT, color: "" };
+    }
+
+    // v1.45.4 打断（江：「我想在等霞姐开口的时候有一个打断，万一 api 出问题了呢」）。
+    // 只有正在演（含等楼落定）时「打断」才点得动；两端（浮窗 / 抽屉）一起管。
+    function adrTheaterSetButtons() {
+        try {
+            var busy = !!adrTheaterState.busy;
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-theater-stop")).forEach(function (el) { el.disabled = !busy; });
+        } catch (e) {}
+    }
+
+    function adrTheaterAbort() {
+        if (!adrTheaterState.busy) { adrTheaterStatus("现在没有在演的场次，不用打断", "#d6b177"); return false; }
+        adrTheaterState.cancel = true;
+        var fn = adrTheaterState.abort;
+        if (typeof fn === "function") { try { fn(); } catch (e) {} }
+        else adrTheaterStatus("正在打断…", "#d6b177");
+        return true;
+    }
 
     // ---- v1.45.0 剧场位：自己的一页、自己的 API 位。默认跟掌灯聊天位（搬家前就是这样），也能借别人的或自己填 ----
     var ADR_THEATER_BORROW_LABEL = { lamp: "掌灯聊天位", plot: "统筹", emotion: "情感导演", expand: "展开", cd: "小眼睛", self: "自己填" };
@@ -8223,9 +8281,16 @@
         if (!cfg.endpoint || !cfg.model) { adrTheaterStatus("剧场位没有可用的 API：" + adrTheaterApiNote(), "#d4726a"); return false; }
         var homeKey = adrDChatKey();
         adrTheaterState.busy = true;
+        adrTheaterState.cancel = false;
+        adrTheaterState.abort = null;
+        adrTheaterSetButtons();
         var idx = -1;
         try {
-            await adrDWaitForGenerationIdle(120000);   // 楼还在出字就等，导演同款证据
+            // 楼还在出字就等，导演同款证据。等的这一段也能打断：「打断」把下面这个 Promise 提前放行。
+            if (adrDGenerationLooksLive()) adrTheaterStatus("🎬 这一楼还在出字，等它落定再开演…（不想等可以打断）", "#8ed99d");
+            await Promise.race([adrDWaitForGenerationIdle(120000), new Promise(function (resolve) { adrTheaterState.abort = resolve; })]);
+            adrTheaterState.abort = null;
+            if (adrTheaterState.cancel) { adrTheaterStatus("打断了，这一场不演", "#d6b177"); return false; }
             if (adrDChatKey() !== homeKey) return false;
             var chat = adrLampChat();
             idx = findLastMessageIndex(chat);
@@ -8247,6 +8312,7 @@
             var lastPaint = 0;
             var out = await adrDChatCompletionText({
                 endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrTheaterTemp(), messages: messages,
+                onAbortable: function (fn) { adrTheaterState.abort = fn; },   // v1.45.4 请求挂着时「打断」掐的就是它
                 onProgress: function (chars, thought) {
                     var now = Date.now();
                     if (now - lastPaint < 250) return;
@@ -8254,6 +8320,9 @@
                     adrTheaterStatus(chars > 0 ? "🎬 #" + idx + "「" + theme.name + "」在写…已收到 " + chars + " 字" : (thought > 0 ? "🎬 霞姐在想（" + thought + " 字）…" : "🎬 等霞姐开口…"), "#8ed99d");
                 }
             });
+            adrTheaterState.abort = null;
+            // 保险：万一「打断」按下时手里没有那把掐请求的（理论上不会），稿子回来了也不往楼里写
+            if (adrTheaterState.cancel) { var eC = new Error("已打断"); eC.name = "LampAbort"; throw eC; }
             var cleaned = adrTheaterClean(out, allowRich);
             if (!cleaned.text) throw new Error("写回来是空的");
             if (adrDChatKey() !== homeKey) { adrTheaterStatus("中途换了聊天，这一场作废", "#d6b177"); return false; }
@@ -8267,11 +8336,18 @@
             try { console.log("[Arrebol D] theater #" + idx + " 「" + theme.name + "」 (" + (reason || "") + ")"); } catch (eL) {}
             return true;
         } catch (e) {
+            if (e && e.name === "LampAbort") {
+                adrTheaterStatus("这一场打断了" + (idx >= 0 ? "（#" + idx + "）" : "") + "，楼里什么都没写。想再试点「现在来一场」", "#d6b177");
+                return false;
+            }
             adrTheaterStatus("这一场没写出来" + (idx >= 0 ? "（#" + idx + "）" : "") + "：" + (e && e.message ? e.message : String(e)), "#d4726a");
             return false;
         } finally {
             adrTheaterState.busy = false;
-            adr048SetFabBusy(false, "theater");   // 演完、作废、失败都熄灯
+            adrTheaterState.abort = null;
+            adrTheaterState.cancel = false;
+            adrTheaterSetButtons();
+            adr048SetFabBusy(false, "theater");   // 演完、作废、失败、打断都熄灯
         }
     }
 
@@ -8319,6 +8395,7 @@
             adrCdSetValueSafe("adr044-theater-temp", String(adrTheaterTemp()));
             Array.prototype.slice.call(d.querySelectorAll("#adr044-stage-self")).forEach(function (el) { el.classList.toggle("adr-lamp-hide", adrTheaterBorrow() !== "self"); });
             adrCdSetTextAll("adr044-theater-api-note", adrTheaterApiNote());
+            adrTheaterSetButtons();
             if (fillText !== false) {
                 var active = d.activeElement;
                 var store = adrTheaterStore();
@@ -8562,14 +8639,16 @@
         var names = adrTheaterNames();
         var store = adrTheaterStore();
         var borrow = adrTheaterBorrow();
+        var status0 = adrTheaterStatusForRender();
         return secOpen("🎭 红霞剧场 · 每层楼尾来一场", false, "theater-main")
             + '<div class="' + noteClass + '">开了以后，每层助手正文落地，霞姐在楼尾插一场：弹幕、场外嗑瓜子、Q 版四格、花絮……她看到的和掌灯一样（基调、角色卡、世界书、人设、此前各楼摘要、本篇全文），所以说的是这个世界里的话。插在楼里是给你看的，别让主模型看见——「剥离正则」那一节的东西贴进酒馆「正则」就行。</div>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-enabled"' + (st.theaterEnabled === true ? " checked" : "") + '> 启用红霞剧场（走剧场位 API，每层一次，花钱；「小红霞正在运行」关着就不演）</label>'
             + '<label>主题怎么选</label><select id="adr044-theater-pick">' + opt(adrTheaterPickMode(), "fixed", "固定：每层都用主题仓里选中的那个") + opt(adrTheaterPickMode(), "random", "随机：每层从主题仓里抽一个，不连着抽同一个") + '</select>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-rich"' + (st.theaterRich !== false ? " checked" : "") + '> 允许 HTML / CSS 排版（主题里点名要排版时，她可以回一段带样式的 HTML；不勾就一律纯文本）</label>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-fold"' + (st.theaterFold === true ? " checked" : "") + '> 插进去时默认折叠（点开才看；不勾就是摊开的）</label>'
-            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-now">🎬 现在来一场</button><button type="button" id="adr044-theater-remove">撤掉最新一楼的</button></div>'
-            + '<div class="adr044-template-status" id="adr044-theater-status">没开也能点「现在来一场」试试手感；一楼只留一场，再来一场会换掉旧的。</div>'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-now">🎬 现在来一场</button><button type="button" id="adr044-theater-stop"' + (adrTheaterState.busy ? '' : ' disabled') + '>打断</button></div>'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-remove">撤掉最新一楼的</button></div>'
+            + '<div class="adr044-template-status" id="adr044-theater-status"' + (status0.color ? ' style="color:' + esc(status0.color) + '"' : '') + '>' + esc(status0.text) + '</div>'
             + secClose()
 
             + secOpen("📚 主题仓 · 这一场怎么写", false, "theater-lib")
@@ -8630,6 +8709,7 @@
         if (id === "adr044-theater-save") { adrTheaterSaveFromFields(); return true; }
         if (id === "adr044-theater-delete") { adrTheaterDeleteFromFields(btn); return true; }
         if (id === "adr044-theater-now") { adrTheaterNow("manual", true).catch(function () {}); return true; }
+        if (id === "adr044-theater-stop") { adrTheaterAbort(); return true; }
         if (id === "adr044-theater-remove") { adrTheaterRemoveLatest(); return true; }
         if (id === "adr044-theater-regex-copy") { adrTheaterCopyRegex(); return true; }
         if (id === "adr044-theater-import") { adrTheaterTriggerImport(); return true; }
@@ -8731,7 +8811,7 @@
         rootWin().__adrTheaterTest = {
             now: adrTheaterNow, onMessage: adrTheaterOnMessage, block: adrTheaterBlock, strip: adrTheaterStrip, has: adrTheaterHas, clean: adrTheaterClean,
             pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, preset: ADR_THEATER_PRESET, presetText: adrTheaterPresetText,
-            regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite,
+            regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite, abort: adrTheaterAbort,
             paint: adrTheaterPaint, show: adrTheaterShow, saveSoon: adrTheaterSaveSoon, lampDirty: function () { return adrLampDirty; },
             apiCfg: adrTheaterApiCfg, apiNote: adrTheaterApiNote, topLine: adrTheaterTopLineText,
             tidyRich: adrTheaterTidyRich, packObject: adrTheaterPackObject, parsePack: adrTheaterParsePack, importText: adrTheaterImportText,
@@ -10247,7 +10327,7 @@
             ids[lid] = function () { adrLampHandleButtonId(lid, qForm(lid)); };
         });
         // v1.43.0 红霞剧场按钮：同样双注册
-        ["adr044-theater-save", "adr044-theater-delete", "adr044-theater-now", "adr044-theater-remove", "adr044-theater-regex-copy",
+        ["adr044-theater-save", "adr044-theater-delete", "adr044-theater-now", "adr044-theater-stop", "adr044-theater-remove", "adr044-theater-regex-copy",
          "adr044-theater-import", "adr044-theater-export", "adr044-theater-clear", "adr044-theater-restore",
          "adr044-tab-theater", "adr044-stage-load-models", "adr044-stage-test"].forEach(function (tid) {
             ids[tid] = function () { adrTheaterHandleButtonId(tid, qForm(tid)); };
