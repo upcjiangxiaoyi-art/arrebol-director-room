@@ -177,7 +177,7 @@
         penApiKey: "",
         penModel: "",
         lampPreset: "",
-        lampSummaryTags: "summary",
+        lampSummaryTags: "report",
         lampSummaryFloors: 60,
         lampTemp: 0.8
     };
@@ -6500,7 +6500,7 @@
         var raw = "";
         try { raw = String(settings().lampSummaryTags || ""); } catch (e) {}
         var names = raw.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
-        return names.length ? names : ["summary"];
+        return names.length ? names : ["report"];
     }
 
     function adrLampTagRegex(names) {
@@ -7189,7 +7189,7 @@
     function adrLampRefreshPanelFields() {
         try {
             var st = settings();
-            adrCdSetValueSafe("adr044-lamp-summary-tags", st.lampSummaryTags || "summary");
+            adrCdSetValueSafe("adr044-lamp-summary-tags", st.lampSummaryTags || "report");
             adrCdSetValueSafe("adr044-lamp-summary-floors", String(adrLampSummaryFloors()));
             adrCdSetValueSafe("adr044-lamp-temp", String(adrLampTemp()));
             adrCdSetValueSafe("adr044-lamp-borrow", st.lampBorrow || "plot");
@@ -7260,7 +7260,7 @@
             + '<details class="adr-lamp-fold"><summary>此前剧情 · 未隐藏楼层的摘要</summary><div class="adr-lamp-mat" id="adr044-lamp-mat-summary"></div></details>'
             + '<details class="adr-lamp-fold"><summary>基调 · 角色卡 · 世界书 · 人设</summary><div class="adr-lamp-mat" id="adr044-lamp-mat-card"></div></details>'
             + '<label>摘要标签名（主模型每楼写摘要用的标签；多个用英文逗号分隔）</label>'
-            + '<input type="text" id="adr044-lamp-summary-tags" placeholder="summary" value="' + esc(st.lampSummaryTags || "summary") + '">'
+            + '<input type="text" id="adr044-lamp-summary-tags" placeholder="report" value="' + esc(st.lampSummaryTags || "report") + '">'
             + '<label>往前读多少楼的摘要（默认 ' + ADR_LAMP_SUMMARY_FLOORS_DEFAULT + '，填 0 读全部未隐藏楼层）</label>'
             + '<input type="number" id="adr044-lamp-summary-floors" min="0" max="999" value="' + esc(String(adrLampSummaryFloors())) + '">'
             + secClose()
@@ -7369,7 +7369,7 @@
             });
             each("adr044-lamp-summary-tags", function (el) {
                 guard(el);
-                el.addEventListener("change", function () { save("lampSummaryTags", String(el.value || "").trim() || "summary"); saveNow(); adrLampRefreshAll(); });
+                el.addEventListener("change", function () { save("lampSummaryTags", String(el.value || "").trim() || "report"); saveNow(); adrLampRefreshAll(); });
             });
             each("adr044-lamp-summary-floors", function (el) {
                 guard(el);

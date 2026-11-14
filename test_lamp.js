@@ -16,7 +16,7 @@ function section(t) { console.log("\n── " + t + " ──"); }
 const tick = ms => new Promise(r => setTimeout(r, ms));
 
 const TAIL = "\n\narrebol_d_visible:plot###\n【暗河红霞 Arrebol D｜统筹】\n派人：老周送口信\n###";
-const FLOOR3 = "<status>HP 80 · 夜 · 书房</status>\n<content>\n他把信放在桌上，说：「三天前就该到的人，今晚到了。」她笑了笑，立刻答应跟他走。\n</content>\n<summary>信送到，她当场答应同行。</summary>" + TAIL;
+const FLOOR3 = "<status>HP 80 · 夜 · 书房</status>\n<content>\n他把信放在桌上，说：「三天前就该到的人，今晚到了。」她笑了笑，立刻答应跟他走。\n</content>\n<report>信送到，她当场答应同行。</report>" + TAIL;
 
 function build(opts) {
     opts = opts || {};
@@ -32,9 +32,9 @@ function build(opts) {
 
     // 楼层：#0 用户 · #1 助手（隐藏）· #2 用户 · #3 助手（本篇，带状态栏、正文、摘要、导演稿尾巴）
     chat.push({ is_user: true, name: "江", mes: "开场白" });
-    chat.push({ is_user: false, is_system: true, name: "阿尔", mes: "<content>这楼被藏了</content><summary>隐藏楼的摘要</summary>" });
+    chat.push({ is_user: false, is_system: true, name: "阿尔", mes: "<content>这楼被藏了</content><report>隐藏楼的摘要</report>" });
     chat.push({ is_user: true, name: "江", mes: "我问他信里写了什么" });
-    chat.push({ is_user: false, name: "阿尔", mes: "<content>前一楼正文</content><summary>他收到了一封信。</summary>" });
+    chat.push({ is_user: false, name: "阿尔", mes: "<content>前一楼正文</content><report>他收到了一封信。</report>" });
     chat.push({ is_user: true, name: "江", mes: "我说：你念给我听" });
     chat.push({ is_user: false, name: "阿尔", mes: FLOOR3, swipes: [FLOOR3], swipe_id: 0, swipe_info: [{ send_date: "d", extra: { a: 1 } }] });
 
@@ -116,7 +116,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(mat.idx === 5, "本篇默认是最新一楼助手正文 #5", String(mat.idx));
     ok(mat.bodyTagged && mat.body.indexOf("三天前就该到的人") >= 0, "本篇原文取的是 content 标签里面");
     ok(mat.body.indexOf("<status>") < 0 && mat.body.indexOf("arrebol_d_visible") < 0, "状态栏与导演稿尾巴不进本篇原文");
-    ok(mat.summary.indexOf("他收到了一封信") >= 0, "此前剧情读到了 #3 的 summary 标签");
+    ok(mat.summary.indexOf("他收到了一封信") >= 0, "此前剧情读到了 #3 的 report 标签");
     ok(mat.summary.indexOf("隐藏楼的摘要") < 0 && mat.summary.indexOf("这楼被藏了") < 0, "隐藏楼（is_system）一个字不读");
     ok(mat.hiddenFloors === 1, "数出跳过了 1 楼隐藏", String(mat.hiddenFloors));
     ok(mat.summary.indexOf("[#2 · 用户] 我问他信里写了什么") >= 0, "用户楼原话带上");
@@ -141,8 +141,8 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(e.st().lampSummaryTags === "memo", "摘要标签名存进设置");
     mat = e.T().materials();
     ok(mat.summary.indexOf("换了名字的摘要") >= 0, "改了标签名后按新标签读");
-    tagEl.value = "summary"; change(W, tagEl); await tick(50);
-    e.chat[3].mes = "<content>前一楼正文</content><summary>他收到了一封信。</summary>";
+    tagEl.value = "report"; change(W, tagEl); await tick(50);
+    e.chat[3].mes = "<content>前一楼正文</content><report>他收到了一封信。</report>";
 
     section("聊：借统筹的 API，无导演框架，多轮");
     const inp = d.querySelector("#adr048-popup-body #adr044-lamp-input");
@@ -200,7 +200,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     section("改好给我：执笔位读讨论，只认标签");
     e.setScript((n, body) => {
         if (body.messages[0].content.indexOf("你是这篇的执笔人") === 0) {
-            return "<content>\n他把信放在桌上，说：「三天前就该到的人，今晚到了。」她看了眼窗外，雨还没停，隔了一拍才说：「走。」\n</content>\n<summary>信送到，她看了眼窗外才答应同行。</summary>";
+            return "<content>\n他把信放在桌上，说：「三天前就该到的人，今晚到了。」她看了眼窗外，雨还没停，隔了一拍才说：「走。」\n</content>\n<report>信送到，她看了眼窗外才答应同行。</report>";
         }
         return "聊天回答";
     });
@@ -211,7 +211,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(c3.body.messages[0].content.indexOf("你是这篇的执笔人") === 0, "执笔系统提示是执笔人规矩");
     ok(c3.body.messages[0].content.indexOf("你是 Arrebol，小红霞") < 0, "执笔位不带聊天人设");
     ok(c3.body.messages[1].content.indexOf("【讨论记录 · 作者与小红霞】") >= 0 && c3.body.messages[1].content.indexOf("作者：她答应得太快了吧") >= 0 && c3.body.messages[1].content.indexOf("小红霞：同意。补一拍") >= 0, "整段讨论喂给了执笔位");
-    ok(c3.body.messages[1].content.indexOf("<content>…</content>") >= 0 && c3.body.messages[1].content.indexOf("<summary>…</summary>") >= 0, "要求按正文标签与摘要标签输出");
+    ok(c3.body.messages[1].content.indexOf("<content>…</content>") >= 0 && c3.body.messages[1].content.indexOf("<report>…</report>") >= 0, "要求按正文标签与摘要标签输出");
     ok(c3.body.messages[1].content.indexOf("【本篇原文 · #5") >= 0, "执笔位也看得到素材");
     meta = e.meta();
     ok(meta.threads["5"].draft && meta.threads["5"].draft.content.indexOf("隔了一拍才说") >= 0, "改稿存进 draft");
@@ -237,7 +237,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(m5.mes.indexOf("<status>HP 80 · 夜 · 书房</status>") === 0, "状态栏原样留在开头");
     ok(m5.mes.indexOf("<content>\n他把信放在桌上") >= 0 && m5.mes.indexOf("隔了一拍才说") >= 0 && m5.mes.indexOf("灯也没点") >= 0, "正文标签里换成了改稿（含手改的两笔）");
     ok(m5.mes.indexOf("立刻答应跟他走") < 0, "旧正文不在了");
-    ok(m5.mes.indexOf("<summary>信送到，她看了眼窗外才答应同行。</summary>") >= 0, "摘要标签里换成了新摘要");
+    ok(m5.mes.indexOf("<report>信送到，她看了眼窗外才答应同行。</report>") >= 0, "摘要标签里换成了新摘要");
     ok(m5.mes.indexOf("arrebol_d_visible:plot###") >= 0 && m5.mes.indexOf("派人：老周送口信") >= 0, "导演稿尾巴原样留着");
     ok(Array.isArray(m5.swipes) && m5.swipes.length === 2 && m5.swipes[0] === FLOOR3 && m5.swipes[1] === m5.mes && m5.swipe_id === 1, "原版存成前一页 swipe，当前页是新版");
     ok(Array.isArray(m5.swipe_info) && m5.swipe_info.length === 2 && m5.swipe_info[1].extra && m5.swipe_info[1].extra.a === 1, "swipe_info 跟着补了一份");
@@ -270,13 +270,13 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(composed.indexOf("新的整楼正文") === 0, "新正文在最前");
     ok(composed.indexOf("image###pic.png###") > 0 && composed.indexOf("arrebol_d_visible:plot###") > 0, "图标记与导演稿留在末尾");
     ok(composed.indexOf("整楼正文没有标签") < 0, "旧正文不在了");
-    const composed2 = T.compose("<content>甲</content>\n中间\n<content>乙</content><summary>老</summary>", "丙", "新");
-    ok(composed2 === "<content>丙</content>\n中间\n<summary>新</summary>", "多块正文标签：第一块换、其余删、摘要换", composed2);
+    const composed2 = T.compose("<content>甲</content>\n中间\n<content>乙</content><report>老</report>", "丙", "新");
+    ok(composed2 === "<content>丙</content>\n中间\n<report>新</report>", "多块正文标签：第一块换、其余删、摘要换", composed2);
     const composed3 = T.compose("<content>甲</content>", "丙", "新摘要");
     ok(composed3 === "<content>丙</content>", "原楼没有摘要标签就不加");
     const parsed = T.parsePen("```\n没按标签来的整段\n```", true);
     ok(parsed.content === "没按标签来的整段" && parsed.summary === "", "执笔位没按标签来：去围栏整段当正文");
-    const parsed2 = T.parsePen("好的，改好了：<content>正</content>\n<summary>摘</summary>", true);
+    const parsed2 = T.parsePen("好的，改好了：<content>正</content>\n<report>摘</report>", true);
     ok(parsed2.content === "正" && parsed2.summary === "摘", "标签外的废话不要");
 
     section("打断");
