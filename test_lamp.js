@@ -152,11 +152,8 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(!!d.querySelector("#adr044-drawer #adr044-lamp-jump-bottom") && !!d.querySelector("#adr044-drawer #adr044-lamp-jump-top"), "抽屉也有");
     await tick(500); click(W, d.querySelector("#adr048-popup-body #adr044-lamp-jump-bottom")); await tick(500); click(W, d.querySelector("#adr048-popup-body #adr044-lamp-jump-top")); await tick(50);
     ok(e.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "点回底、回顶不报错");
-    ok(d.querySelector("#adr048-popup-body #adr044-lamp-jump-bottom").closest(".adr-top-pane") && d.querySelector("#adr048-popup-body #adr044-lamp-jump-bottom").closest(".adr-top-pane").getAttribute("data-director") === "lamp", "回底键在掌灯的顶部工作台里");
-    const pageEl = d.querySelector("#adr048-page-lamp");
-    const chatDr = pageEl.querySelector('[data-drawer-id="lamp-chat"]'), matDr = pageEl.querySelector('[data-drawer-id="lamp-mat"]');
-    ok(chatDr && matDr && (chatDr.compareDocumentPosition(matDr) & 4) !== 0, "聊天区排在素材前面（v1.41.8）");
-    ok(pageEl.lastElementChild && pageEl.lastElementChild.querySelector("#adr044-lamp-jump-top"), "回顶键在整页最底");
+    const jb = d.querySelector("#adr048-popup-body #adr044-lamp-jump-bottom");
+    ok(jb.closest('[data-drawer-id="lamp-chat"]') && jb.parentNode.previousElementSibling && jb.parentNode.previousElementSibling.id === "adr044-lamp-thread", "两枚键紧挨在对话框底下，只管对话框（v1.41.9）");
     const inp = d.querySelector("#adr048-popup-body #adr044-lamp-input");
     inp.value = "她答应得太快了吧，这不像她";
     e.setScript(() => "快是快，但你看她前一楼就已经在等这封信了——快的是动作，不是决定。");
