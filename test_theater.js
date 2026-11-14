@@ -19,7 +19,7 @@ const FLOOR5 = "<status>HP 80 · 夜 · 书房</status>\n<content>\n他把信放
 
 function build(opts) {
     opts = opts || {};
-    const dom = new JSDOM("<!doctype html><html><body><div id=\"extensions_settings2\"></div></body></html>",
+    const dom = new JSDOM("<!doctype html><html><body><div id=\"chat\"></div><div id=\"extensions_settings2\"></div></body></html>",
         { url: "https://example.org/", pretendToBeVisual: true, runScripts: "outside-only" });
     const win = dom.window; win.top = win;
     const chat = [], extensionSettings = {}, chatMetadata = {}, handlers = {};
@@ -38,7 +38,17 @@ function build(opts) {
     const calls = [];
     let script = () => "好的";
     let hang = null;
-    let saveChatCalls = 0, redraws = [];
+    let saveChatCalls = 0, redraws = [], emits = [], reloads = 0;
+    // 酒馆画好的楼：#chat .mes[mesid] .mes_text，里面有它自己渲染出来的节点
+    function addMes(idx) {
+        const doc = win.document;
+        const mes = doc.createElement("div"); mes.className = "mes"; mes.setAttribute("mesid", String(idx));
+        const box = doc.createElement("div"); box.className = "mes_text";
+        const p = doc.createElement("p"); p.textContent = "画好的第 " + idx + " 楼"; box.appendChild(p);
+        mes.appendChild(box); doc.getElementById("chat").appendChild(mes);
+        return box;
+    }
+    win.reloadCurrentChat = () => { reloads++; };
     win.SillyTavern = { getContext: () => context };
     win.toastr = { info() {}, success() {}, warning() {}, error() {} };
     win.fetch = async (url, init) => {
@@ -68,11 +78,15 @@ function build(opts) {
         setExtensionPrompt() {}, extensionPrompts: {},
         extensionPromptTypes: { IN_CHAT: 1 }, extensionPromptRoles: { SYSTEM: 0 },
         substituteParams: s => s,
-        eventSource: { on(t, f) { (handlers[t] = handlers[t] || []).push(f); }, emit() {} },
+        reloadCurrentChat() { reloads++; },
+        eventSource: { on(t, f) { (handlers[t] = handlers[t] || []).push(f); }, emit(t) { emits.push(t); } },
         event_types: { APP_READY: "app_ready", MESSAGE_RECEIVED: "message_received", MESSAGE_SENT: "message_sent", CHAT_CHANGED: "chat_changed", MESSAGE_UPDATED: "message_updated" }
     };
+    for (let i = 0; i < chat.length; i++) addMes(i);
     win.eval(SRC);
     return {
+        addMes, emits: () => emits, reloads: () => reloads,
+        box: idx => win.document.querySelector('#chat .mes[mesid="' + idx + '"] .mes_text'),
         win, doc: win.document, chat, calls, logs, context,
         st: () => extensionSettings[SET_KEY],
         setScript(f) { script = f; },
@@ -121,6 +135,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
         ? "```\n🎭 红霞剧场 · 弹幕吐槽\n前排围观\n哈哈哈哈 <b>她答应得也太快了</b>\n\n\n\n高能预警：信 & 人一起到\n```"
         : "别的回答");
     const before5 = e.chat[5].mes;
+    const p5 = e.box(5).firstElementChild;
     e.fire(); await tick(2000);
     ok(e.calls.length === 1, "新楼落地发了一次请求", String(e.calls.length));
     const c1 = e.calls[0];
@@ -137,7 +152,23 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     ok(tailBlock === '\n\n<details class="arrebol-d-theater" open><summary>🎭 红霞剧场 · 弹幕吐槽</summary>前排围观<br>哈哈哈哈 &lt;b&gt;她答应得也太快了&lt;/b&gt;<br><br>高能预警：信 &amp; 人一起到</details>',
         "楼尾插了一整块：围栏和它自己加的标题去掉、尖括号转义、换行成 <br>、空行最多一个、整块一行", JSON.stringify(tailBlock));
     ok(m5.swipes[m5.swipe_id] === m5.mes, "当前 swipe 同写，翻页不丢");
-    ok(e.saves() >= 1 && e.redraws().indexOf(5) >= 0, "保存了聊天、只重画这一楼");
+    const det5 = e.box(5).querySelector("details.arrebol-d-theater");
+    ok(!!det5 && det5.hasAttribute("open") && det5.classList.contains("custom-arrebol-d-theater") && det5.querySelector("summary").textContent === "🎭 红霞剧场 · 弹幕吐槽", "画面上：楼尾多了那一块，两个类名都挂着、摊开、标题对（v1.43.2 静默上屏）");
+    ok(det5.querySelectorAll("br").length === 3 && det5.textContent.indexOf("哈哈哈哈 <b>她答应得也太快了</b>") > 0 && !det5.querySelector("b"), "正文按文本节点上屏：换行是 br，模型夹带的标签不会变成真标签");
+    ok(e.box(5).firstElementChild === p5 && p5.textContent === "画好的第 5 楼" && e.box(5).lastElementChild === det5, "楼里原来画好的节点原封不动，新的一块接在最后（没有整楼重画）");
+    ok(e.redraws().length === 0 && e.emits().indexOf("message_updated") < 0 && e.reloads() === 0, "没让酒馆重画这一楼、没广播 MESSAGE_UPDATED、没整聊天重载", JSON.stringify([e.redraws(), e.emits(), e.reloads()]));
+    ok(e.saves() === 0, "不抢着存盘");
+    await tick(1300);
+    ok(e.saves() === 1, "1.5 秒后存一次整份聊天", String(e.saves()));
+    const s0 = e.saves();
+    T.saveSoon(); await tick(300); T.saveSoon(); await tick(300); T.saveSoon(); await tick(1800);
+    ok(e.saves() === s0 + 1, "连着几笔合并成一次存盘", String(e.saves() - s0));
+    const stop = d.createElement("div"); stop.id = "mes_stop"; stop.style.display = "flex"; d.body.appendChild(stop);
+    T.saveSoon(); await tick(2000);
+    ok(e.saves() === s0 + 1, "到点时下一楼正在出字：先不存，等它");
+    stop.style.display = "none"; await tick(1800);
+    ok(e.saves() === s0 + 2, "字出完了再存");
+    stop.remove();
     ok(P("#adr044-theater-status").textContent.indexOf("#5 的「弹幕吐槽」已插在楼尾 ✓") >= 0, "状态行报了哪一楼哪个主题", P("#adr044-theater-status").textContent);
     ok(W.__adrDGenTest.looksLive() === false, "自己插的这一笔不算「楼还在生成」");
 
@@ -181,6 +212,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     e.fire(); await tick(2000);
     ok(e.calls.length === 2, "重 roll 换了正文，再演一场");
     ok(blocks(e.chat[5].mes) === 1 && e.chat[5].mes === rerolled + T.block("弹幕吐槽", "新一版的弹幕\n第二条", false), "新一页的楼尾是新的那场，只有一块");
+    ok(e.box(5).querySelectorAll("details").length === 1 && e.box(5).querySelector("details").textContent.indexOf("新一版的弹幕") > 0 && e.box(5).querySelector("details").textContent.indexOf("前排围观") < 0, "画面上也只留新的那块");
     ok(e.chat[5].swipes[0] === FLOOR5 + tailBlock - 0 || e.chat[5].swipes[0].indexOf("前排围观") >= 0, "旧那页带着它自己的那场，各页各的");
 
     section("手动：现在来一场 / 撤掉");
@@ -191,6 +223,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     ok(blocks(e.chat[5].mes) === 1 && e.chat[5].mes.indexOf("手动点的一场") > 0 && e.chat[5].mes.indexOf("新一版的弹幕") < 0, "一楼只留一场：新的换掉旧的");
     await tick(500); click(W, P("#adr044-theater-remove")); await tick(400);
     ok(e.chat[5].mes === rerolled && e.chat[5].swipes[1] === rerolled, "「撤掉最新一楼的」把楼还原");
+    ok(e.box(5).querySelectorAll("details").length === 0 && e.box(5).firstElementChild === p5 && e.redraws().length === 0, "画面上那块也拿掉了，楼里别的节点不动、仍然没有整楼重画");
     ok(P("#adr044-theater-status").textContent.indexOf("撤掉了") >= 0, "状态行说撤了");
     await tick(500); click(W, P("#adr044-theater-remove")); await tick(100);
     ok(P("#adr044-theater-status").textContent.indexOf("没有剧场可撤") >= 0, "没有可撤的时候直说");
@@ -234,6 +267,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     en.checked = true; change(W, en); await tick(50);
     e.chat.push({ is_user: true, name: "江", mes: "上车" });
     e.chat.push({ is_user: false, name: "阿尔", mes: "<content>车门一关，他说：「系好。」</content><report>两人上车。</report>" });
+    e.addMes(6); e.addMes(7);
     e.setScript((n, body) => isTheater(body) ? "晚到的一场" : "别的回答");
     let h = e.hangNext();
     e.fire(); await tick(1500);
@@ -241,6 +275,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     e.chat[7].mes = "<content>车门一关，他什么也没说。</content><report>两人上车。</report>";
     h.resolve(); e.unhang(); await tick(300);
     ok(blocks(e.chat[7].mes) === 0 && P("#adr044-theater-status").textContent.indexOf("作废") >= 0, "写的时候这一楼被重 roll / 编辑了：不往新版本上贴旧的一场");
+    ok(e.box(7).querySelectorAll("details").length === 0, "画面上也没贴");
     h = e.hangNext();
     e.fire(); await tick(1500);
     ok(e.calls.length === 6, "新版本自己再演一场，请求挂着");
@@ -276,15 +311,36 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     e.st().lampAutoQuip = true;
     e.chat.push({ is_user: true, name: "江", mes: "去哪" });
     e.chat.push({ is_user: false, name: "阿尔", mes: "<content>「到了再说。」</content><report>到了再说。</report>" });
+    // 这一楼故意不给画面（酒馆版本差异 / 楼不在画面里）：看退路
+    const redrawsBefore = e.redraws().length, emitsBefore = e.emits().filter(x => x === "message_updated").length;
     e.setScript((n, body) => isTheater(body) ? "折叠着的一场" : (body.messages[body.messages.length - 1].content.indexOf("【自动蛐蛐】") >= 0 ? "到了再说，这人把悬念当饭吃。" : "别的回答"));
     const before = e.calls.length;
     e.fire(); await tick(2400);
     const mine = e.calls.slice(before);
     ok(mine.length === 2 && mine.filter(c => isTheater(c.body)).length === 1 && mine.filter(c => c.body.messages[c.body.messages.length - 1].content.indexOf("【自动蛐蛐】") >= 0).length === 1, "一层落地：剧场一次、蛐蛐一次，各发各的", String(mine.length));
     ok(e.chat[9].mes.indexOf('<details class="arrebol-d-theater"><summary>🎭 红霞剧场 · 弹幕吐槽</summary>折叠着的一场</details>') > 0, "默认折叠的那块不带 open");
+    ok(e.redraws().length === redrawsBefore + 1 && e.redraws()[e.redraws().length - 1] === 9, "找不到画好的楼：退到只让酒馆重画这一楼");
+    ok(e.emits().filter(x => x === "message_updated").length === emitsBefore && e.reloads() === 0, "退路上也不广播、不整聊天重载");
+    const keepUpd = e.context.updateMessageBlock; delete e.context.updateMessageBlock;
+    ok(T.show(9, "弹幕吐槽", "x") === "none" && e.reloads() === 0, "连单楼重画都没有的老酒馆：画面不动，数据在楼里，绝不整聊天重载");
+    e.context.updateMessageBlock = keepUpd;
+    e.addMes(9);
+    ok(T.paint(9, "场外嗑瓜子", "大爷：行。", true) === true && e.box(9).querySelector("details") && !e.box(9).querySelector("details").hasAttribute("open"), "有画面时折叠版上屏不带 open");
     ok(e.calls.slice(before).every(c => c.body.messages[0].content.indexOf("折叠着的一场") < 0 && c.body.messages[0].content.indexOf("导演稿后面再来一场") < 0), "蛐蛐读楼时读不到任何一场剧场");
     const pop = d.getElementById("adr044-auto-trigger-popup");
     ok(!!pop && pop.querySelector(".adr044-auto-trigger-popup-text").textContent.indexOf("悬念当饭吃") >= 0, "蛐蛐的小窗照弹");
+
+    section("掌灯页不在眼前时不白算");
+    e.st().lampAutoQuip = false; en.checked = false; change(W, en); await tick(50);
+    ok(P("#adr044-lamp-mat-body").textContent.indexOf("到了再说") >= 0 && T.lampDirty() === false, "停在掌灯页：素材跟到最新一楼");
+    await tick(500); click(W, P("#adr044-tab-emotion")); await tick(100);
+    e.chat.push({ is_user: true, name: "江", mes: "下车" });
+    e.chat.push({ is_user: false, name: "阿尔", mes: "<content>车停在海边，浪声盖过了他的后半句。</content><report>到海边。</report>" });
+    e.addMes(10); e.addMes(11);
+    e.fire(); await tick(1200);
+    ok(T.lampDirty() === true && P("#adr044-lamp-mat-body").textContent.indexOf("浪声") < 0, "切到别的页时来了新楼：不重算素材，只记一笔");
+    await tick(500); click(W, P("#adr044-tab-lamp")); await tick(100);
+    ok(T.lampDirty() === false && P("#adr044-lamp-mat-body").textContent.indexOf("浪声") >= 0, "切回掌灯页补上，素材是最新一楼");
 
     section("收尾");
     ok(e.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "全程没有 console.error", e.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));

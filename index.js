@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.43.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.43.2｜ripple & GPT & Claude
+ * v1.43.2 红霞剧场静默插入：只把那一块 DOM 接到画好的楼尾，不重画整楼、不广播 MESSAGE_UPDATED、绝不整聊天重载；存盘 1.5 秒合并一次；掌灯页不在眼前时不再每楼重算素材（报告 江「别让页面一抖、手机嗷嗷烫」；施工 Claude）
  * v1.43.1 随扩展附带可直接导入酒馆的剥离正则脚本 regex/arrebol-theater-strip.json（提议 江；施工 Claude）
  * v1.43.0 红霞剧场：每层助手正文落地后在楼尾插一场（弹幕 / 场外嗑瓜子 / Q 版四格 / 花絮 / 采访间 / 评论区，主题仓可自写，固定或随机），范围同掌灯；整段包在 details.arrebol-d-theater 里，配剥离正则（提议 江；施工 Claude）
  * v1.42.1 蛐蛐说完状态行收尾「#N 蛐蛐了一句 ✓」，不再停在「她在看…」（截图自查；施工 Claude）
@@ -103,7 +104,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.43.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.43.2";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -7511,7 +7512,21 @@
         } catch (e) {}
     }
 
+    // v1.43.2 每来一楼就把素材重算一遍、写进两套面板，面板关着也照做，是白烧。
+    // 只在掌灯页真在眼前时算：浮窗开着且停在掌灯页，或内嵌抽屉里的掌灯页有版面。不在眼前就记一笔脏，
+    // 切到掌灯页、开浮窗、或在抽屉的掌灯页里点第一下时补上。
+    var adrLampDirty = false;
+    function adrLampInView() {
+        try {
+            if (settings().activeTab !== "lamp") return false;
+            if (adr048IsPopupOpen()) return true;
+            var dr = rootDoc().querySelector("#adr044-page-lamp");
+            return !!(dr && dr.getClientRects && dr.getClientRects().length);
+        } catch (e) { return true; }
+    }
+
     function adrLampRefreshAll() {
+        adrLampDirty = false;
         adrLampRefreshMaterials();
         adrLampRenderThread();
         adrLampRefreshPanelFields();
@@ -7756,6 +7771,12 @@
                 guard(el);
                 el.addEventListener("change", function () { save("lampPreset", String(el.value || "")); saveNow(); });
             });
+            // v1.43.2 抽屉里的掌灯页攒了脏（面板不在眼前时来过新楼）：在页里点第一下时补算
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-page-lamp, #adr048-page-lamp")).forEach(function (pg) {
+                if (pg.__adrLampDirtyBound) return;
+                pg.__adrLampDirtyBound = true;
+                pg.addEventListener("pointerdown", function () { if (adrLampDirty) { try { adrLampRefreshAll(); } catch (eD) {} } }, { passive: true, capture: true });
+            });
             // v1.41.9 「和小红霞聊」抽屉收起再展开，对话框又在最顶上——展开那一刻卷到底
             Array.prototype.slice.call(rootDoc().querySelectorAll('[data-drawer-id="lamp-chat"]')).forEach(function (dr) {
                 if (dr.__adrLampToggleBound) return;
@@ -7888,8 +7909,72 @@
         var base = adrTheaterStrip(m.mes).replace(/\s+$/, "");
         adrDSetMessageText(m, base + adrTheaterBlock(name, text, settings().theaterFold === true));
         adrLampAcknowledgeOwnWrite();
-        adrDNoteRedraw(idx);
         return true;
+    }
+
+    // ---- v1.43.2 静默上屏 ----
+    // 剧场每层都插，不能走导演稿那条"存整份聊天 → 让酒馆把整楼重画 → 广播 MESSAGE_UPDATED"的路：
+    // 整楼重画会让这一楼闪一下，美化正则、变量脚本、前端卡的 iframe 跟着对这一楼重跑一遍，手机上每层多烧一回。
+    // 这里只把剧场那一块的 DOM 接到已经画好的楼尾（或把旧的那块拿掉），楼里原有的节点一个不碰、不广播任何事件。
+    // 酒馆以后自己重画这一楼（翻页、编辑、重载）时，会从 mes 里按它的流程画出同一块。
+    function adrTheaterMesBox(idx) {
+        try { return rootDoc().querySelector('#chat .mes[mesid="' + idx + '"] .mes_text') || null; } catch (e) { return null; }
+    }
+
+    // name 传 null 表示只撤不画。返回 true 表示画面已经对上了
+    function adrTheaterPaint(idx, name, text, folded) {
+        var box = adrTheaterMesBox(idx);
+        if (!box) return false;
+        try {
+            Array.prototype.slice.call(box.querySelectorAll("details.arrebol-d-theater, details.custom-arrebol-d-theater")).forEach(function (old) {
+                if (old.parentNode) old.parentNode.removeChild(old);
+            });
+            if (name == null) return true;
+            var d = box.ownerDocument;
+            var det = d.createElement("details");
+            det.className = "arrebol-d-theater custom-arrebol-d-theater";   // 酒馆重画后类名带 custom- 前缀，两个都挂上，样式一致
+            if (!folded) det.setAttribute("open", "");
+            var sum = d.createElement("summary");
+            sum.textContent = "🎭 红霞剧场 · " + name;
+            det.appendChild(sum);
+            String(text || "").split("\n").forEach(function (line, i) {
+                if (i) det.appendChild(d.createElement("br"));
+                det.appendChild(d.createTextNode(line));
+            });
+            box.appendChild(det);
+            return true;
+        } catch (e) { return false; }
+    }
+
+    // 找不到画好的楼（酒馆版本差异 / 这楼不在画面里）：退到只让酒馆重画这一楼，仍然不广播；再不行就不动画面——
+    // 数据已经在楼里，下次酒馆自己重画时出现。绝不整聊天重载。
+    function adrTheaterShow(idx, name, text) {
+        if (adrTheaterPaint(idx, name, text, settings().theaterFold === true)) return "silent";
+        try {
+            var c = ctx();
+            if (c && c.chat && c.chat[idx] && typeof c.updateMessageBlock === "function") { c.updateMessageBlock(idx, c.chat[idx]); return "block"; }
+        } catch (e) {}
+        return "none";
+    }
+
+    // 存盘合并：插一场、撤一场、连着点几下，1.5 秒内只存一次整份聊天。到点时如果下一楼正在出字就再等一轮——
+    // 这一笔已经在内存里，酒馆写完那一楼自己存的那次也会带上它；最多等四十轮，不死等。
+    var ADR_THEATER_SAVE_DELAY_MS = 1500;
+    var adrTheaterSaveTimer = null;
+    function adrTheaterSaveSoon(tries) {
+        if (adrTheaterSaveTimer) clearTimeout(adrTheaterSaveTimer);
+        adrTheaterSaveTimer = setTimeout(function () {
+            adrTheaterSaveTimer = null;
+            try {
+                if (adrDGenerationLooksLive() && (Number(tries) || 0) < 40) { adrTheaterSaveSoon((Number(tries) || 0) + 1); return; }
+                var c = ctx();
+                if (!c || typeof c.saveChat !== "function") return;
+                var ret = c.saveChat();
+                if (ret && typeof ret.then === "function") {
+                    ret.then(null, function (e) { adrTheaterStatus("剧场已在楼里，但聊天保存没确认：" + (e && e.message ? e.message : String(e)), "#d4726a"); });
+                }
+            } catch (e) {}
+        }, ADR_THEATER_SAVE_DELAY_MS);
     }
 
     function adrTheaterEnabled() {
@@ -7951,9 +8036,9 @@
             if (!chat2[idx] || adrLampFloorSig(chat2, idx) !== sig) { adrTheaterStatus("#" + idx + " 在写的时候变了（重 roll / 编辑 / 删楼），这一场作废", "#d6b177"); return false; }
             if (!adrTheaterWrite(idx, theme.name, text)) throw new Error("没写进楼里");
             adrTheaterState.lastName = theme.name;
-            adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾，等酒馆存盘…", "#8ed99d");
-            try { await adrDSaveThenRedrawAfterInject(); adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾 ✓", "#8ed99d"); }
-            catch (eSave) { adrTheaterStatus("#" + idx + " 楼里已插，但聊天保存没确认：" + (eSave && eSave.message ? eSave.message : String(eSave)), "#d4726a"); }
+            var how = adrTheaterShow(idx, theme.name, text);   // v1.43.2 静默上屏：不重画整楼、不广播
+            adrTheaterSaveSoon();
+            adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾 ✓" + (how === "none" ? "（这楼不在画面里，下次重画时出现）" : ""), "#8ed99d");
             try { console.log("[Arrebol D] theater #" + idx + " 「" + theme.name + "」 (" + (reason || "") + ")"); } catch (eL) {}
             return true;
         } catch (e) {
@@ -7972,10 +8057,9 @@
             if (adrDGenerationLooksLive()) { adrTheaterStatus("这一楼还在生成，等写完再撤", "#d6b177"); return false; }
             adrDSetMessageText(chat[idx], adrTheaterStrip(chat[idx].mes).replace(/\s+$/, ""));
             adrLampAcknowledgeOwnWrite();
-            adrDNoteRedraw(idx);
-            adrTheaterStatus("#" + idx + " 的剧场撤掉了，等酒馆存盘…", "#8ed99d");
-            adrDSaveThenRedrawAfterInject().then(function () { adrTheaterStatus("#" + idx + " 的剧场撤掉了 ✓", "#8ed99d"); })
-                .catch(function (e) { adrTheaterStatus("已撤，但聊天保存没确认：" + (e && e.message ? e.message : String(e)), "#d4726a"); });
+            adrTheaterShow(idx, null, "");
+            adrTheaterSaveSoon();
+            adrTheaterStatus("#" + idx + " 的剧场撤掉了 ✓", "#8ed99d");
             return true;
         } catch (e) { return false; }
     }
@@ -8150,7 +8234,8 @@
         rootWin().__adrTheaterTest = {
             now: adrTheaterNow, onMessage: adrTheaterOnMessage, block: adrTheaterBlock, strip: adrTheaterStrip, has: adrTheaterHas, clean: adrTheaterClean,
             pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, preset: ADR_THEATER_PRESET,
-            regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite
+            regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite,
+            paint: adrTheaterPaint, show: adrTheaterShow, saveSoon: adrTheaterSaveSoon, lampDirty: function () { return adrLampDirty; }
         };
     } catch (eTheaterHook) {}
     // ================= 红霞剧场 模块结束 =================
@@ -10146,7 +10231,8 @@
 
             adr048BindPopupPanel();
             bindDirect();
-            try { adrLampRefreshAll(); } catch (eLampOpen) {}   // v1.39.0 浮窗每次重建，掌灯页的素材与对话从状态里画回来
+            // v1.39.0 浮窗每次重建，掌灯页的素材与对话从状态里画回来；v1.43.2 只在停在掌灯页时算，别的页开窗不白算
+            try { if (settings().activeTab === "lamp") adrLampRefreshAll(); else adrLampDirty = true; } catch (eLampOpen) {}
         } catch (e) {
             console.error("[ADR0483] create popup panel failed", e);
         }
@@ -11763,7 +11849,8 @@
                 // v1.39.0 掌灯页：新楼落地后素材要跟上（最新一楼变了）。
                 if (types.MESSAGE_RECEIVED) {
                     es.on(types.MESSAGE_RECEIVED, function () {
-                        setTimeout(function () { try { adrLampRefreshAll(); } catch (eLampMr) {} }, 700);
+                        // v1.43.2 掌灯页不在眼前就不重算素材（全量角色卡 / 世界书 + 逐楼摘要），记一笔，等它露面再算
+                        setTimeout(function () { try { if (adrLampInView()) adrLampRefreshAll(); else adrLampDirty = true; } catch (eLampMr) {} }, 700);
                         try { adrLampAutoQuipOnMessage(); } catch (eLampQuip) {}   // v1.41.0 自动蛐蛐（开关默认关）
                         try { adrTheaterOnMessage(); } catch (eTheater) {}          // v1.43.0 红霞剧场（开关默认关）
                     });
