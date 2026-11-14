@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.45.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.45.1｜ripple & GPT & Claude
+ * v1.45.1 剧场开演时浮标也亮灯：同一圈呼吸，小灯是霞粉色；灯按导演 / 剧场分别记账，谁跑完都不熄对方的（提议 江；施工 Claude）
  * v1.45.0 红霞剧场搬到自己的一页（第五个页签「剧场」），自己的 API 位「剧场位」：默认跟掌灯聊天位，也能借别人的或自己填，温度单独调（提议 江；施工 Claude）
  * v1.44.0 导演稿也静默上屏（只把稿接到楼尾，不重画整楼、不广播；认不出旧稿或老酒馆才走老路）；红霞剧场主题包导入 / 导出 / 清空 / 补回出厂；剧场支持 HTML / CSS 排版，上屏走酒馆自己的格式化与消毒（提议 江；施工 Claude）
  * v1.43.2 红霞剧场静默插入：只把那一块 DOM 接到画好的楼尾，不重画整楼、不广播 MESSAGE_UPDATED、绝不整聊天重载；存盘 1.5 秒合并一次；掌灯页不在眼前时不再每楼重算素材（报告 江「别让页面一抖、手机嗷嗷烫」；施工 Claude）
@@ -106,7 +107,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.45.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.45.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -1366,17 +1367,31 @@
     }
 
     /* v1.15.1 分析忙碌脉冲：导演分析进行中给胶囊浮标点灯（挂类，样式在 style.css） */
-    function adr048SetFabBusy(on) {
+    // v1.45.1：灯按"谁在跑"分别记账。以前只有导演会点灯，一个布尔够用；现在剧场开演也点，
+    // 两边可能同时在跑——导演跑完不能把剧场的灯顺手熄了，反过来也一样。任何一家在跑灯就亮；
+    // 只有剧场在跑时多挂一个 adr048-staging，小灯换成霞粉，一眼看出是剧场不是导演。
+    var adr048FabBusy = { director: false, theater: false };
+
+    function adr048ApplyFabBusy() {
         try {
+            var any = adr048FabBusy.director || adr048FabBusy.theater;
+            var stageOnly = adr048FabBusy.theater && !adr048FabBusy.director;
             var els = rootDoc().querySelectorAll("#adr048-fab");
             for (var i = 0; i < els.length; i++) {
                 try {
-                    if (on) els[i].classList.add("adr048-analyzing");
-                    else els[i].classList.remove("adr048-analyzing");
+                    els[i].classList.toggle("adr048-analyzing", !!any);
+                    els[i].classList.toggle("adr048-staging", !!stageOnly);
                 } catch (e) {}
             }
         } catch (e) {}
     }
+
+    function adr048SetFabBusy(on, source) {
+        adr048FabBusy[source === "theater" ? "theater" : "director"] = !!on;
+        adr048ApplyFabBusy();
+    }
+
+    try { rootWin().__adr048FabBusyTest = { set: adr048SetFabBusy, state: adr048FabBusy, apply: adr048ApplyFabBusy }; } catch (eFabBusyHook) {}
 
     // v1.27.0：导演请求改流式接收（提议：江；施工：波哥）。
     // 非流式时，会思考的模型要把整段思考跑完才回第一个字节——中转站／网关的空闲超时（常见 60–100 秒）
@@ -8190,6 +8205,7 @@
             var mat = adrLampMaterialsAt(idx);
             if (!mat.body) { if (force) adrTheaterStatus("#" + idx + " 没有正文可演", "#d4726a"); return false; }
             adrTheaterStatus("🎬 #" + idx + " 开演「" + theme.name + "」…", "#8ed99d");
+            adr048SetFabBusy(true, "theater");   // v1.45.1 开演：浮标亮一盏霞粉小灯
             var allowRich = adrTheaterRichAllowed();
             var messages = [
                 { role: "system", content: adrTheaterPresetText() + "\n\n" + adrLampMaterialsText(mat) },
@@ -8222,6 +8238,7 @@
             return false;
         } finally {
             adrTheaterState.busy = false;
+            adr048SetFabBusy(false, "theater");   // 演完、作废、失败都熄灯
         }
     }
 
@@ -11051,6 +11068,8 @@
             btn.setAttribute("data-arb-motion", settings().fabMotion === false ? "off" : "on");
             var theme = adr048FabTheme();
             if (btn.getAttribute("data-arb-theme") !== theme) btn.setAttribute("data-arb-theme", theme);
+            // v1.45.1 换配色、开关动效时把灯的状态补一遍。放在最后且自带保险：补灯出什么岔子都不许挡住上面的换色。
+            try { if (typeof adr048ApplyFabBusy === "function") adr048ApplyFabBusy(); } catch (eBusy) {}
         } catch (e) {}
     }
 

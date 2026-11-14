@@ -7610,3 +7610,17 @@ html #adr044-drawer#adr044-drawer .adr044-box .adr-top-tabs.adr-top-tabs.adr-top
     overflow: hidden !important;
     text-overflow: clip !important;
 }
+
+/* v1.45.1 剧场开演时浮标也亮灯：还是那一圈呼吸，小灯换成霞粉，和导演的雾紫区分开。
+   只有剧场在跑时才挂 adr048-staging；导演也在跑就按导演的颜色亮。动效开关关着时不呼吸，只留一粒静态小灯。 */
+#adr048-fab:not([data-arb-motion="off"]).adr048-analyzing.adr048-staging {
+    animation-name: adr048-cap-pulse-stage !important;
+}
+@keyframes adr048-cap-pulse-stage {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(246, 169, 194, .68); }
+    50%      { box-shadow: 0 0 0 9px rgba(246, 169, 194, 0); }
+}
+#adr048-fab.adr048-analyzing.adr048-staging::after {
+    background: #f6a9c2 !important;
+    box-shadow: 0 0 6px rgba(246, 169, 194, .95) !important;
+}
