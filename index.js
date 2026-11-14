@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.41.4｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.41.5｜ripple & GPT & Claude
+ * v1.41.5 掌灯页开窗 / 切页一律落到对话区，不再依赖记忆：对话区顶上留 56px，聊天块装不下就让输入框和发送露在底边；分五拍落稳，用户一碰就收手（报告 江「还是不能自动回底」；施工 Claude）
  * v1.41.4 浮窗记位漏洞：关窗前一瞬的 scroll 事件经节流落到关窗之后，把记好的位置抹成 0，再开回顶；窗关着不记，开窗 420ms 后发现被拨回 0 再对一次（报告 江；施工 Claude）
  * v1.41.3 蛐蛐小窗不自动关：看完点「朕已阅」；没看的排队一条条看，导演提示插队关掉后摆回来（提议 江；施工 Claude）
  * v1.41.2 浮窗记位：关了再开、切页再切回来，落回上次停的地方（按锚点记，不怕上面长了短了）；掌灯页没记忆时直接落到对话区（报告 江「每次回到蛐蛐页面都在最顶上」；施工 Claude）
@@ -7912,11 +7913,7 @@
             Array.prototype.slice.call(d.querySelectorAll(".adr-top-pane")).forEach(function (el) {
                 el.hidden = el.getAttribute("data-director") !== type;
             });
-            if (changed) {
-                var body = d.querySelector("#adr048-popup-body");
-                // v1.41.2：切回来的页落回上次停的地方；掌灯页没记忆就落到对话区；其余照旧回顶
-                if (body && !adr048RestoreScroll()) body.scrollTop = 0;
-            }
+            var bodyForScroll = changed ? d.querySelector("#adr048-popup-body") : null;
 
             // 抽屉与浮窗会同时存在，且内部 id 重复。
             // 所以这里必须同步所有同名节点，不能只 q("#id")。
@@ -7959,6 +7956,14 @@
             adrDRefreshAllFieldsFromSettings();
             adrDRestorePanelRuntimeState();
             if (type === "lamp") { try { adrLampRefreshAll(); } catch (eLampTab) {} }   // v1.39.0 切到掌灯页时重读素材与对话
+            // v1.41.2 / v1.41.5：换了页才动滚动，且要等页面显示出来、对话区量得到位置之后——掌灯页落到对话区，其余页有记忆按记忆落、没记忆回顶。
+            // 点页签那一下不算"用户划过"，先把标记清掉再落。
+            if (bodyForScroll) {
+                try {
+                    bodyForScroll.__adr048Touched = false;
+                    if (!adr048RestoreScroll()) bodyForScroll.scrollTop = 0;
+                } catch (eScroll) {}
+            }
         } catch (e) {
             console.warn("[Arrebol D] switchTab failed", e);
         }
@@ -9783,15 +9788,7 @@
             try {
                 if (body) {
                     adr048InstallScrollMemo(body);
-                    if (!adr048RestoreScroll()) body.scrollTop = 0;
-                    setTimeout(function () { try { adr048RestoreScroll(); } catch (eR2) {} }, 160);
-                    // v1.41.4：有的浏览器在窗刚显示那一拍会把 scrollTop 拨回 0；420ms 后若发现被拨回了再对一次，用户已经自己划开就不动
-                    setTimeout(function () {
-                        try {
-                            var want = Number(body.__adr048ScrollWant) || 0;
-                            if (want > 0 && body.scrollTop === 0) adr048RestoreScroll();
-                        } catch (eR3) {}
-                    }, 420);
+                    if (!adr048RestoreScroll()) body.scrollTop = 0;   // v1.41.5 落位分几拍自己对稳（adr048SettleScroll）
                 }
             } catch (e1) {}
         } catch (e) {
@@ -9842,27 +9839,67 @@
         } catch (e) {}
     }
 
-    // 有记忆按记忆落；没记忆的掌灯页直接落到对话区（它在下半截，第一次打开也不该从素材头上开始划）
+    // v1.41.5 掌灯页的"底"：对话区顶上留 56px；聊天块（对话区 + 输入框 + 发送）一屏装不下时改成让输入框和发送露在底边，
+    // 对话区顶被裁掉没关系，它自己卷到最新一句。开窗、切页一律落这里，不看记忆——记忆那套在手机上关窗一瞬的 scroll 事件、
+    // 布局晚到、二次重建面板等情况下都可能被抹掉，用户要的只是"回到能聊的地方"，那就每次都稳稳落到能聊的地方。
+    function adr048LampChatTarget(body) {
+        var th = body.querySelector("#adr044-lamp-thread");
+        if (!th || !th.getClientRects().length) return null;
+        var top = adr048TopWithin(body, th) - 56;
+        var send = body.querySelector(".adr-lamp-send-row") || body.querySelector("#adr044-lamp-input");
+        if (send && send.getClientRects().length) {
+            var sendBottom = adr048TopWithin(body, send) + send.getBoundingClientRect().height + 10;
+            var byBottom = sendBottom - body.clientHeight;
+            if (byBottom > top) top = byBottom;
+        }
+        return Math.max(0, Math.round(top));
+    }
+
+    // 落位要"落稳"：手机上窗刚显示那几拍布局还没定、scrollTop 会被拨回 0，所以分几拍反复对，直到位置对上；
+    // 用户一碰（触摸 / 滚轮）就收手，不跟人抢。
+    function adr048SettleScroll(body, computeWant, tries) {
+        var delays = [0, 120, 300, 600, 1000];
+        function pass(i) {
+            try {
+                if (!body || !body.isConnected || body.__adr048Touched) return;
+                var want = computeWant();
+                if (want == null) return;
+                body.__adr048ScrollWant = want;
+                if (Math.abs(body.scrollTop - want) > 4) {
+                    body.scrollTop = want;
+                    // 还是没动（个别 WebKit 在刚显示那一拍不吃 scrollTop）：用 scrollIntoView 把锚点顶上来再微调
+                    if (Math.abs(body.scrollTop - want) > 4 && want > 0) {
+                        var th = body.querySelector("#adr044-lamp-thread");
+                        if (th && typeof th.scrollIntoView === "function") { try { th.scrollIntoView({ block: "start" }); } catch (eSv) {} }
+                        body.scrollTop = want;
+                    }
+                }
+            } catch (e) {}
+            if (i + 1 < delays.length) setTimeout(function () { pass(i + 1); }, delays[i + 1] - delays[i]);
+        }
+        pass(0);
+    }
+
+    // 掌灯页：永远落到对话区（见上）。其余页：有记忆按记忆落，没记忆回顶。
     function adr048RestoreScroll() {
         try {
             var body = rootDoc().querySelector("#adr048-popup-body");
             if (!body) return false;
             var tab = settings().activeTab || "emotion";
+            if (tab === "lamp") {
+                if (adr048LampChatTarget(body) == null) return false;
+                adr048SettleScroll(body, function () { return adr048LampChatTarget(body); });
+                return true;
+            }
             var m = adr048ScrollMemo[tab];
-            var target = null;
-            if (m) {
+            if (!m) return false;
+            var computeWant = function () {
                 var el = null;
                 if (m.anchor) { try { el = body.querySelector(m.anchor); } catch (eQ) { el = null; } }
-                if (el && el.getClientRects().length) target = adr048TopWithin(body, el) + m.delta;
-                else target = m.top;
-            } else if (tab === "lamp") {
-                var th = body.querySelector("#adr044-lamp-thread");
-                if (th && th.getClientRects().length) target = adr048TopWithin(body, th) - 56;
-            }
-            if (target == null) return false;
-            var want = Math.max(0, Math.round(target));
-            body.scrollTop = want;
-            body.__adr048ScrollWant = want;
+                var target = (el && el.getClientRects().length) ? adr048TopWithin(body, el) + m.delta : m.top;
+                return Math.max(0, Math.round(target));
+            };
+            adr048SettleScroll(body, computeWant);
             return true;
         } catch (e) { return false; }
     }
@@ -9871,6 +9908,10 @@
         try {
             if (!body || body.__adr048ScrollMemo) return;
             body.__adr048ScrollMemo = true;
+            // v1.41.5 用户一划（触摸拖动 / 滚轮）就标记，落位的后几拍就不再抢；点按钮不算划
+            ["touchmove", "wheel"].forEach(function (evt) {
+                body.addEventListener(evt, function () { body.__adr048Touched = true; }, { passive: true });
+            });
             var timer = null;
             body.addEventListener("scroll", function () {
                 if (timer) return;
