@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.41.6｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.41.7｜ripple & GPT & Claude
+ * v1.41.7 掌灯手动回顶 / 回底键：顶上那行旁边「⤓ 回底」、聊天区底下「⤒ 回顶」，不靠自动落位，浮窗与内嵌抽屉都有（提议 江；施工 Claude）
  * v1.41.6 掌灯落位诊断版：落位改以 scrollIntoView 为主、scrollTop 微调，九拍对到 2.5 秒，落位窗口内被拨回 0 当场设回；每一拍的想/得/容器高写在掌灯顶上那行 8 秒；台头显示版本号；滚动容器落位期间强制 scroll-behavior: auto（报告 江「依旧在最顶上」；施工 Claude）
  * v1.41.5 掌灯页开窗 / 切页一律落到对话区，不再依赖记忆：对话区顶上留 56px，聊天块装不下就让输入框和发送露在底边；分五拍落稳，用户一碰就收手（报告 江「还是不能自动回底」；施工 Claude）
  * v1.41.4 浮窗记位漏洞：关窗前一瞬的 scroll 事件经节流落到关窗之后，把记好的位置抹成 0，再开回顶；窗关着不记，开窗 420ms 后发现被拨回 0 再对一次（报告 江；施工 Claude）
@@ -7547,6 +7548,7 @@
             + '<label class="' + checkClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><input type="checkbox" id="adr044-lamp-reset-after-apply"' + (st.lampResetAfterApply !== false ? " checked" : "") + '> 替换后自动清空本轮对话（这一楼改完了，下一次从头说）</label>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-lamp-auto-quip"' + (st.lampAutoQuip === true ? " checked" : "") + '> 🍉 新楼落地自动蛐蛐一句，弹个小窗（走聊天位 API，每楼一次，花钱；写进蛐蛐记录，你能接着回）</label>'
             + '<div class="adr044-template-status" id="adr044-lamp-chat-status">聊到你觉得可以了，点「改好给我」：执笔位读完整段讨论重写这一楼，先预览再替换。</div>'
+            + '<div class="adr-lamp-jumprow"><button type="button" id="adr044-lamp-jump-top" class="adr-lamp-jump" title="回到页顶">⤒ 回顶</button></div>'
             + '<div id="adr044-lamp-draft-wrap" class="adr-lamp-hide">'
             + '<label>📝 改稿 · 正文（能改两笔再替换）</label>'
             + '<textarea id="adr044-lamp-draft" rows="10"></textarea>'
@@ -7597,6 +7599,32 @@
             + '</div>';
     }
 
+    // v1.41.7 手动回顶 / 回底：用户自己点的，不走自动落位那套——浮窗滚 body，内嵌抽屉滚页面
+    function adrLampJump(where) {
+        try {
+            var d = rootDoc();
+            var body = d.querySelector("#adr048-popup-body");
+            var inPopup = !!(body && adr048IsPopupOpen());
+            if (where === "top") {
+                if (inPopup) { body.__adr048Touched = true; body.scrollTop = 0; try { body.scrollTo({ top: 0 }); } catch (eT) {} }
+                else { var dr = d.querySelector("#adr044-drawer"); if (dr && typeof dr.scrollIntoView === "function") dr.scrollIntoView({ block: "start" }); }
+                return true;
+            }
+            var scope = inPopup ? body : d.querySelector("#adr044-drawer");
+            if (!scope) return false;
+            var send = scope.querySelector(".adr-lamp-send-row") || scope.querySelector("#adr044-lamp-input") || scope.querySelector("#adr044-lamp-thread");
+            if (!send) return false;
+            if (inPopup) {
+                body.__adr048Touched = true;   // 自动落位的后几拍别再插手
+                var want = adr048LampChatTarget(body);
+                if (want != null) body.scrollTop = want;
+            }
+            try { send.scrollIntoView({ block: "end" }); } catch (eS) { try { send.scrollIntoView(false); } catch (eS2) {} }
+            if (inPopup) { var want2 = adr048LampChatTarget(body); if (want2 != null && Math.abs(body.scrollTop - want2) > 4) body.scrollTop = want2; }
+            return true;
+        } catch (e) { return false; }
+    }
+
     // ---- 绑定 ----
     function adrLampHandleButtonId(id, btn) {
         if (id === "adr044-tab-lamp") { switchTab("lamp"); return true; }
@@ -7615,6 +7643,8 @@
         if (id === "adr044-lamp-preset-reset") { adrCdSetValueSafe("adr044-lamp-preset", ""); save("lampPreset", ""); saveNow(); adrLampStatus("已恢复出厂人设 ✓", "#8ed99d"); return true; }
         if (id === "adr044-lamp-gossip-preset-reset") { adrCdSetValueSafe("adr044-lamp-gossip-preset", ""); save("lampGossipPreset", ""); saveNow(); adrLampStatus("蛐蛐人设已恢复出厂 ✓", "#8ed99d"); return true; }
         if (id === "adr044-lamp-quip-ack") { return adrLampQuipAck(); }
+        if (id === "adr044-lamp-jump-bottom") { adrLampJump("bottom"); return true; }
+        if (id === "adr044-lamp-jump-top") { adrLampJump("top"); return true; }
         if (id === "adr044-lamp-mode-edit") { adrLampSetMode("edit"); return true; }
         if (id === "adr044-lamp-mode-gossip") { adrLampSetMode("gossip"); return true; }
         return false;
@@ -7792,7 +7822,8 @@
             if (type === 'lamp') {
                 // v1.39.0 掌灯不是导演：没有计数、没有基准线，顶上只有一行"对着哪一楼、聊了几句"。
                 html += '<div class="adr-top-pane" data-director="lamp"' + (active === type ? '' : ' hidden') + '>'
-                    + '<div class="adr-lamp-topline" id="adr044-lamp-topline">🏮 掌灯</div></div>';
+                    + '<div class="adr-lamp-toprow"><div class="adr-lamp-topline" id="adr044-lamp-topline">🏮 掌灯</div>'
+                    + '<button type="button" id="adr044-lamp-jump-bottom" class="adr-lamp-jump" title="跳到对话区">⤓ 回底</button></div></div>';   // v1.41.7 手动回底，不靠自动落位
                 return;
             }
             html += '<div class="adr-top-pane" data-director="' + type + '"' + (active === type ? '' : ' hidden') + '>'
@@ -9203,7 +9234,7 @@
         // v1.39.0 掌灯页按钮：直接绑定 + 兜底表双注册（同抽卡）。
         ["adr044-tab-lamp", "adr044-lamp-send", "adr044-lamp-stop", "adr044-lamp-rewrite", "adr044-lamp-clear", "adr044-lamp-apply", "adr044-lamp-draft-discard",
          "adr044-lamp-refresh", "adr044-lamp-floor-latest", "adr044-lamp-load-models", "adr044-pen-load-models", "adr044-lamp-test", "adr044-pen-test", "adr044-lamp-preset-reset",
-         "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip"].forEach(function (lid) {
+         "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip", "adr044-lamp-jump-bottom", "adr044-lamp-jump-top"].forEach(function (lid) {
             ids[lid] = function () { adrLampHandleButtonId(lid, qForm(lid)); };
         });
         ids["adr044-api-profile-save-cd"] = function () { adrDSaveCurrentApiProfile("cd"); };

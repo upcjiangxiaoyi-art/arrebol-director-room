@@ -7557,3 +7557,20 @@ html #adr044-drawer#adr044-drawer #adr044-lamp-send#adr044-lamp-send {
     box-shadow: none !important;
 }
 #adr044-auto-trigger-popup .adr044-lamp-quip-ack:active { transform: scale(.98) !important; }
+
+/* v1.41.7 掌灯手动回顶 / 回底 */
+.adr-lamp-toprow { display: flex; gap: 6px; align-items: stretch; }
+.adr-lamp-toprow > .adr-lamp-topline { flex: 1 1 auto; min-width: 0; }
+.adr-lamp-jumprow { display: flex; justify-content: flex-end; margin: 4px 0 0; }
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-lamp-jump.adr-lamp-jump.adr-lamp-jump,
+html #adr044-drawer#adr044-drawer .adr-lamp-jump.adr-lamp-jump.adr-lamp-jump {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    margin: 6px 0 !important;
+    min-height: 34px !important;
+    padding: 0 12px !important;
+    border-radius: 999px !important;
+    white-space: nowrap !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+}

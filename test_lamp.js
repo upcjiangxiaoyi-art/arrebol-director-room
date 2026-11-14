@@ -148,6 +148,11 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     const sendBtn = d.querySelector("#adr048-popup-body #adr044-lamp-send");
     ok(sendBtn.parentNode.children.length === 1 && sendBtn.parentNode.classList.contains("adr-lamp-send-row"), "发送独占一行（v1.41.1）");
     ok(d.querySelector("#adr048-popup-body #adr044-lamp-stop").parentNode === d.querySelector("#adr048-popup-body #adr044-lamp-clear").parentNode, "打断与清空同一行");
+    ok(!!d.querySelector("#adr048-popup-body #adr044-lamp-jump-bottom") && !!d.querySelector("#adr048-popup-body #adr044-lamp-jump-top"), "浮窗有「回底」「回顶」两枚键（v1.41.7）");
+    ok(!!d.querySelector("#adr044-drawer #adr044-lamp-jump-bottom") && !!d.querySelector("#adr044-drawer #adr044-lamp-jump-top"), "抽屉也有");
+    await tick(500); click(W, d.querySelector("#adr048-popup-body #adr044-lamp-jump-bottom")); await tick(500); click(W, d.querySelector("#adr048-popup-body #adr044-lamp-jump-top")); await tick(50);
+    ok(e.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "点回底、回顶不报错");
+    ok(d.querySelector("#adr048-popup-body #adr044-lamp-jump-bottom").closest(".adr-top-pane") && d.querySelector("#adr048-popup-body #adr044-lamp-jump-bottom").closest(".adr-top-pane").getAttribute("data-director") === "lamp", "回底键在掌灯的顶部工作台里");
     const inp = d.querySelector("#adr048-popup-body #adr044-lamp-input");
     inp.value = "她答应得太快了吧，这不像她";
     e.setScript(() => "快是快，但你看她前一楼就已经在等这封信了——快的是动作，不是决定。");
