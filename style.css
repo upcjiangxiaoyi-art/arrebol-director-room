@@ -7593,3 +7593,7 @@ html #adr044-drawer#adr044-drawer .adr-lamp-jump.adr-lamp-jump.adr-lamp-jump {
 }
 .mes_text details.arrebol-d-theater:not([open]) > summary,
 .mes_text details.custom-arrebol-d-theater:not([open]) > summary { margin-bottom: 0; }
+
+/* v1.44.0 剧场里的 HTML 排版别撑破楼：内容不超出容器，图片与表格跟着缩 */
+.mes_text details.arrebol-d-theater, .mes_text details.custom-arrebol-d-theater { max-width: 100%; overflow-x: auto; }
+.mes_text details.arrebol-d-theater img, .mes_text details.custom-arrebol-d-theater img { max-width: 100%; height: auto; }

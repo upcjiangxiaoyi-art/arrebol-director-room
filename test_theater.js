@@ -149,12 +149,12 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     const m5 = e.chat[5];
     ok(m5.mes.indexOf(before5) === 0, "楼里原来的东西（状态栏、正文、摘要）一个字没动");
     const tailBlock = m5.mes.slice(before5.length);
-    ok(tailBlock === '\n\n<details class="arrebol-d-theater" open><summary>🎭 红霞剧场 · 弹幕吐槽</summary>前排围观<br>哈哈哈哈 &lt;b&gt;她答应得也太快了&lt;/b&gt;<br><br>高能预警：信 &amp; 人一起到</details>',
-        "楼尾插了一整块：围栏和它自己加的标题去掉、尖括号转义、换行成 <br>、空行最多一个、整块一行", JSON.stringify(tailBlock));
+    ok(tailBlock === '\n\n<details class="arrebol-d-theater" open><summary>🎭 红霞剧场 · 弹幕吐槽</summary>前排围观<br>哈哈哈哈 <b>她答应得也太快了</b><br><br>高能预警：信 & 人一起到</details>',
+        "楼尾插了一整块：围栏和它自己加的标题去掉、行内标签留着（默认允许排版）、换行成 <br>、空行最多一个、整块一行", JSON.stringify(tailBlock));
     ok(m5.swipes[m5.swipe_id] === m5.mes, "当前 swipe 同写，翻页不丢");
     const det5 = e.box(5).querySelector("details.arrebol-d-theater");
     ok(!!det5 && det5.hasAttribute("open") && det5.classList.contains("custom-arrebol-d-theater") && det5.querySelector("summary").textContent === "🎭 红霞剧场 · 弹幕吐槽", "画面上：楼尾多了那一块，两个类名都挂着、摊开、标题对（v1.43.2 静默上屏）");
-    ok(det5.querySelectorAll("br").length === 3 && det5.textContent.indexOf("哈哈哈哈 <b>她答应得也太快了</b>") > 0 && !det5.querySelector("b"), "正文按文本节点上屏：换行是 br，模型夹带的标签不会变成真标签");
+    ok(det5.querySelectorAll("br").length === 3 && det5.textContent.indexOf("哈哈哈哈 她答应得也太快了") > 0 && !det5.querySelector("b"), "老酒馆且拿不到消毒器：只按文本节点上屏，换行是 br，标签一个不放进画面");
     ok(e.box(5).firstElementChild === p5 && p5.textContent === "画好的第 5 楼" && e.box(5).lastElementChild === det5, "楼里原来画好的节点原封不动，新的一块接在最后（没有整楼重画）");
     ok(e.redraws().length === 0 && e.emits().indexOf("message_updated") < 0 && e.reloads() === 0, "没让酒馆重画这一楼、没广播 MESSAGE_UPDATED、没整聊天重载", JSON.stringify([e.redraws(), e.emits(), e.reloads()]));
     ok(e.saves() === 0, "不抢着存盘");
@@ -296,6 +296,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     const inj = P("#adr044-plot-inject");
     await tick(500); click(W, inj); await tick(500); click(W, inj); await tick(1600);
     ok(e.chat[7].mes.indexOf("arrebol_d_visible:plot###") > 0 && e.chat[7].mes.indexOf("让老周把口信送到") > 0, "导演稿挂进同一楼");
+    ok(e.redraws().indexOf(7) >= 0 && e.emits().indexOf("message_updated") >= 0 && e.reloads() === 0, "老酒馆（没有格式化接口）：导演稿照旧让酒馆重画这一楼并广播一声");
     ok(blocks(e.chat[7].mes) === 1 && e.chat[7].mes.indexOf("和导演稿做邻居") > 0, "导演稿挂上之后剧场还在");
     e.setScript((n, body) => isTheater(body) ? "导演稿后面再来一场" : "别的回答");
     // 导演稿刚写进这一楼，楼的字数变了：「楼还在出字」的证据要安静 4 秒才算落定，剧场会等它
@@ -330,6 +331,112 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     const pop = d.getElementById("adr044-auto-trigger-popup");
     ok(!!pop && pop.querySelector(".adr044-auto-trigger-popup-text").textContent.indexOf("悬念当饭吃") >= 0, "蛐蛐的小窗照弹");
 
+    section("HTML / CSS 排版（v1.44.0）");
+    fold.checked = false; change(W, fold); await tick(50);
+    const richBox = P("#adr044-theater-rich");
+    ok(!!richBox && richBox.checked && e.st().theaterRich !== false, "「允许 HTML / CSS 排版」默认勾着");
+    ok(T.presetText().indexOf("只有本场主题明确要求用 HTML / CSS 排版时才输出 HTML") > 0 && T.presetText().indexOf("不要 script") > 0 && T.presetText().indexOf("不要 <details>") > 0, "允许时规矩第六条：主题点名才给 HTML，并写明不许的东西");
+    const dirty = '```html\n<style>\n.hx-d { color: red; }\n</style>\n<div class="hx-d" onclick="alert(1)">\n  <span style="color:#f66">前排</span>\n  <details><summary>点开</summary>里面</details>\n  <a href="javascript:alert(2)">链</a>\n  <script>alert(3)</script>\n  <iframe src="x"></iframe>\n</div>\n```';
+    const tidy = T.clean(dirty, true);
+    ok(tidy.rich === true && tidy.text.indexOf("\n") < 0, "认出是 HTML；有块级结构的整段压成一行（酒馆的 markdown 遇空行会把 HTML 拆散）");
+    ok(tidy.text.indexOf("<script") < 0 && tidy.text.indexOf("alert(3)") < 0 && tidy.text.indexOf("<iframe") < 0 && tidy.text.indexOf("onclick") < 0 && tidy.text.indexOf("javascript:") < 0, "script / iframe / 事件属性 / javascript: 链接当场去掉");
+    ok(tidy.text.indexOf("<details") < 0 && tidy.text.indexOf("</details>") < 0 && tidy.text.indexOf("<summary") < 0 && tidy.text.indexOf("<div><div>点开</div>里面</div>") > 0, "里面不许再套折叠块（剥离正则认第一个 </details>），换成 div");
+    ok(tidy.text.indexOf("<style> .hx-d { color: red; } </style>") === 0 && tidy.text.indexOf('<span style="color:#f66">前排</span>') > 0 && tidy.text.indexOf('<a href="#">链</a>') > 0, "样式块与内联样式留着");
+    ok(T.clean("纯文本一行\n第二行", true).rich === false && T.clean("<b>x</b>", false).rich === false, "没有标签就是纯文本；不允许排版时带标签也当纯文本");
+    const inl = T.clean("第一行 <b>粗</b>\n第二行", true);
+    ok(inl.rich === true && inl.text === "第一行 <b>粗</b><br>第二行", "只有行内标签的保留换行");
+    // ① 新酒馆：上屏交给酒馆自己的格式化
+    const fmt = [];
+    e.context.messageFormatting = (text, name, isSys, isUser, id) => { fmt.push({ text, id, name, isSys, isUser }); return '<div class="st-rendered">' + String(text).replace('class="arrebol-d-theater"', 'class="custom-arrebol-d-theater"') + '</div>'; };
+    const pre9 = T.strip(e.chat[9].mes);
+    const r9 = e.redraws().length, u9 = e.emits().filter(x => x === "message_updated").length;
+    e.setScript((n, body) => isTheater(body) ? dirty : "别的回答");
+    await tick(500); click(W, P("#adr044-theater-now")); await tick(1800);
+    const lastReq = e.calls[e.calls.length - 1];
+    ok(lastReq.body.messages[0].content.indexOf("只有本场主题明确要求用 HTML / CSS 排版时才输出 HTML") > 0 && lastReq.body.messages[1].content.indexOf("主题没点名要 HTML 就用纯文本") > 0, "请求里带的是允许排版的规矩");
+    ok(e.chat[9].mes === pre9 + '\n\n<details class="arrebol-d-theater" open><summary>🎭 红霞剧场 · 弹幕吐槽</summary>' + tidy.text + '</details>', "楼里存的是理过的那段 HTML，外面还是那个折叠块", JSON.stringify(e.chat[9].mes.slice(pre9.length)));
+    ok(e.chat[9].mes.slice(pre9.length + 2).indexOf("\n") < 0 && e.chat[9].mes.replace(stripRe, "") === pre9, "整块一行；剥离正则套上去恢复原样");
+    ok(fmt.length === 1 && fmt[0].id === 9 && fmt[0].text.indexOf('<details class="arrebol-d-theater" open>') === 0 && fmt[0].isUser === false && fmt[0].name === "阿尔", "那一块交给酒馆自己的 messageFormatting（美化正则、消毒、style 作用域都走它的）", JSON.stringify(fmt.map(x => x.id)));
+    const live9 = e.box(9).querySelectorAll(".arrebol-d-theater-live");
+    ok(live9.length === 1 && !!live9[0].querySelector(".st-rendered details.custom-arrebol-d-theater span") && e.box(9).querySelectorAll("details").length === 1, "画面上接的是酒馆格式化出来的那一块，旧的那场拿掉了，全楼只有一个折叠块", String(e.box(9).querySelectorAll("details").length));
+    ok(e.redraws().length === r9 && e.emits().filter(x => x === "message_updated").length === u9 && e.reloads() === 0, "照旧不重画整楼、不广播、不重载");
+    ok(P("#adr044-theater-status").textContent.indexOf("（HTML 排版）") > 0, "状态行注明这一场是 HTML 排版");
+    ok(W.__adrLampTest.materials().body.indexOf("前排") < 0, "掌灯读本篇时照样读不到这一场");
+    e.context.messageFormatting = () => "<p></p>";
+    ok(T.paint(9, "弹幕吐槽", "被美化正则藏掉的一场", false, false) === true && e.box(9).querySelectorAll(".arrebol-d-theater-live").length === 0, "用户的美化正则把它整块藏了：不往楼里留空壳");
+    // ② 老酒馆有消毒器：自己搭，样式块不要
+    delete e.context.messageFormatting;
+    const dp = [];
+    W.DOMPurify = { sanitize(h, cfg) { dp.push(cfg); return String(h).replace(/<style[\s\S]*?<\/style>/gi, ""); } };
+    ok(T.paint(9, "弹幕吐槽", tidy.text, false, true) === true, "老酒馆（没有格式化接口）照样上屏");
+    const det9 = e.box(9).querySelector("details.arrebol-d-theater");
+    ok(dp.length === 1 && dp[0].FORBID_TAGS.indexOf("style") >= 0 && dp[0].FORBID_TAGS.indexOf("script") >= 0 && dp[0].FORBID_TAGS.indexOf("details") >= 0, "先过酒馆的 DOMPurify，并禁掉没法限定范围的 style 等标签");
+    ok(!!det9 && !!det9.querySelector(".arrebol-d-theater-body span") && !det9.querySelector("style") && det9.querySelector("summary").textContent === "🎭 红霞剧场 · 弹幕吐槽", "消过毒的 HTML 放进折叠块里，标题照旧");
+    // ③ 连消毒器都拿不到：只显示文字
+    delete W.DOMPurify;
+    ok(T.paint(9, "弹幕吐槽", tidy.text, false, true) === true && !e.box(9).querySelector("details span") && e.box(9).querySelector("details").textContent.indexOf("前排") > 0 && e.box(9).querySelector("details").textContent.indexOf(".hx-d") < 0, "拿不到消毒器就只显示文字，标签与样式都不进画面");
+    // 关掉排版：一律纯文本
+    richBox.checked = false; change(W, richBox); await tick(50);
+    ok(e.st().theaterRich === false && T.presetText().indexOf("不要任何 HTML 标签") > 0 && T.presetText().indexOf("才输出 HTML") < 0, "关掉后规矩第六条回到纯文本");
+    e.setScript((n, body) => isTheater(body) ? "前排 <b>加粗</b> & 围观\n第二行" : "别的回答");
+    await tick(500); click(W, P("#adr044-theater-now")); await tick(1800);
+    ok(e.chat[9].mes === pre9 + '\n\n<details class="arrebol-d-theater" open><summary>🎭 红霞剧场 · 弹幕吐槽</summary>前排 &lt;b&gt;加粗&lt;/b&gt; &amp; 围观<br>第二行</details>', "关掉排版：尖括号转义，标签当普通字", JSON.stringify(e.chat[9].mes.slice(pre9.length)));
+    ok(e.calls[e.calls.length - 1].body.messages[1].content.indexOf("不要 HTML 标签。") > 0, "请求里也说明不要 HTML");
+    richBox.checked = true; change(W, richBox); await tick(50);
+
+    section("主题包：导出、导入、清空、补回（v1.44.0）");
+    ok(P("#adr044-theater-import") && P("#adr044-theater-export") && P("#adr044-theater-clear") && P("#adr044-theater-restore") && P("#adr044-theater-import-file") && P("#adr044-theater-import-file").type === "file", "面板上有导入、导出、清空、补回四枚键和一个藏着的文件框");
+    ok(P("#adr044-theater-count").textContent === "主题仓现有 6 个主题", "数着主题仓有几个", P("#adr044-theater-count").textContent);
+    const pack = T.packObject();
+    ok(pack.type === "arrebol-theater-pack" && pack.version === 1 && pack.count === 6 && pack.themes.length === 6 && pack.themes[0].name === "弹幕吐槽" && pack.themes[0].text === T.factory["弹幕吐槽"], "导出的包：类型、版本、条数、每条名字加写法");
+    const clicked = []; let dl = null;
+    W.HTMLAnchorElement.prototype.click = function () { clicked.push({ download: this.download }); };
+    W.URL.createObjectURL = b => { dl = b; return "blob:x"; }; W.URL.revokeObjectURL = () => {};
+    await tick(500); click(W, P("#adr044-theater-export")); await tick(100);
+    ok(clicked.length === 1 && /^红霞剧场主题包-\d{8}\.json$/.test(clicked[0].download) && !!dl && String(dl.type).indexOf("application/json") === 0, "「导出主题包」下载一个 json 文件", JSON.stringify(clicked));
+    ok(P("#adr044-theater-status").textContent.indexOf("主题包已导出：6 个主题") >= 0, "状态行报了导出几个");
+    const danmu = T.store()["弹幕吐槽"];
+    let r = T.importText(JSON.stringify({ type: "arrebol-theater-pack", version: 1, themes: [
+        { name: "关系天气预报", text: "用天气预报的口吻播报两人之间的关系气象。" },
+        { name: "弹幕吐槽", text: danmu },
+        { name: "弹幕吐槽", text: "另一种弹幕写法" },
+        { name: "", text: "没名字的不要" },
+        { name: "没写法的不要", text: "   " }
+    ] }));
+    ok(r && r.added === 1 && r.same === 1 && r.renamed === 1, "导入：新的加进来、一模一样的跳过、同名不同写法的改名", JSON.stringify(r));
+    ok(T.store()["关系天气预报"] === "用天气预报的口吻播报两人之间的关系气象。" && T.store()["弹幕吐槽"] === danmu && T.store()["弹幕吐槽（导入）"] === "另一种弹幕写法" && T.store()["没写法的不要"] === undefined, "同名不同写法不覆盖你原来的，放成「弹幕吐槽（导入）」；缺名字或缺写法的不收");
+    ok(P("#adr044-theater-select").querySelectorAll("option").length === 8 && d.querySelector("#adr044-drawer #adr044-theater-select").querySelectorAll("option").length === 8 && P("#adr044-theater-count").textContent === "主题仓现有 8 个主题", "两端下拉与计数跟着变");
+    ok(P("#adr044-theater-status").textContent.indexOf("新增 1 个") >= 0 && P("#adr044-theater-status").textContent.indexOf("改名放进来 1 个") >= 0 && P("#adr044-theater-status").textContent.indexOf("跳过 1 个") >= 0, "状态行把三种去向都报了", P("#adr044-theater-status").textContent);
+    r = T.importText(JSON.stringify({ themes: [{ name: "弹幕吐槽", text: "另一种弹幕写法" }] }));
+    ok(r && r.added === 0 && r.renamed === 0 && r.same === 1 && T.names().length === 8, "同一个包再导一遍不会越导越多");
+    r = T.importText(JSON.stringify([{ title: "家族群聊", prompt: "相亲相爱一家人式的群聊。" }, "裸字符串也收下"]));
+    ok(r && r.added === 2 && T.store()["家族群聊"] === "相亲相爱一家人式的群聊。" && T.store()["主题 2"] === "裸字符串也收下", "数组也认，title / prompt 这种字段名也认");
+    r = T.importText("﻿" + JSON.stringify({ "茶馆说书": "说书先生拍着惊堂木讲这一楼。", "动物世界": "旁白腔解说两个人。" }));
+    ok(r && r.added === 2 && T.store()["茶馆说书"] && T.store()["动物世界"], "「主题名：写法」的对象也认，带 BOM 的文件也读得了");
+    ok(T.importText("{ 这不是 json") === null && P("#adr044-theater-status").textContent.indexOf("导入失败") === 0, "不是 json：报导入失败，仓不动");
+    ok(T.importText(JSON.stringify({ a: 1, b: 2 })) === null && P("#adr044-theater-status").textContent.indexOf("这不是主题包") > 0, "不是主题包：直说");
+    ok(T.importText(JSON.stringify({ themes: [{ name: "__proto__", text: "x" }, { name: "constructor", text: "y" }] })) === null && ({}).x === undefined, "名字是 __proto__ 这类的不收");
+    const nBefore = T.names().length;
+    T.handleFile({ files: [new W.File([JSON.stringify({ themes: [{ name: "外卖订单", text: "把这一楼写成一单外卖。" }] })], "p.json", { type: "application/json" })] });
+    await tick(300);
+    ok(T.names().length === nBefore + 1 && T.store()["外卖订单"] === "把这一楼写成一单外卖。", "选文件导入走得通");
+    const clr = P("#adr044-theater-clear");
+    await tick(500); click(W, clr); await tick(50);
+    ok(clr.textContent === "确定清空？" && T.names().length === nBefore + 1, "清空第一下只是问");
+    await tick(500); click(W, clr); await tick(100);
+    ok(T.names().length === 0 && Object.keys(T.store()).length === 0, "第二下清空，出厂的也不自己长回来");
+    ok(P("#adr044-theater-select").querySelectorAll("option").length === 1 && P("#adr044-theater-count").textContent === "主题仓现有 0 个主题" && T.pick().name === "弹幕吐槽", "空仓：下拉只剩提示，真要演也有内置的兜底");
+    const sample = fs.readFileSync("packs/arrebol-theater-sample-pack.json", "utf8");
+    const sampleObj = JSON.parse(sample);
+    r = T.importText(sample);
+    ok(sampleObj.type === "arrebol-theater-pack" && sampleObj.themes.length === 21 && r && r.added === 21 && T.names().length === 21, "仓库里附的示例包：二十一个主题一次导进空仓", JSON.stringify(r));
+    ok(sampleObj.themes.every(x => typeof x.name === "string" && x.name && typeof x.text === "string" && x.text.length > 30) && sampleObj.themes.filter(x => x.text.indexOf("用 HTML 排版") === 0).length === 3, "示例包每个主题都有名字和像样的写法，其中三个是 HTML 排版的");
+    await tick(500); click(W, P("#adr044-theater-restore")); await tick(100);
+    ok(T.names().length === 27 && T.store()["弹幕吐槽"] === T.factory["弹幕吐槽"], "「补回出厂六个」把出厂的补回来，导入的不动");
+    await tick(500); click(W, P("#adr044-theater-restore")); await tick(100);
+    ok(T.names().length === 27 && P("#adr044-theater-status").textContent.indexOf("没什么要补的") > 0, "都在的时候再点不重复");
+    e.st().theaterStore = Object.assign({}, T.factory); e.st().theaterCurrent = "弹幕吐槽";
+
     section("掌灯页不在眼前时不白算");
     e.st().lampAutoQuip = false; en.checked = false; change(W, en); await tick(50);
     ok(P("#adr044-lamp-mat-body").textContent.indexOf("到了再说") >= 0 && T.lampDirty() === false, "停在掌灯页：素材跟到最新一楼");
@@ -341,6 +448,53 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     ok(T.lampDirty() === true && P("#adr044-lamp-mat-body").textContent.indexOf("浪声") < 0, "切到别的页时来了新楼：不重算素材，只记一笔");
     await tick(500); click(W, P("#adr044-tab-lamp")); await tick(100);
     ok(T.lampDirty() === false && P("#adr044-lamp-mat-body").textContent.indexOf("浪声") >= 0, "切回掌灯页补上，素材是最新一楼");
+
+    section("导演稿静默上屏（v1.44.0）");
+    W.__adrDGenTest.setQuietMs(60);   // 测试里不等那 4 秒安静期
+    const fmtD = [];
+    e.context.messageFormatting = (text, name, isSys, isUser, id) => { fmtD.push({ text, id }); return "<p>" + String(text).replace(/</g, "&lt;").replace(/\n/g, "<br>") + "</p>"; };
+    e.chat.push({ is_user: true, name: "江", mes: "下雨了" });
+    e.chat.push({ is_user: false, name: "阿尔", mes: "<content>雨落下来的时候，他把外套递了过去。</content><report>下雨，他递外套。</report>" });
+    const iD = e.chat.length - 1; e.addMes(iD - 1); const boxD = e.addMes(iD); const pD = boxD.firstElementChild;
+    let rD = e.redraws().length, uD = e.emits().filter(x => x === "message_updated").length, sD = e.saves();
+    pv.value = "派人：让门房把伞送来";
+    await tick(600); click(W, inj); await tick(500); click(W, inj); await tick(900);
+    ok(e.chat[iD].mes.indexOf("<content>雨落下来的时候，他把外套递了过去。</content>") === 0 && e.chat[iD].mes.indexOf("arrebol_d_visible:plot###") > 0 && e.chat[iD].mes.indexOf("让门房把伞送来") > 0, "稿照旧写进这一楼");
+    let liveD = boxD.querySelectorAll('.arrebol-d-live[data-arb-type="plot"]');
+    ok(liveD.length === 1 && liveD[0].textContent.indexOf("让门房把伞送来") > 0 && boxD.lastElementChild === liveD[0], "画面上只在楼尾接了一块统筹稿");
+    ok(fmtD.length === 1 && fmtD[0].id === iD && fmtD[0].text.indexOf("arrebol_d_visible:plot###") === 0, "那一块交给酒馆自己格式化（你的美化正则照样作用在它上面）");
+    ok(boxD.firstElementChild === pD && pD.textContent === "画好的第 " + iD + " 楼", "楼里原来画好的节点原封不动");
+    ok(e.redraws().length === rD && e.emits().filter(x => x === "message_updated").length === uD && e.reloads() === 0, "不让酒馆重画整楼、不广播 MESSAGE_UPDATED、不整聊天重载", JSON.stringify([e.redraws().length - rD, e.emits().filter(x => x === "message_updated").length - uD, e.reloads()]));
+    ok(e.saves() === sD + 1, "导演稿照旧当场存一次盘（它的成败要记账）", String(e.saves() - sD));
+    pv.value = "派人：改成让她自己去拿伞";
+    await tick(600); click(W, inj); await tick(500); click(W, inj); await tick(900);
+    liveD = boxD.querySelectorAll('.arrebol-d-live[data-arb-type="plot"]');
+    ok(liveD.length === 1 && liveD[0].textContent.indexOf("改成让她自己去拿伞") > 0 && liveD[0].textContent.indexOf("让门房把伞送来") < 0 && e.redraws().length === rD, "同一楼重挂一次：原地换成新稿，仍然不重画整楼");
+    ok((e.chat[iD].mes.match(/arrebol_d_visible:plot###/g) || []).length === 1, "楼里也只留一份统筹稿");
+    const pvE = P("#adr044-emotion-preview"), injE = P("#adr044-emotion-inject");
+    pvE.value = "情感方向：先别心软";
+    await tick(600); click(W, injE); await tick(500); click(W, injE); await tick(900);
+    ok(boxD.querySelectorAll('.arrebol-d-live[data-arb-type="emotion"]').length === 1 && boxD.querySelectorAll('.arrebol-d-live[data-arb-type="plot"]').length === 1 && e.redraws().length === rD, "情感导演的稿另占一块，和统筹稿各换各的");
+    // 这一楼原来的统筹稿是酒馆整楼画出来的（认不出哪块是它）：让酒馆重画这一楼
+    e.chat.push({ is_user: true, name: "江", mes: "接着" });
+    e.chat.push({ is_user: false, name: "阿尔", mes: "<content>伞撑开了。</content><report>撑伞。</report>" + TAIL });
+    const iO = e.chat.length - 1; e.addMes(iO - 1); const boxO = e.addMes(iO);
+    rD = e.redraws().length; uD = e.emits().filter(x => x === "message_updated").length;
+    pv.value = "派人：这一楼换一份稿";
+    await tick(600); click(W, inj); await tick(500); click(W, inj); await tick(900);
+    ok(e.redraws().length === rD + 1 && e.redraws()[e.redraws().length - 1] === iO && e.emits().filter(x => x === "message_updated").length === uD + 1 && boxO.querySelectorAll(".arrebol-d-live").length === 0, "旧稿是酒馆整楼画的、认不出来：退回让酒馆重画这一楼并广播（老路）");
+    ok(e.chat[iO].mes.indexOf("这一楼换一份稿") > 0 && e.chat[iO].mes.indexOf("老周送口信") < 0 && e.reloads() === 0, "稿换对了，也没有整聊天重载");
+    // 你的美化正则把导演稿整块藏了：不留空壳，也不重画
+    e.context.messageFormatting = () => "<p></p>";
+    e.chat.push({ is_user: true, name: "江", mes: "再接着" });
+    e.chat.push({ is_user: false, name: "阿尔", mes: "<content>两个人挤在一把伞下。</content><report>共伞。</report>" });
+    const iH = e.chat.length - 1; e.addMes(iH - 1); const boxH = e.addMes(iH);
+    rD = e.redraws().length;
+    pv.value = "派人：藏起来的一份稿";
+    await tick(600); click(W, inj); await tick(500); click(W, inj); await tick(900);
+    ok(e.chat[iH].mes.indexOf("藏起来的一份稿") > 0 && boxH.querySelectorAll(".arrebol-d-live").length === 0 && boxH.children.length === 1 && e.redraws().length === rD, "美化正则把稿藏了：楼里有、画面不留空壳、不重画");
+    delete e.context.messageFormatting;
+    W.__adrDGenTest.setQuietMs(4000);
 
     section("收尾");
     ok(e.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "全程没有 console.error", e.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));

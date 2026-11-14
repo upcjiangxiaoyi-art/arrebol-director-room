@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.43.2｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.44.0｜ripple & GPT & Claude
+ * v1.44.0 导演稿也静默上屏（只把稿接到楼尾，不重画整楼、不广播；认不出旧稿或老酒馆才走老路）；红霞剧场主题包导入 / 导出 / 清空 / 补回出厂；剧场支持 HTML / CSS 排版，上屏走酒馆自己的格式化与消毒（提议 江；施工 Claude）
  * v1.43.2 红霞剧场静默插入：只把那一块 DOM 接到画好的楼尾，不重画整楼、不广播 MESSAGE_UPDATED、绝不整聊天重载；存盘 1.5 秒合并一次；掌灯页不在眼前时不再每楼重算素材（报告 江「别让页面一抖、手机嗷嗷烫」；施工 Claude）
  * v1.43.1 随扩展附带可直接导入酒馆的剥离正则脚本 regex/arrebol-theater-strip.json（提议 江；施工 Claude）
  * v1.43.0 红霞剧场：每层助手正文落地后在楼尾插一场（弹幕 / 场外嗑瓜子 / Q 版四格 / 花絮 / 采访间 / 评论区，主题仓可自写，固定或随机），范围同掌灯；整段包在 details.arrebol-d-theater 里，配剥离正则（提议 江；施工 Claude）
@@ -104,7 +105,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.43.2";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.44.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -207,7 +208,8 @@
         theaterEnabled: false,
         theaterPick: "fixed",       // fixed 固定用选中的 / random 每层随机抽
         theaterCurrent: "",
-        theaterFold: false
+        theaterFold: false,
+        theaterRich: true           // v1.44.0 允许 HTML / CSS 排版（主题点名要排版时才用；关掉就一律纯文本）
     };
 
     var initialized = false;
@@ -2572,6 +2574,8 @@
             // 酒馆没有 updateMessageBlock 的老版本仍走整体重载。
             try {
                 var pending = adrDPendingRedraw.slice();
+                // v1.44.0：没有登记要重画的楼——稿子已经静默接在楼尾，画面是对的。到此为止，更不能往下走到整聊天重载。
+                if (!pending.length) return true;
                 if (pending.length && c && c.chat && typeof c.updateMessageBlock === "function") {
                     var drew = 0;
                     pending.forEach(function (idx) {
@@ -2708,6 +2712,50 @@
         } catch (eSw) {}
     }
 
+    // ================= v1.44.0 楼尾静默上屏（导演稿与红霞剧场共用）=================
+    // 往楼尾接一小块，不该让酒馆把整楼重画一遍：整楼重画时用户的美化正则、变量脚本、前端卡都跟着对这一楼重跑，手机上闪一下、烧一回。
+    // 做法是让酒馆只把"新接的这一小段"按它自己的流程格式化（美化正则、markdown、消毒都走它的），拿到 HTML 接到已经画好的楼尾。
+    // 这个接口（messageFormatting）新一点的酒馆才有，没有就返回 null，调用方走各自的老路。
+    function adrDMesBox(idx) {
+        try { return rootDoc().querySelector('#chat .mes[mesid="' + idx + '"] .mes_text') || null; } catch (e) { return null; }
+    }
+
+    function adrDFormatFragment(idx, text) {
+        try {
+            var c = ctx();
+            if (!c || typeof c.messageFormatting !== "function") return null;
+            var m = c.chat && c.chat[idx];
+            var html = c.messageFormatting(String(text || ""), m ? m.name : "", false, false, idx);
+            return typeof html === "string" ? html : null;
+        } catch (e) { return null; }
+    }
+
+    // 格式化出来的东西有没有可看的内容（用户的美化正则可能把它整块藏掉，那就不往楼里留空壳）
+    function adrDFragmentVisible(el) {
+        try { return !!(String(el.textContent || "").trim() || el.querySelector("img, video, audio, svg, canvas, hr, iframe")); } catch (e) { return true; }
+    }
+
+    // 导演稿静默上屏。返回 true 表示画面已经对上，不用酒馆重画这一楼。
+    // hadOwn：这一楼原来就挂着本类型的旧稿。旧稿要是我们上次静默接上去的（认得出那个容器）就原地换；
+    // 要是酒馆整楼画出来的（经过美化正则已经面目全非，认不出哪块是它），只能老老实实让酒馆重画这一楼。
+    function adrDDirectorPaint(idx, type, add, hadOwn) {
+        try {
+            var box = adrDMesBox(idx);
+            if (!box) return false;
+            var live = Array.prototype.slice.call(box.querySelectorAll('.arrebol-d-live[data-arb-type="' + type + '"]'));
+            if (hadOwn && !live.length) return false;
+            var html = adrDFormatFragment(idx, String(add || "").replace(/^\s+/, ""));
+            if (html == null) return false;
+            live.forEach(function (el) { if (el.parentNode) el.parentNode.removeChild(el); });
+            var w = box.ownerDocument.createElement("div");
+            w.className = "arrebol-d-live";
+            w.setAttribute("data-arb-type", type);
+            w.innerHTML = html;
+            if (adrDFragmentVisible(w)) box.appendChild(w);
+            return true;
+        } catch (e) { return false; }
+    }
+
     var adrDPendingRedraw = [];   // v1.23.2：改过正文、还没重画的楼号；重绘只画这几楼
     function adrDNoteRedraw(idx) {
         try { if (Number.isFinite(Number(idx)) && adrDPendingRedraw.indexOf(Number(idx)) < 0) adrDPendingRedraw.push(Number(idx)); } catch (e) {}
@@ -2728,6 +2776,7 @@
 
             // 移除同类型旧注入，避免最后一条消息越堆越多。
             var mes = String(chat[idx].mes || "");
+            var mesBefore = mes;
             var startMark = "<!-- ARREBOL_D_START:" + type + " -->";
             var endMark = "<!-- ARREBOL_D_END:" + type + " -->";
 
@@ -2762,8 +2811,10 @@
             // 旧格式因互删缺陷至多存活一块，清掉后由各导演在各自下一拍以带类型格式重建。
             mes = mes.replace(/\n?arrebol_d(?:_visible)?###[\s\S]*?###/g, "").trimEnd();
 
+            var hadOwn = mes.trimEnd() !== mesBefore.trimEnd();   // 这一楼原来就挂着本类型的旧稿（或旧格式的残留）
             adrDSetMessageText(chat[idx], mes.trimEnd() + add);
-            adrDNoteRedraw(idx);
+            // v1.44.0 静默上屏：只把这份稿接到画好的楼尾，不重画整楼、不广播；对不上才登记让酒馆重画这一楼（老路）
+            if (!adrDDirectorPaint(idx, t, add, hadOwn)) adrDNoteRedraw(idx);
             try { adrDDirectorLogPush(type, text); } catch (eLog34) {}
             try { adrDUpdateFloatFromInjection(type, text); } catch (eFloat34) {}
             try { adrDGrazeClearOnInjection(type); } catch (eGraze) {} // v1.13.0：稿子挂上即归队
@@ -7808,7 +7859,7 @@
     var ADR_THEATER_STRIP_REGEX_TEXT = '/\\s*<details class="arrebol-d-theater"[\\s\\S]*?<\\/details>/g';
     function adrTheaterBlockRe() { return /\s*<details class="arrebol-d-theater"[\s\S]*?<\/details>/g; }
 
-    var ADR_THEATER_PRESET = [
+    var ADR_THEATER_PRESET_HEAD = [
         "你是 Arrebol，小红霞。你在给这篇文的每一楼配「红霞剧场」——贴在正文后面的一小段场外内容，给作者看着乐的。",
         "它不是正文：不推进剧情、不替角色做正文里没做的决定、不剧透后面、不给修改意见。",
         "",
@@ -7816,11 +7867,19 @@
         "① 只针对本篇这一楼刚发生的事，引用细节要准，别凭印象编；此前剧情只用来接梗、翻旧账。",
         "② 短小，一屏以内。主题里写了条数 / 格数就照它来；没写就 120–200 字。",
         "③ 好笑或者戳人，二选一，别端着；可以损，但损的是剧情和角色，不损作者。",
-        "④ 人设不崩：角色可以出戏，但嘴脸还是那个人；场外人物说的话要像那种人会说的。",
-        "⑤ 这局的基调（如果有）是底色：甜的局别写成虐的，虐的局可以苦中作乐。",
-        "⑥ 纯文本，用换行分条分格，可以有少量 emoji；不要 markdown 标题、不要代码块、不要任何 HTML 标签。",
-        "⑦ 只输出剧场正文本身：不要标题行、不要「好的」、不要解释你在干什么。"
-    ].join("\n");
+        "④ 人设不崩：角色可以出戏，但嘴脸还是那个人；场外人物说的话要像那种人会说的，名字、称呼、地点都用这个世界里有的。",
+        "⑤ 这局的基调（如果有）是底色：甜的局别写成虐的，虐的局可以苦中作乐。"
+    ];
+    var ADR_THEATER_RULE_PLAIN = "⑥ 纯文本，用换行分条分格，可以有少量 emoji；不要 markdown 标题、不要代码块、不要任何 HTML 标签。";
+    // v1.44.0 允许排版时的第六条：默认还是纯文本，主题点名要 HTML / CSS 才给
+    var ADR_THEATER_RULE_RICH = "⑥ 默认纯文本，用换行分条分格，可以有少量 emoji，不要 markdown 标题、不要代码块。只有本场主题明确要求用 HTML / CSS 排版时才输出 HTML：一段自包含的片段，样式写在标签的 style 属性里，或者放一个 <style> 块且每条选择器都以你自己起的类名开头（比如 .hx-danmu）；不要 script、不要 iframe、不要外链图片和字体、不要 position:fixed、不要 <details>、不要整页的 html / body 标签，宽度不超过容器。";
+    var ADR_THEATER_RULE_TAIL = "⑦ 只输出剧场正文本身：不要标题行、不要「好的」、不要解释你在干什么。";
+    var ADR_THEATER_PRESET = ADR_THEATER_PRESET_HEAD.concat([ADR_THEATER_RULE_PLAIN, ADR_THEATER_RULE_TAIL]).join("\n");
+
+    function adrTheaterRichAllowed() { try { return settings().theaterRich !== false; } catch (e) { return true; } }
+    function adrTheaterPresetText() {
+        return ADR_THEATER_PRESET_HEAD.concat([adrTheaterRichAllowed() ? ADR_THEATER_RULE_RICH : ADR_THEATER_RULE_PLAIN, ADR_THEATER_RULE_TAIL]).join("\n");
+    }
 
     var ADR_THEATER_FACTORY = {
         "弹幕吐槽": "模拟视频网站的弹幕飘过这一楼：8–12 条，每条一行，短、快、带梗。可以有「前排」「+1」「哈哈哈哈」「高能预警」「课代表来了」这类弹幕腔，也要有两三条真在吐槽这楼细节的。不写 ID、不写颜色、不编号。",
@@ -7883,18 +7942,41 @@
 
     function adrTheaterEscape(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
-    // 模型回来的东西洗成纯文本：去围栏、去它自己加的标题行、去标签，空行最多留一个
-    function adrTheaterClean(raw) {
-        var t = adrLampStripFences(String(raw || "").replace(/\r/g, ""));
-        t = t.replace(/<\/?(?:details|summary|br|p|div|span)[^>]*>/gi, "\n");
-        t = t.replace(/^\s*(?:🎭\s*)?(?:【\s*)?红霞剧场[^\n]*\n+/, "");
-        t = t.split("\n").map(function (line) { return line.replace(/\s+$/, ""); }).join("\n");
-        return t.replace(/\n{3,}/g, "\n\n").trim();
+    // ---- v1.44.0 HTML / CSS 排版 ----
+    // 主题点名要排版时，模型回来的是一段 HTML。存进楼里之前先理一遍：
+    // 明摆着不该有的（script、iframe、表单、on* 事件、javascript: 链接）当场去掉；里面不许再套 <details>（剥离正则认第一个 </details>）；
+    // 有块级结构的整段压成一行（酒馆的 markdown 遇到空行会把 HTML 拆散），只有行内标签的保留换行。
+    // 这一步不是消毒——真正的消毒在上屏时：走酒馆自己的 messageFormatting（它的 DOMPurify 与 <style> 作用域），
+    // 老酒馆没有那个接口就用它的 DOMPurify 并去掉 <style>，连 DOMPurify 都拿不到就只显示文字。
+    var ADR_THEATER_TAG_RE = /<\/?(?:div|span|p|style|table|thead|tbody|tr|td|th|ul|ol|li|section|article|header|footer|h[1-6]|img|font|center|b|i|u|s|em|strong|small|mark|ruby|rt|marquee|blockquote|hr|br|svg|a|pre|code|sub|sup|del|ins)\b[^<>]*>/i;
+    var ADR_THEATER_BLOCK_TAG_RE = /<(?:div|p|table|ul|ol|li|section|article|header|footer|style|h[1-6]|blockquote|hr|pre)\b/i;
+
+    function adrTheaterTidyRich(t) {
+        t = String(t || "");
+        t = t.replace(/<script\b[\s\S]*?<\/script\s*>/gi, "");
+        t = t.replace(/<\/?(?:script|iframe|frame|frameset|object|embed|link|meta|base|form|input|textarea|button|select|html|head|body)\b[^>]*>/gi, "");
+        t = t.replace(/<!doctype[^>]*>/gi, "");
+        t = t.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+        t = t.replace(/\b(href|src)\s*=\s*(["']?)\s*javascript:[^"'>\s]*/gi, "$1=$2#");
+        t = t.replace(/<(\/?)details\b/gi, "<$1div").replace(/<(\/?)summary\b/gi, "<$1div");
+        if (ADR_THEATER_BLOCK_TAG_RE.test(t)) t = t.replace(/\s*\n\s*/g, " ");
+        else t = t.replace(/\n{3,}/g, "\n\n").split("\n").join("<br>");
+        return t.trim();
     }
 
-    // 整段写成一行：行与行之间用 <br>，不留裸换行——酒馆的 markdown 管不到 HTML 块里面，裸换行在画面上会并成空格
-    function adrTheaterBlock(name, text, folded) {
-        var body = adrTheaterEscape(text).split("\n").join("<br>");
+    // 模型回来的东西洗干净。返回 { text, rich }：rich 为真时 text 是一段 HTML，否则是纯文本
+    function adrTheaterClean(raw, allowRich) {
+        var t = adrLampStripFences(String(raw || "").replace(/\r/g, ""));
+        t = t.replace(/^\s*(?:🎭\s*)?(?:【\s*)?红霞剧场[^\n]*\n+/, "");
+        if (allowRich && ADR_THEATER_TAG_RE.test(t)) return { rich: true, text: adrTheaterTidyRich(t) };
+        t = t.replace(/<\/?(?:details|summary|br|p|div|span)[^>]*>/gi, "\n");
+        t = t.split("\n").map(function (line) { return line.replace(/\s+$/, ""); }).join("\n");
+        return { rich: false, text: t.replace(/\n{3,}/g, "\n\n").trim() };
+    }
+
+    // 整段写成一行：纯文本的行与行之间用 <br>，不留裸换行——酒馆的 markdown 管不到 HTML 块里面，裸换行在画面上会并成空格
+    function adrTheaterBlock(name, text, folded, rich) {
+        var body = rich ? String(text || "") : adrTheaterEscape(text).split("\n").join("<br>");
         return "\n\n<details class=\"arrebol-d-theater\"" + (folded ? "" : " open") + "><summary>🎭 红霞剧场 · " + adrTheaterEscape(name) + "</summary>" + body + "</details>";
     }
 
@@ -7902,45 +7984,76 @@
     function adrTheaterHas(mes) { return adrTheaterBlockRe().test(String(mes || "")); }
 
     // 写进这一楼：先摘掉旧的那场（一楼只留一场），再接到楼尾；当前 swipe 同写，自己这一笔不算"楼还在生成"
-    function adrTheaterWrite(idx, name, text) {
+    function adrTheaterWrite(idx, name, text, rich) {
         var chat = adrLampChat();
         var m = chat[idx];
         if (!m) return false;
         var base = adrTheaterStrip(m.mes).replace(/\s+$/, "");
-        adrDSetMessageText(m, base + adrTheaterBlock(name, text, settings().theaterFold === true));
+        adrDSetMessageText(m, base + adrTheaterBlock(name, text, settings().theaterFold === true, rich));
         adrLampAcknowledgeOwnWrite();
         return true;
     }
 
     // ---- v1.43.2 静默上屏 ----
-    // 剧场每层都插，不能走导演稿那条"存整份聊天 → 让酒馆把整楼重画 → 广播 MESSAGE_UPDATED"的路：
+    // 剧场每层都插，不能走"存整份聊天 → 让酒馆把整楼重画 → 广播 MESSAGE_UPDATED"的路：
     // 整楼重画会让这一楼闪一下，美化正则、变量脚本、前端卡的 iframe 跟着对这一楼重跑一遍，手机上每层多烧一回。
-    // 这里只把剧场那一块的 DOM 接到已经画好的楼尾（或把旧的那块拿掉），楼里原有的节点一个不碰、不广播任何事件。
-    // 酒馆以后自己重画这一楼（翻页、编辑、重载）时，会从 mes 里按它的流程画出同一块。
-    function adrTheaterMesBox(idx) {
-        try { return rootDoc().querySelector('#chat .mes[mesid="' + idx + '"] .mes_text') || null; } catch (e) { return null; }
+    // 这里只把剧场那一块接到已经画好的楼尾（或把旧的那块拿掉），楼里原有的节点一个不碰、不广播任何事件。
+    // v1.44.0：那一块优先交给酒馆自己的 messageFormatting 去格式化（见 adrDFormatFragment）——
+    // 美化正则、markdown、消毒、<style> 作用域都和它以后整楼重画时一模一样；老酒馆没有这个接口再自己搭。
+    function adrTheaterSanitize(html) {
+        try {
+            var w = rootWin();
+            var DP = (w.SillyTavern && w.SillyTavern.libs && w.SillyTavern.libs.DOMPurify) || w.DOMPurify;
+            if (!DP || typeof DP.sanitize !== "function") return null;
+            return String(DP.sanitize(String(html || ""), {
+                FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "form", "link", "meta", "base", "details", "summary", "input", "textarea", "button", "select"],
+                FORBID_ATTR: ["id", "name"]
+            }));
+        } catch (e) { return null; }
+    }
+
+    function adrTheaterPlainOf(html) {
+        return String(html || "").replace(/<style\b[\s\S]*?<\/style\s*>/gi, "").replace(/<br\s*\/?>/gi, "\n").replace(/<\/(?:div|p|li|tr|h[1-6])\s*>/gi, "\n").replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim();
     }
 
     // name 传 null 表示只撤不画。返回 true 表示画面已经对上了
-    function adrTheaterPaint(idx, name, text, folded) {
-        var box = adrTheaterMesBox(idx);
+    function adrTheaterPaint(idx, name, text, folded, rich) {
+        var box = adrDMesBox(idx);
         if (!box) return false;
         try {
-            Array.prototype.slice.call(box.querySelectorAll("details.arrebol-d-theater, details.custom-arrebol-d-theater")).forEach(function (old) {
+            Array.prototype.slice.call(box.querySelectorAll(".arrebol-d-theater-live, details.arrebol-d-theater, details.custom-arrebol-d-theater")).forEach(function (old) {
                 if (old.parentNode) old.parentNode.removeChild(old);
             });
             if (name == null) return true;
             var d = box.ownerDocument;
+            // ① 酒馆自己的流程
+            var html = adrDFormatFragment(idx, adrTheaterBlock(name, text, folded, rich).replace(/^\s+/, ""));
+            if (html != null) {
+                var wrap = d.createElement("div");
+                wrap.className = "arrebol-d-theater-live";
+                wrap.innerHTML = html;
+                if (adrDFragmentVisible(wrap)) box.appendChild(wrap);   // 用户的美化正则把它藏了就不留空壳
+                return true;
+            }
+            // ② 老酒馆：自己搭一个折叠块
             var det = d.createElement("details");
             det.className = "arrebol-d-theater custom-arrebol-d-theater";   // 酒馆重画后类名带 custom- 前缀，两个都挂上，样式一致
             if (!folded) det.setAttribute("open", "");
             var sum = d.createElement("summary");
             sum.textContent = "🎭 红霞剧场 · " + name;
             det.appendChild(sum);
-            String(text || "").split("\n").forEach(function (line, i) {
-                if (i) det.appendChild(d.createElement("br"));
-                det.appendChild(d.createTextNode(line));
-            });
+            var safe = rich ? adrTheaterSanitize(text) : null;
+            if (rich && safe != null) {
+                var bodyEl = d.createElement("div");
+                bodyEl.className = "arrebol-d-theater-body";
+                bodyEl.innerHTML = safe;
+                det.appendChild(bodyEl);
+            } else {
+                String(rich ? adrTheaterPlainOf(text) : (text || "")).split("\n").forEach(function (line, i) {
+                    if (i) det.appendChild(d.createElement("br"));
+                    det.appendChild(d.createTextNode(line));
+                });
+            }
             box.appendChild(det);
             return true;
         } catch (e) { return false; }
@@ -7948,8 +8061,8 @@
 
     // 找不到画好的楼（酒馆版本差异 / 这楼不在画面里）：退到只让酒馆重画这一楼，仍然不广播；再不行就不动画面——
     // 数据已经在楼里，下次酒馆自己重画时出现。绝不整聊天重载。
-    function adrTheaterShow(idx, name, text) {
-        if (adrTheaterPaint(idx, name, text, settings().theaterFold === true)) return "silent";
+    function adrTheaterShow(idx, name, text, rich) {
+        if (adrTheaterPaint(idx, name, text, settings().theaterFold === true, rich)) return "silent";
         try {
             var c = ctx();
             if (c && c.chat && c.chat[idx] && typeof c.updateMessageBlock === "function") { c.updateMessageBlock(idx, c.chat[idx]); return "block"; }
@@ -8015,9 +8128,10 @@
             var mat = adrLampMaterialsAt(idx);
             if (!mat.body) { if (force) adrTheaterStatus("#" + idx + " 没有正文可演", "#d4726a"); return false; }
             adrTheaterStatus("🎬 #" + idx + " 开演「" + theme.name + "」…", "#8ed99d");
+            var allowRich = adrTheaterRichAllowed();
             var messages = [
-                { role: "system", content: ADR_THEATER_PRESET + "\n\n" + adrLampMaterialsText(mat) },
-                { role: "user", content: "【本场主题 · " + theme.name + "】\n" + theme.text + "\n\n【任务】针对本篇（#" + idx + "）写一场。只输出剧场正文本身：不要标题、不要解释、不要 markdown 围栏、不要 HTML 标签。" }
+                { role: "system", content: adrTheaterPresetText() + "\n\n" + adrLampMaterialsText(mat) },
+                { role: "user", content: "【本场主题 · " + theme.name + "】\n" + theme.text + "\n\n【任务】针对本篇（#" + idx + "）写一场。只输出剧场正文本身：不要标题、不要解释、不要 markdown 围栏" + (allowRich ? "；主题没点名要 HTML 就用纯文本。" : "、不要 HTML 标签。") }
             ];
             var lastPaint = 0;
             var out = await adrDChatCompletionText({
@@ -8029,16 +8143,16 @@
                     adrTheaterStatus(chars > 0 ? "🎬 #" + idx + "「" + theme.name + "」在写…已收到 " + chars + " 字" : (thought > 0 ? "🎬 霞姐在想（" + thought + " 字）…" : "🎬 等霞姐开口…"), "#8ed99d");
                 }
             });
-            var text = adrTheaterClean(out);
-            if (!text) throw new Error("写回来是空的");
+            var cleaned = adrTheaterClean(out, allowRich);
+            if (!cleaned.text) throw new Error("写回来是空的");
             if (adrDChatKey() !== homeKey) { adrTheaterStatus("中途换了聊天，这一场作废", "#d6b177"); return false; }
             var chat2 = adrLampChat();
             if (!chat2[idx] || adrLampFloorSig(chat2, idx) !== sig) { adrTheaterStatus("#" + idx + " 在写的时候变了（重 roll / 编辑 / 删楼），这一场作废", "#d6b177"); return false; }
-            if (!adrTheaterWrite(idx, theme.name, text)) throw new Error("没写进楼里");
+            if (!adrTheaterWrite(idx, theme.name, cleaned.text, cleaned.rich)) throw new Error("没写进楼里");
             adrTheaterState.lastName = theme.name;
-            var how = adrTheaterShow(idx, theme.name, text);   // v1.43.2 静默上屏：不重画整楼、不广播
+            var how = adrTheaterShow(idx, theme.name, cleaned.text, cleaned.rich);   // v1.43.2 静默上屏：不重画整楼、不广播
             adrTheaterSaveSoon();
-            adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾 ✓" + (how === "none" ? "（这楼不在画面里，下次重画时出现）" : ""), "#8ed99d");
+            adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾 ✓" + (cleaned.rich ? "（HTML 排版）" : "") + (how === "none" ? "（这楼不在画面里，下次重画时出现）" : ""), "#8ed99d");
             try { console.log("[Arrebol D] theater #" + idx + " 「" + theme.name + "」 (" + (reason || "") + ")"); } catch (eL) {}
             return true;
         } catch (e) {
@@ -8057,7 +8171,7 @@
             if (adrDGenerationLooksLive()) { adrTheaterStatus("这一楼还在生成，等写完再撤", "#d6b177"); return false; }
             adrDSetMessageText(chat[idx], adrTheaterStrip(chat[idx].mes).replace(/\s+$/, ""));
             adrLampAcknowledgeOwnWrite();
-            adrTheaterShow(idx, null, "");
+            adrTheaterShow(idx, null, "", false);
             adrTheaterSaveSoon();
             adrTheaterStatus("#" + idx + " 的剧场撤掉了 ✓", "#8ed99d");
             return true;
@@ -8067,7 +8181,7 @@
     // ---- 主题仓的面板动作 ----
     function adrTheaterOptionsHTML(sel) {
         var names = adrTheaterNames();
-        if (!names.length) return '<option value="">（主题仓是空的，写一个存进来）</option>';
+        if (!names.length) return '<option value="">（主题仓是空的，写一个存进来，或导入一个主题包）</option>';
         return names.map(function (n) { return '<option value="' + esc(n) + '"' + (n === sel ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("");
     }
 
@@ -8082,7 +8196,9 @@
             Array.prototype.slice.call(d.querySelectorAll("#adr044-theater-select")).forEach(function (el) { adrCdFillSelect(el, html, sel, sig); });
             adrCdSetCheckedSafe("adr044-theater-enabled", st.theaterEnabled === true);
             adrCdSetCheckedSafe("adr044-theater-fold", st.theaterFold === true);
+            adrCdSetCheckedSafe("adr044-theater-rich", st.theaterRich !== false);
             adrCdSetValueSafe("adr044-theater-pick", adrTheaterPickMode());
+            adrCdSetTextAll("adr044-theater-count", "主题仓现有 " + names.length + " 个主题");
             if (fillText !== false) {
                 var active = d.activeElement;
                 var store = adrTheaterStore();
@@ -8101,7 +8217,7 @@
 
     function adrTheaterSaveFromFields() {
         var nameEl = qForm("adr044-theater-name"), textEl = qForm("adr044-theater-text");
-        var name = nameEl ? String(nameEl.value || "").trim() : "";
+        var name = adrTheaterCleanName(nameEl ? nameEl.value : "");
         var text = textEl ? String(textEl.value || "").trim() : "";
         if (!name) { adrTheaterStatus("先给这个主题起个名", "#d4726a"); return false; }
         if (!text) { adrTheaterStatus("主题的写法是空的，没什么可存", "#d4726a"); return false; }
@@ -8116,6 +8232,14 @@
         return true;
     }
 
+    function adrTheaterMarkSeeded(names) {
+        var st = settings();
+        var seeded = Array.isArray(st.theaterSeeded) ? st.theaterSeeded.slice() : [];
+        var touched = false;
+        names.forEach(function (n) { if (seeded.indexOf(n) < 0) { seeded.push(n); touched = true; } });
+        if (touched) save("theaterSeeded", seeded);
+    }
+
     function adrTheaterDeleteFromFields(btn) {
         var name = adrTheaterCurrentName();
         if (!name) { adrTheaterStatus("主题仓已经空了", "#d6b177"); return false; }
@@ -8125,14 +8249,171 @@
                 var store = adrTheaterStore();
                 delete store[name];
                 save("theaterStore", store);
-                var st = settings();
-                var seeded = Array.isArray(st.theaterSeeded) ? st.theaterSeeded.slice() : [];
-                if (seeded.indexOf(name) < 0) { seeded.push(name); save("theaterSeeded", seeded); }   // 出厂条目删过就记账，不复活
+                adrTheaterMarkSeeded([name]);   // 出厂条目删过就记账，不复活
                 save("theaterCurrent", "");
                 saveNow();
                 adrTheaterRefreshFields();
                 adrTheaterStatus("已从主题仓删掉「" + name + "」", "#d6b177");
             });
+    }
+
+    // ---- v1.44.0 主题包：整仓导出成一个 json，别人的包一次导进来 ----
+    // 包的样子：{ "type": "arrebol-theater-pack", "version": 1, "themes": [ { "name": "主题名", "text": "这一场怎么写" }, … ] }
+    // 导入时宽进：上面这种、[ {name,text}, … ] 数组、{ "主题名": "写法", … } 对象都认；字段名 title / prompt / content / 名字 / 写法 也认。
+    // 同名同写法的跳过；同名不同写法的不覆盖，改名成「名（导入）」放进来——不动你自己改过的。
+    function adrTheaterCleanName(v) {
+        var n = String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, 40);
+        return (n === "__proto__" || n === "constructor" || n === "prototype") ? "" : n;
+    }
+
+    function adrTheaterPackObject() {
+        var store = adrTheaterStore();
+        var names = Object.keys(store);
+        return {
+            type: "arrebol-theater-pack", version: 1, exportedAt: new Date().toISOString(), count: names.length,
+            themes: names.map(function (n) { return { name: n, text: String(store[n] || "") }; })
+        };
+    }
+
+    function adrTheaterParsePack(input) {
+        var list = null;
+        if (Array.isArray(input)) list = input;
+        else if (input && typeof input === "object") {
+            if (Array.isArray(input.themes)) list = input.themes;
+            else if (input.themes && typeof input.themes === "object") list = Object.keys(input.themes).map(function (k) { return { name: k, text: input.themes[k] }; });
+            else if (input.theaterStore && typeof input.theaterStore === "object") list = Object.keys(input.theaterStore).map(function (k) { return { name: k, text: input.theaterStore[k] }; });
+            else {
+                var keys = Object.keys(input);
+                if (keys.length && keys.every(function (k) { return typeof input[k] === "string"; })) list = keys.map(function (k) { return { name: k, text: input[k] }; });
+            }
+        }
+        if (!list) throw new Error("这不是主题包：要一个 themes 数组，或者「主题名：写法」的对象");
+        var out = [];
+        list.forEach(function (it, i) {
+            var name = "", text = "";
+            if (typeof it === "string") { text = it; name = "主题 " + (i + 1); }
+            else if (it && typeof it === "object") {
+                name = it.name != null ? it.name : (it.title != null ? it.title : (it["名字"] != null ? it["名字"] : (it["主题"] != null ? it["主题"] : "")));
+                text = it.text != null ? it.text : (it.prompt != null ? it.prompt : (it.content != null ? it.content : (it["写法"] != null ? it["写法"] : (it["提示词"] != null ? it["提示词"] : ""))));
+            }
+            name = adrTheaterCleanName(name);
+            text = typeof text === "string" ? text.trim() : "";
+            if (name && text) out.push({ name: name, text: text });
+        });
+        if (!out.length) throw new Error("包里没有读到可用的主题（每个主题要有名字和写法）");
+        return out;
+    }
+
+    function adrTheaterImportList(list) {
+        var store = adrTheaterStore();
+        var res = { added: 0, same: 0, renamed: 0, total: list.length, first: "" };
+        list.forEach(function (it) {
+            var name = it.name;
+            if (typeof store[name] === "string") {
+                if (store[name] === it.text) { res.same++; return; }
+                var base = name + "（导入）", k = 2;
+                name = base;
+                while (typeof store[name] === "string") {
+                    if (store[name] === it.text) { name = ""; break; }
+                    name = base + k; k++;
+                }
+                if (!name) { res.same++; return; }
+                res.renamed++;
+            } else {
+                res.added++;
+            }
+            store[name] = it.text;
+            if (!res.first) res.first = name;
+        });
+        save("theaterStore", store);
+        saveNow();
+        return res;
+    }
+
+    function adrTheaterImportText(jsonText) {
+        try {
+            var data = JSON.parse(String(jsonText || "").replace(/^﻿/, ""));
+            var res = adrTheaterImportList(adrTheaterParsePack(data));
+            adrTheaterRefreshFields();
+            adrTheaterStatus("主题包导入完成：新增 " + res.added + " 个" + (res.renamed ? "、同名不同写法改名放进来 " + res.renamed + " 个" : "") + (res.same ? "、一模一样跳过 " + res.same + " 个" : "") + "；主题仓现有 " + adrTheaterNames().length + " 个 ✓", "#8ed99d");
+            return res;
+        } catch (e) {
+            adrTheaterStatus("导入失败：" + (e && e.message ? e.message : String(e)), "#d4726a");
+            return null;
+        }
+    }
+
+    function adrTheaterHandleImportFile(fileInput) {
+        try {
+            var file = fileInput && fileInput.files && fileInput.files[0];
+            if (!file) return;
+            var reader = new (rootWin().FileReader || FileReader)();
+            reader.onload = function () { adrTheaterImportText(String(reader.result || "")); };
+            reader.onerror = function () { adrTheaterStatus("导入失败：文件读取错误", "#d4726a"); };
+            reader.readAsText(file);
+        } catch (e) { adrTheaterStatus("导入失败：" + (e && e.message ? e.message : String(e)), "#d4726a"); }
+    }
+
+    function adrTheaterTriggerImport() {
+        var f = qForm("adr044-theater-import-file");
+        if (f) { try { f.value = ""; } catch (e0) {} f.click(); }
+    }
+
+    function adrTheaterExportPack() {
+        try {
+            var pack = adrTheaterPackObject();
+            if (!pack.count) { adrTheaterStatus("主题仓是空的，没什么可导出", "#d4726a"); return false; }
+            var d = rootDoc();
+            var now = new Date();
+            var stamp = now.getFullYear() + ("0" + (now.getMonth() + 1)).slice(-2) + ("0" + now.getDate()).slice(-2);
+            var blob = new Blob([JSON.stringify(pack, null, 2)], { type: "application/json;charset=utf-8" });
+            var a = d.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "红霞剧场主题包-" + stamp + ".json";
+            (d.body || d.documentElement).appendChild(a);
+            a.click();
+            setTimeout(function () {
+                try { URL.revokeObjectURL(a.href); } catch (e1) {}
+                try { if (a.parentNode) a.parentNode.removeChild(a); } catch (e2) {}
+            }, 1200);
+            adrTheaterStatus("主题包已导出：" + pack.count + " 个主题 ✓", "#8ed99d");
+            return true;
+        } catch (e) {
+            adrTheaterStatus("导出失败：" + (e && e.message ? e.message : String(e)), "#d4726a");
+            return false;
+        }
+    }
+
+    function adrTheaterClearStore(btn) {
+        var n = adrTheaterNames().length;
+        if (!n) { adrTheaterStatus("主题仓已经空了", "#d6b177"); return false; }
+        return adrDTwoStepConfirm("theater-clear", btn || qForm("adr044-theater-clear"), "确定清空？", "再点一次清空主题仓（" + n + " 个全删；想留就先导出）",
+            function (msg) { adrTheaterStatus(msg, "#d6a26a"); },
+            function () {
+                adrTheaterMarkSeeded(Object.keys(ADR_THEATER_FACTORY));   // 出厂的也算删过，不自己长回来
+                save("theaterStore", {});
+                save("theaterCurrent", "");
+                saveNow();
+                adrTheaterRefreshFields();
+                adrTheaterStatus("主题仓清空了。可以导入一个主题包，或点「补回出厂六个」", "#d6b177");
+            });
+    }
+
+    function adrTheaterRestoreFactory() {
+        var st = settings();
+        var store = (st.theaterStore && typeof st.theaterStore === "object" && !Array.isArray(st.theaterStore)) ? st.theaterStore : {};
+        var back = 0;
+        Object.keys(ADR_THEATER_FACTORY).forEach(function (k) {
+            if (typeof store[k] === "string") return;
+            store[k] = ADR_THEATER_FACTORY[k];
+            back++;
+        });
+        save("theaterStore", store);
+        adrTheaterMarkSeeded(Object.keys(ADR_THEATER_FACTORY));
+        saveNow();
+        adrTheaterRefreshFields();
+        adrTheaterStatus(back ? "补回了 " + back + " 个出厂主题 ✓（你改过的同名主题没动）" : "出厂六个都在，没什么要补的", "#8ed99d");
+        return back;
     }
 
     function adrTheaterCopyRegex() {
@@ -8160,14 +8441,19 @@
         var names = adrTheaterNames();
         var store = adrTheaterStore();
         return secOpen("🎭 红霞剧场 · 每层楼尾来一场", false, "lamp-theater")
-            + '<div class="' + noteClass + '">开了以后，每层助手正文落地，霞姐在楼尾插一场：弹幕、场外嗑瓜子、Q 版四格、花絮……她看到的和掌灯一样。插在楼里是给你看的，别让主模型看见——底下那条剥离正则贴进酒馆「正则」就行。</div>'
+            + '<div class="' + noteClass + '">开了以后，每层助手正文落地，霞姐在楼尾插一场：弹幕、场外嗑瓜子、Q 版四格、花絮……她看到的和掌灯一样（基调、角色卡、世界书、人设、此前各楼摘要、本篇全文）。插在楼里是给你看的，别让主模型看见——底下那条剥离正则贴进酒馆「正则」就行。</div>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-enabled"' + (st.theaterEnabled === true ? " checked" : "") + '> 启用红霞剧场（走聊天位 API，每层一次，花钱；「小红霞正在运行」关着就不演）</label>'
             + '<label>主题怎么选</label><select id="adr044-theater-pick">' + opt(adrTheaterPickMode(), "fixed", "固定：每层都用下面选中的这个") + opt(adrTheaterPickMode(), "random", "随机：每层从主题仓里抽一个，不连着抽同一个") + '</select>'
-            + '<label>主题仓（出厂六个；能改、能加、能删）</label>'
+            + '<label>主题仓（出厂六个；能改、能加、能删，也能整包导入导出）</label>'
             + '<select id="adr044-theater-select" data-optsig="' + esc(adrCdOptSig("theater", names, sel)) + '">' + adrTheaterOptionsHTML(sel) + '</select>'
             + '<input type="text" id="adr044-theater-name" placeholder="主题名，如：弹幕吐槽 / 场外嗑瓜子 / 你自己起" value="' + esc(sel) + '">'
-            + '<textarea id="adr044-theater-text" rows="4" placeholder="这个主题怎么写：谁在说、几条几格、什么腔调。写得越具体越像样。">' + esc(sel ? String(store[sel] || "") : "") + '</textarea>'
+            + '<textarea id="adr044-theater-text" rows="4" placeholder="这个主题怎么写：谁在说、几条几格、什么腔调。想要彩色卡片这类排版，就在这里写明「用 HTML 排版」和长什么样。">' + esc(sel ? String(store[sel] || "") : "") + '</textarea>'
             + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-save">存进主题仓</button><button type="button" id="adr044-theater-delete">从仓里删掉</button></div>'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-import">导入主题包</button><button type="button" id="adr044-theater-export">导出主题包</button></div>'
+            + '<input type="file" id="adr044-theater-import-file" class="adr044-cd-import-file" accept=".json,application/json,text/json,text/plain">'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-clear">清空主题仓</button><button type="button" id="adr044-theater-restore">补回出厂六个</button></div>'
+            + '<div class="adr044-template-status" id="adr044-theater-count">主题仓现有 ' + names.length + ' 个主题</div>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-rich"' + (st.theaterRich !== false ? " checked" : "") + '> 允许 HTML / CSS 排版（主题里点名要排版时，她可以回一段带样式的 HTML；不勾就一律纯文本）</label>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-fold"' + (st.theaterFold === true ? " checked" : "") + '> 插进去时默认折叠（点开才看；不勾就是摊开的）</label>'
             + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-now">🎬 现在来一场</button><button type="button" id="adr044-theater-remove">撤掉最新一楼的</button></div>'
             + '<div class="adr044-template-status" id="adr044-theater-status">没开也能点「现在来一场」试试手感；一楼只留一场，再来一场会换掉旧的。</div>'
@@ -8183,6 +8469,10 @@
         if (id === "adr044-theater-now") { adrTheaterNow("manual", true).catch(function () {}); return true; }
         if (id === "adr044-theater-remove") { adrTheaterRemoveLatest(); return true; }
         if (id === "adr044-theater-regex-copy") { adrTheaterCopyRegex(); return true; }
+        if (id === "adr044-theater-import") { adrTheaterTriggerImport(); return true; }
+        if (id === "adr044-theater-export") { adrTheaterExportPack(); return true; }
+        if (id === "adr044-theater-clear") { adrTheaterClearStore(btn); return true; }
+        if (id === "adr044-theater-restore") { adrTheaterRestoreFactory(); return true; }
         return false;
     }
 
@@ -8211,6 +8501,13 @@
                 tap(el);
                 el.addEventListener("change", function () { adrCdTouch(el); save("theaterFold", !!el.checked); saveNow(); });
             });
+            each("adr044-theater-rich", function (el) {
+                tap(el);
+                el.addEventListener("change", function () {
+                    adrCdTouch(el); save("theaterRich", !!el.checked); saveNow();
+                    adrTheaterStatus(el.checked ? "允许 HTML / CSS 排版：主题里点名要排版，她才会回带样式的 HTML" : "一律纯文本：她回来的标签会当成普通字显示", "#8ed99d");
+                });
+            });
             each("adr044-theater-pick", function (el) {
                 tap(el);
                 el.addEventListener("change", function () {
@@ -8225,6 +8522,9 @@
             });
             each("adr044-theater-name", function (el) { typing(el); });
             each("adr044-theater-text", function (el) { typing(el); });
+            each("adr044-theater-import-file", function (el) {
+                el.addEventListener("change", function () { adrTheaterHandleImportFile(el); });
+            });
         } catch (e) {
             try { console.warn("[Arrebol D] theater bind failed", e); } catch (e2) {}
         }
@@ -8233,9 +8533,11 @@
     try {
         rootWin().__adrTheaterTest = {
             now: adrTheaterNow, onMessage: adrTheaterOnMessage, block: adrTheaterBlock, strip: adrTheaterStrip, has: adrTheaterHas, clean: adrTheaterClean,
-            pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, preset: ADR_THEATER_PRESET,
+            pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, preset: ADR_THEATER_PRESET, presetText: adrTheaterPresetText,
             regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite,
-            paint: adrTheaterPaint, show: adrTheaterShow, saveSoon: adrTheaterSaveSoon, lampDirty: function () { return adrLampDirty; }
+            paint: adrTheaterPaint, show: adrTheaterShow, saveSoon: adrTheaterSaveSoon, lampDirty: function () { return adrLampDirty; },
+            tidyRich: adrTheaterTidyRich, packObject: adrTheaterPackObject, parsePack: adrTheaterParsePack, importText: adrTheaterImportText,
+            handleFile: adrTheaterHandleImportFile, restoreFactory: adrTheaterRestoreFactory
         };
     } catch (eTheaterHook) {}
     // ================= 红霞剧场 模块结束 =================
@@ -9731,7 +10033,8 @@
             ids[lid] = function () { adrLampHandleButtonId(lid, qForm(lid)); };
         });
         // v1.43.0 红霞剧场按钮：同样双注册
-        ["adr044-theater-save", "adr044-theater-delete", "adr044-theater-now", "adr044-theater-remove", "adr044-theater-regex-copy"].forEach(function (tid) {
+        ["adr044-theater-save", "adr044-theater-delete", "adr044-theater-now", "adr044-theater-remove", "adr044-theater-regex-copy",
+         "adr044-theater-import", "adr044-theater-export", "adr044-theater-clear", "adr044-theater-restore"].forEach(function (tid) {
             ids[tid] = function () { adrTheaterHandleButtonId(tid, qForm(tid)); };
         });
         ids["adr044-api-profile-save-cd"] = function () { adrDSaveCurrentApiProfile("cd"); };

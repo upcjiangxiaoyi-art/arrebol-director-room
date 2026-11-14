@@ -6,6 +6,22 @@
 
 ---
 
+## v1.44.0
+
+导演稿静默上屏、剧场主题包、剧场 HTML / CSS 排版（提议：江「导演也该静默」「可以导入和导出小剧场提示词预设包，比如 100 个小剧场脑洞，不用一个个复制，直接打包 json」「小剧场能支持 css 等类型的渲染哈」「小剧场能看到的范围也是角色卡世界书当前正文和之前的摘要对不，不然莫名其妙，得有沉浸感」；施工：Claude）。
+
+楼尾静默上屏的公共件。三个小函数供导演稿与剧场共用：`adrDMesBox(idx)` 找酒馆已经画好的 `#chat .mes[mesid] .mes_text`；`adrDFormatFragment(idx, text)` 调酒馆上下文里的 `messageFormatting`，让酒馆只把"新接的这一小段"按它自己的流程变成 HTML（美化正则、markdown、消毒、`<style>` 作用域都走它的），老酒馆没有这个接口返回 null；`adrDFragmentVisible(el)` 判断格式化出来的东西有没有可看的内容（用户的美化正则可能把它整块藏掉，那就不往楼里留空壳）。
+
+导演稿静默。`adrDWriteDirectorInjection` 写完楼之后先试 `adrDDirectorPaint(idx, type, add, hadOwn)`：把这份稿格式化后放进一个 `div.arrebol-d-live[data-arb-type]` 接到楼尾，成了就不登记 `adrDPendingRedraw`——于是没有 `updateMessageBlock`、没有 `MESSAGE_UPDATED`。`hadOwn`（这一楼原来就挂着本类型的旧稿）为真时，旧稿若是上次静默接上去的（认得出那个容器）就原地换；若是酒馆整楼画出来的（经过美化正则已经认不出哪块是它），返回 false 走老路让酒馆重画这一楼并广播。情感与统筹各占各的容器，各换各的。`adrDNativeRedrawNow` 开头加一条：没有登记要重画的楼就直接返回——以前待重画清单为空时会一路走到 `reloadCurrentChat()` 整聊天重载。导演稿的当场存盘不动（一次、要等结果，成败记进导演的账）；放养撤稿、掌灯替换正文仍走整楼重画（它们改的是楼里已有的东西）。
+
+主题包。导出 `adrTheaterExportPack`：`{ type: "arrebol-theater-pack", version: 1, exportedAt, count, themes: [{ name, text }] }`，下载成「红霞剧场主题包-YYYYMMDD.json」（下载手法与卡库导出同款）。导入 `adrTheaterImportText` ← 文件框 `adr044-theater-import-file`（FileReader）：去 BOM、`JSON.parse`、`adrTheaterParsePack` 宽进——`themes` 数组、裸数组、`themes` / `theaterStore` 对象、「主题名：写法」的纯对象都认，条目字段 `name | title | 名字 | 主题` 与 `text | prompt | content | 写法 | 提示词` 都认，裸字符串起名「主题 N」；名字压空白截 40 字，`__proto__` / `constructor` / `prototype` 不收，缺名字或缺写法的丢掉。`adrTheaterImportList` 合并：没有的新增；同名同写法跳过；同名不同写法不覆盖，改名「名（导入）」「名（导入）2」…放进来（已有一模一样的就跳过，所以同一个包重复导不会越导越多）。状态行报新增 / 改名 / 跳过各几个。「清空主题仓」两下确认，出厂六个一并记进 `theaterSeeded`、不自己长回来；「补回出厂六个」只补缺的，不动用户改过的同名主题。面板多一行「主题仓现有 N 个主题」。仓库附示例包 `packs/arrebol-theater-sample-pack.json`：十八个纯文本主题（朋友圈现场、微博热搜、家族群聊、课堂小纸条、赛事解说、情感法庭、动物世界、关系天气预报、外卖订单、工作周报、茶馆说书、剧组通告单、毒舌星座运势、种草笔记、系统提示、十年后的回忆录、物品的独白、路人甲的日记）加三个 HTML 排版主题（彩色弹幕墙、朋友圈卡片、好感度面板）。
+
+HTML / CSS 排版。设置 `theaterRich`（默认 true），面板一枚勾选。规矩第六条分两版：允许时「默认纯文本，只有本场主题明确要求用 HTML / CSS 排版时才输出 HTML：自包含的片段，样式写在 style 属性里或一个 `<style>` 块且选择器以自己起的类名开头；不要 script、iframe、外链图片与字体、position:fixed、`<details>`、整页的 html / body」，不允许时还是「不要任何 HTML 标签」。回稿 `adrTheaterClean(raw, allowRich)` 返回 `{ text, rich }`：允许且认出标签就走 `adrTheaterTidyRich`——去掉 script 块、iframe / object / embed / link / meta / base / 表单控件 / html / head / body 标签、`on*=` 事件属性、`javascript:` 链接；`details` / `summary` 换成 `div`（剥离正则认第一个 `</details>`，里面不能再有）；有块级结构的整段压成一行（酒馆的 markdown 遇空行会把 HTML 拆散），只有行内标签的保留换行成 `<br>`。这一步不是消毒，是给存进楼里的东西立规矩。`adrTheaterBlock(name, text, folded, rich)`：rich 的正文原样放进折叠块，不转义。上屏 `adrTheaterPaint` 三层：① 有 `messageFormatting` 就把整块交给酒馆格式化，结果放进 `div.arrebol-d-theater-live` 接到楼尾（纯文本的场也走这条，和酒馆以后整楼重画出来的一模一样，用户针对剧场块写的美化正则也生效）；② 老酒馆没有接口：自己搭折叠块，rich 的正文过酒馆的 DOMPurify（`SillyTavern.libs.DOMPurify` 或 `window.DOMPurify`），并禁掉没法限定作用域的 `style` 以及 script / iframe / 表单 / details 等；③ 连 DOMPurify 都拿不到：`adrTheaterPlainOf` 去掉标签只显示文字。style.css 给剧场块加了 `max-width: 100%; overflow-x: auto`，里面的图片跟着缩，排版不撑破楼。
+
+读取范围（确认，未改）。剧场的素材直接复用掌灯的 `adrLampMaterialsAt(idx)`：这局的基调、全量角色卡 / 世界书 / 人设、未隐藏楼层的摘要（按时间顺序，用户楼原话带上）、本篇全文；被隐藏的楼不读，各楼已有的剧场块不读（`cleanMessage` 洗掉了）。规矩第四条补了一句「名字、称呼、地点都用这个世界里有的」。面板说明里把范围写明了。
+
+test_theater.js 98 → 158 项。排版：默认勾着、两版规矩、理一遍（压成一行、去 script / iframe / 事件 / javascript:、嵌套折叠块换 div、样式留着）、纯文本与不允许时的判定、行内标签保留换行；新酒馆走 `messageFormatting`（参数是那一整块与楼号）、楼里存的字面量、整块一行且剥离正则套回去恢复原样、画面上是酒馆格式化出来的那一块且全楼只有一个折叠块、不重画不广播、状态行注明、掌灯读不到、被美化正则藏掉不留空壳；老酒馆过 DOMPurify 且禁 style、拿不到消毒器只显示文字；关掉排版回到转义、请求里说明不要 HTML。主题包：四枚键与文件框、计数、导出包的字段、下载文件名与类型、三种去向与状态行、不覆盖原有、两端下拉同步、重复导不增、数组与别名字段、对象与 BOM、非 json、非主题包、`__proto__` 不收、选文件导入、清空两下且出厂不复活、空仓兜底、示例包二十一个一次导入且字段齐全、补回出厂不动导入的、都在时不重复。导演稿：新楼静默接一块、交给酒馆格式化、原节点不动、不重画不广播不重载、当场存盘一次、同楼重挂原地换且楼里只一份、情感与统筹各占一块、旧稿认不出时退回老路、被美化正则藏掉不留空壳不重画；老酒馆（无接口）照旧重画并广播。原有 16 套全过。
+
 ## v1.43.2
 
 红霞剧场静默插入（报告：江「插入方式是静默插入吗，不会插入的时候酒馆页面一抖吧，检查一下插入渲染，别让页面负载太大了，手机嗷嗷烫」；施工：Claude）。查下来 v1.43.0 不是静默的：剧场写完走的是导演稿那条 `adrDSaveThenRedrawAfterInject`——立刻 `saveChat()` 存整份聊天，180ms 后 `updateMessageBlock(idx)` 让酒馆把这一楼的 HTML 整个重画（用户的美化正则跟着重跑），再 `emit(MESSAGE_UPDATED)`，变量脚本、前端卡按"这楼被编辑了"对它重跑一遍；酒馆没有 `updateMessageBlock` 的老版本还会退到 `reloadCurrentChat()` 整聊天重载。导演稿每 N 层一次问题不大，剧场每层一次就是每层多闪一下、多烧一回。
