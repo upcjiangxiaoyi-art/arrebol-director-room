@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.41.3｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.41.4｜ripple & GPT & Claude
+ * v1.41.4 浮窗记位漏洞：关窗前一瞬的 scroll 事件经节流落到关窗之后，把记好的位置抹成 0，再开回顶；窗关着不记，开窗 420ms 后发现被拨回 0 再对一次（报告 江；施工 Claude）
  * v1.41.3 蛐蛐小窗不自动关：看完点「朕已阅」；没看的排队一条条看，导演提示插队关掉后摆回来（提议 江；施工 Claude）
  * v1.41.2 浮窗记位：关了再开、切页再切回来，落回上次停的地方（按锚点记，不怕上面长了短了）；掌灯页没记忆时直接落到对话区（报告 江「每次回到蛐蛐页面都在最顶上」；施工 Claude）
  * v1.41.1 掌灯按钮排布：发送独占一行、按高 48px；打断与清空退到下一行并排；改好给我在改稿模式里再单独一行（报告 江「发送和打断并排总误触」；施工 Claude）
@@ -9784,6 +9785,13 @@
                     adr048InstallScrollMemo(body);
                     if (!adr048RestoreScroll()) body.scrollTop = 0;
                     setTimeout(function () { try { adr048RestoreScroll(); } catch (eR2) {} }, 160);
+                    // v1.41.4：有的浏览器在窗刚显示那一拍会把 scrollTop 拨回 0；420ms 后若发现被拨回了再对一次，用户已经自己划开就不动
+                    setTimeout(function () {
+                        try {
+                            var want = Number(body.__adr048ScrollWant) || 0;
+                            if (want > 0 && body.scrollTop === 0) adr048RestoreScroll();
+                        } catch (eR3) {}
+                    }, 420);
                 }
             } catch (e1) {}
         } catch (e) {
@@ -9819,6 +9827,10 @@
         try {
             var body = rootDoc().querySelector("#adr048-popup-body");
             if (!body) return;
+            // v1.41.4：窗已经关了（display:none 的 scrollTop 读出来是 0）就别记——关窗前一瞬的 scroll 事件
+            // 经 150ms 节流落到关窗之后，会把记好的位置抹成 0，再开就回顶。
+            if (!adr048IsPopupOpen()) return;
+            try { if (!body.getClientRects().length) return; } catch (eRect) {}
             var tab = settings().activeTab || "emotion";
             var top = body.scrollTop;
             var best = null, bestTop = -Infinity;
@@ -9848,7 +9860,9 @@
                 if (th && th.getClientRects().length) target = adr048TopWithin(body, th) - 56;
             }
             if (target == null) return false;
-            body.scrollTop = Math.max(0, Math.round(target));
+            var want = Math.max(0, Math.round(target));
+            body.scrollTop = want;
+            body.__adr048ScrollWant = want;
             return true;
         } catch (e) { return false; }
     }
@@ -9869,7 +9883,7 @@
 
     function adr048ClosePopupPanel() {
         try {
-            try { adr048RememberScroll(); } catch (eMemo) {}   // v1.41.2 关之前记一下停在哪
+            try { adr048RememberScroll(); } catch (eMemo) {}   // v1.41.2 关之前记一下停在哪（关了之后节流里晚到的那次会被 v1.41.4 的守卫挡掉）
             // 关闭浮窗前先强制同步一次表单，避免移动端输入框/长文本框的 debounced save 尚未落盘。
             try {
                 syncAll();
