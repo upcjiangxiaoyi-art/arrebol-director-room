@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.41.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.41.1｜ripple & GPT & Claude
+ * v1.41.1 掌灯按钮排布：发送独占一行、按高 48px；打断与清空退到下一行并排；改好给我在改稿模式里再单独一行（报告 江「发送和打断并排总误触」；施工 Claude）
  * v1.41.0 自动蛐蛐（可选，默认关）：新楼落地她自己随手发一条 60 字以内的吐槽，弹个小窗，写进蛐蛐账；每楼一次、重 roll 算新一版、楼还在出字就等、总开关关着不来；同角色连续消息合并（提议 江；施工 Claude）
  * v1.40.1 蛐蛐模式里「替换后自动清空本轮对话」那枚勾选收不起来：皮肤规则 display: inline-flex !important 比 .adr-lamp-hide 重，藏的规则按同一套写法往上压一级；真浏览器核对两端两模式（发现 Claude 截图自查；施工 Claude）
  * v1.40.0 掌灯蛐蛐模式：和朋友一起追剧——对话一把聊天一本账、不按楼分、不自动清，跟着剧情一楼一楼走，用户那句前标「剧情走到 #N 了」；只聊不改稿；改稿模式照旧（提议 江；施工 Claude）
@@ -7483,8 +7484,10 @@
             + secOpen("💬 和小红霞聊", false, "lamp-chat")
             + '<div class="adr-lamp-thread" id="adr044-lamp-thread"></div>'
             + '<textarea id="adr044-lamp-input" rows="3" placeholder="哪里不对、哪里想改、哪里看着别扭……Ctrl/⌘+Enter 发送"></textarea>'
-            + '<div class="' + actionsClass + '"><button id="adr044-lamp-send" type="button">发送</button><button id="adr044-lamp-stop" type="button" disabled>打断</button></div>'
-            + '<div class="' + actionsClass + '"><button id="adr044-lamp-rewrite" type="button" class="adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '">改好给我</button><button id="adr044-lamp-clear" type="button">清空本轮对话</button></div>'
+            // v1.41.1 发送独占一行、做大；打断与清空退到下一行并排，拇指不再按错；改好给我在改稿模式里再单独一行
+            + '<div class="' + actionsClass + ' adr-lamp-send-row"><button id="adr044-lamp-send" type="button">发送</button></div>'
+            + '<div class="' + actionsClass + '"><button id="adr044-lamp-stop" type="button" disabled>打断</button><button id="adr044-lamp-clear" type="button">清空本轮对话</button></div>'
+            + '<div class="' + actionsClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><button id="adr044-lamp-rewrite" type="button" class="adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '">改好给我</button></div>'
             + '<label class="' + checkClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><input type="checkbox" id="adr044-lamp-reset-after-apply"' + (st.lampResetAfterApply !== false ? " checked" : "") + '> 替换后自动清空本轮对话（这一楼改完了，下一次从头说）</label>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-lamp-auto-quip"' + (st.lampAutoQuip === true ? " checked" : "") + '> 🍉 新楼落地自动蛐蛐一句，弹个小窗（走聊天位 API，每楼一次，花钱；写进蛐蛐记录，你能接着回）</label>'
             + '<div class="adr044-template-status" id="adr044-lamp-chat-status">聊到你觉得可以了，点「改好给我」：执笔位读完整段讨论重写这一楼，先预览再替换。</div>'

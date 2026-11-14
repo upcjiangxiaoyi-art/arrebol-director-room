@@ -145,6 +145,9 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     e.chat[3].mes = "<content>前一楼正文</content><report>他收到了一封信。</report>";
 
     section("聊：借统筹的 API，无导演框架，多轮");
+    const sendBtn = d.querySelector("#adr048-popup-body #adr044-lamp-send");
+    ok(sendBtn.parentNode.children.length === 1 && sendBtn.parentNode.classList.contains("adr-lamp-send-row"), "发送独占一行（v1.41.1）");
+    ok(d.querySelector("#adr048-popup-body #adr044-lamp-stop").parentNode === d.querySelector("#adr048-popup-body #adr044-lamp-clear").parentNode, "打断与清空同一行");
     const inp = d.querySelector("#adr048-popup-body #adr044-lamp-input");
     inp.value = "她答应得太快了吧，这不像她";
     e.setScript(() => "快是快，但你看她前一楼就已经在等这封信了——快的是动作，不是决定。");
@@ -373,6 +376,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(e.st().lampMode === "gossip", "切到蛐蛐模式存进设置");
     ok(modeBtn.classList.contains("active") && modeBtn.getAttribute("aria-pressed") === "true" && !modeEdit.classList.contains("active"), "蛐蛐钮点亮、改稿钮熄灭");
     ok(d.querySelector("#adr048-popup-body #adr044-lamp-rewrite").classList.contains("adr-lamp-hide"), "蛐蛐模式藏起「改好给我」");
+    ok(d.querySelector("#adr048-popup-body #adr044-lamp-rewrite").parentNode.classList.contains("adr-lamp-hide"), "改好给我那一整行都收起，不留空行");
     const editOnly = [...d.querySelectorAll("#adr048-popup-body .adr-lamp-edit-only")];
     ok(editOnly.length >= 3 && editOnly.every(el => el.classList.contains("adr-lamp-hide")), "楼号行、改好给我、自动清空都收起", String(editOnly.length));
     ok(d.querySelector("#adr048-popup-body #adr044-lamp-mode-note").textContent.indexOf("一起追剧") >= 0, "模式说明换成追剧");

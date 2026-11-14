@@ -7492,8 +7492,8 @@ html #adr044-drawer .adr044-page > details > .adr-lamp-hide.adr-lamp-hide.adr-la
     border: 1px solid var(--adr-deck-line, rgba(128, 128, 128, .25));
     background: var(--adr-deck-bg, rgba(128, 128, 128, .06));
 }
-html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-lamp-modes > button,
-html #adr044-drawer .adr-lamp-modes > button {
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-lamp-modes.adr-lamp-modes.adr-lamp-modes > button,
+html #adr044-drawer#adr044-drawer .adr-lamp-modes.adr-lamp-modes.adr-lamp-modes > button {
     flex: 1 1 0 !important;
     width: auto !important;
     margin: 0 !important;
@@ -7505,8 +7505,8 @@ html #adr044-drawer .adr-lamp-modes > button {
     font-weight: 500 !important;
     box-shadow: none !important;
 }
-html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-lamp-modes > button.active,
-html #adr044-drawer .adr-lamp-modes > button.active {
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-lamp-modes.adr-lamp-modes.adr-lamp-modes > button.active,
+html #adr044-drawer#adr044-drawer .adr-lamp-modes.adr-lamp-modes.adr-lamp-modes > button.active {
     background: var(--adr-deck-card, rgba(255, 255, 255, .5)) !important;
     border-color: var(--adr-deck-line, rgba(128, 128, 128, .3)) !important;
     color: var(--adr-deck-ink, inherit) !important;
@@ -7523,3 +7523,16 @@ html #adr044-drawer .adr-lamp-modes > button.active {
     color: var(--adr-deck-muted, inherit);
 }
 .adr-lamp-divider-new { opacity: .85; border-style: solid; color: var(--adr-deck-accent, inherit); border-color: var(--adr-deck-accent, rgba(128, 128, 128, .5)); }
+
+/* v1.41.1 掌灯：发送独占一行、做大；打断与清空退到下一行并排，拇指不再按错 */
+/* 皮肤给全部按钮的那条（#adr048-popup-body#adr048-popup-body button:not(…):not(…)）id 写了两遍，权重 (3,3,2)；
+   这里照它的写法把 id 也写两遍，权重 (5,1,0) / (3,0,0)，稳压。 */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body #adr044-lamp-send#adr044-lamp-send,
+html #adr044-drawer#adr044-drawer #adr044-lamp-send#adr044-lamp-send {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    min-height: 48px !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: .08em !important;
+}
