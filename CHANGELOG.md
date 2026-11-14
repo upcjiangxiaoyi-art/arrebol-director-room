@@ -6,6 +6,10 @@
 
 ---
 
+## v1.41.0
+
+自动蛐蛐小窗（提议：江「搞一个可选，就是一段话趣味吐槽，每篇结束一个小弹窗」；施工：Claude）。设置 `lampAutoQuip`（默认 false），掌灯聊天区一枚勾选。MESSAGE_RECEIVED 进门只排一拍（900ms 防抖），`adrLampAutoQuipNow`：先 `adrDWaitForGenerationIdle(120000)` 等楼真的出完（导演同款证据：停止按钮 / 旗子 / 字数）；掌灯正替用户说话就让，最多 60 秒；再读最新一楼，签名 = chatKey + 楼号 + 正文长度 + 前 40 字，同一签名只来一次（重 roll 换了字就是新一版，会再来）；素材按这一楼现算（新拆的 `adrLampMaterialsAt(idx)`，不受改稿模式填的楼号影响）；请求 = 蛐蛐人设 + 素材 + 蛐蛐账最近 40 句 + 一条合成的用户句「【自动蛐蛐】刚落地一楼，你随手发一条……60 字以内」（前面照例标「（剧情走到 #N 了）」），`max_tokens` 400；回来写两行进蛐蛐账：记录行「📍 #N 落地，她自己蛐蛐了一句」+ 她那句（`auto: true`，气泡标「小红霞 · 自动」），`adrDPopupMessage` 弹窗，kind `quip` 留 25 秒。总开关 `adrDMasterEnabled()` 关着不来；换了聊天不存不弹；失败只在掌灯状态行说一句，不弹错误窗。顺手把 `adrLampApiHistory` 加了同角色连续合并：发送失败没等到回答的两条用户句、自动蛐蛐接在上一句回答后面的两条助手句，合成一条再发，严格要求交替的接口也吃得下。test_lamp.js 165 → 186 项：勾上后新楼落地 ≈ 1 秒内发一次请求、用蛐蛐人设、末句是合成的自动蛐蛐句并标「剧情走到 #9 了」、回来写进 gossip 账带 auto 与楼号、弹窗标题带楼号正文是那句、同一楼再触发不重复、总开关关着不来、关掉勾选不来、重 roll 换了字再来；蛐蛐模式画面上气泡标「小红霞 · 自动」且接着回时历史里带着那句；u/u 与 a/a 连续合并。原有 15 套全过。
+
 ## v1.40.1
 
 蛐蛐模式收不起「替换后自动清空本轮对话」热修（发现：v1.40.0 推主后 Claude 真浏览器截图自查；施工：Claude）。jsdom 测试只看 classList，`adr-lamp-hide` 是挂上了，但浮窗与抽屉给勾选标签的皮肤规则 `#adr048-popup-panel #adr048-popup-shell .adr048-check` / `#adr044-drawer .adr044-check` 写着 `display: inline-flex !important`，两个 id 压过单个类名，那枚勾选在蛐蛐模式里照样露着（楼号行与「改好给我」没这条皮肤规则，收得起来）。修法：`.adr-lamp-hide` 另加四条按同一套写法往上压一级的选择器（`html #adr048-popup-panel[data-arb-theme] #adr048-popup-shell .adr-lamp-hide.adr-lamp-hide.adr-lamp-hide` 等，三个类名叠起来连 `.adr044-page > details > .adr044-check` 那条也压得住）。真浏览器 getComputedStyle 核对：蛐蛐模式浮窗与抽屉里勾选标签、楼号行、「改好给我」均 none，模式钮与对话区正常；切回改稿三样都回来，改稿预览区无稿时仍 none。
