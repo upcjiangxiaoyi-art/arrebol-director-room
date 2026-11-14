@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.41.5｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.41.6｜ripple & GPT & Claude
+ * v1.41.6 掌灯落位诊断版：落位改以 scrollIntoView 为主、scrollTop 微调，九拍对到 2.5 秒，落位窗口内被拨回 0 当场设回；每一拍的想/得/容器高写在掌灯顶上那行 8 秒；台头显示版本号；滚动容器落位期间强制 scroll-behavior: auto（报告 江「依旧在最顶上」；施工 Claude）
  * v1.41.5 掌灯页开窗 / 切页一律落到对话区，不再依赖记忆：对话区顶上留 56px，聊天块装不下就让输入框和发送露在底边；分五拍落稳，用户一碰就收手（报告 江「还是不能自动回底」；施工 Claude）
  * v1.41.4 浮窗记位漏洞：关窗前一瞬的 scroll 事件经节流落到关窗之后，把记好的位置抹成 0，再开回顶；窗关着不记，开窗 420ms 后发现被拨回 0 再对一次（报告 江；施工 Claude）
  * v1.41.3 蛐蛐小窗不自动关：看完点「朕已阅」；没看的排队一条条看，导演提示插队关掉后摆回来（提议 江；施工 Claude）
@@ -95,6 +96,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
+    var ADR_D_VERSION = "1.41.6";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -7830,7 +7832,7 @@
         var st = settings();
 
         return '<div id="adr044-drawer"><div class="inline-drawer">'
-            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v1.29.3</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
+            + '<div class="inline-drawer-toggle inline-drawer-header"><b>🎬 Arrebol D 暗河红霞导演系统 v' + ADR_D_VERSION + '</b><div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div></div>'
             + '<div class="inline-drawer-content">'
             + '<div class="adr044-box">'
             + '<button type="button" id="adr044-master-toggle" data-master-on="' + (st.masterEnabled !== false ? '1' : '0') + '">' + adrDMasterToggleLabel() + '</button>'
@@ -7961,6 +7963,10 @@
             if (bodyForScroll) {
                 try {
                     bodyForScroll.__adr048Touched = false;
+                    // 上一页的落位窗口与"回 0 重设"保险一并作废，免得把这一页的回顶又拉回去
+                    bodyForScroll.__adr048LandUntil = 0;
+                    bodyForScroll.__adr048ScrollWant = 0;
+                    bodyForScroll.__adr048LandToken = (Number(bodyForScroll.__adr048LandToken) || 0) + 1;
                     if (!adr048RestoreScroll()) bodyForScroll.scrollTop = 0;
                 } catch (eScroll) {}
             }
@@ -9627,7 +9633,7 @@
         return '<div id="adr048-popup-panel" data-open="0">'
             + '<div id="adr048-popup-shell">'
             + '<div id="adr048-popup-head">'
-            + '<div class="adr048-head-txt"><div class="adr048-title">🎬 Arrebol <span class="adr048-title-d">D</span><span class="adr048-title-cn">暗河红霞导演系统</span></div><div id="adr048-popup-sub">小红霞在线 · ripple &amp; GPT &amp; Claude</div></div>'
+            + '<div class="adr048-head-txt"><div class="adr048-title">🎬 Arrebol <span class="adr048-title-d">D</span><span class="adr048-title-cn">暗河红霞导演系统</span></div><div id="adr048-popup-sub">小红霞在线 · v' + ADR_D_VERSION + ' · ripple &amp; GPT &amp; Claude</div></div>'
             + '<button type="button" id="adr048-theme-toggle" title="开灯 / 关灯">' + (st.dawnTheme === true ? "☀️" : "🌙") + '</button>'
             + '<button type="button" id="adr048-popup-close" aria-label="关闭导演室">×</button>'
             + '</div>'
@@ -9857,23 +9863,52 @@
 
     // 落位要"落稳"：手机上窗刚显示那几拍布局还没定、scrollTop 会被拨回 0，所以分几拍反复对，直到位置对上；
     // 用户一碰（触摸 / 滚轮）就收手，不跟人抢。
-    function adr048SettleScroll(body, computeWant, tries) {
-        var delays = [0, 120, 300, 600, 1000];
+    // v1.41.6 诊断：每一拍记一笔"想落哪、落到哪、容器多高"，写在掌灯顶上那行与聊天状态行里 8 秒，手机上截图就能看。
+    var adr048LandTrace = [];
+    var adr048LandTraceTimer = null;
+    function adr048LandNote(body, label, want) {
+        try {
+            adr048LandTrace.push(label + "想" + want + "得" + Math.round(body.scrollTop) + "(" + body.clientHeight + "/" + body.scrollHeight + ")");
+            while (adr048LandTrace.length > 10) adr048LandTrace.shift();
+            var txt = "🧭 落位 " + adr048LandTrace.join(" ");
+            try { rootWin().__adr048LandTrace = adr048LandTrace.slice(); } catch (eW) {}
+            if (settings().activeTab === "lamp") {
+                adrCdSetTextAll("adr044-lamp-topline", txt);
+                adrLampStatus(txt, "#d6b177");
+                if (adr048LandTraceTimer) clearTimeout(adr048LandTraceTimer);
+                adr048LandTraceTimer = setTimeout(function () { adr048LandTraceTimer = null; try { adrLampRenderThread(); } catch (eR) {} }, 8000);
+            }
+        } catch (e) {}
+    }
+
+    function adr048SettleScroll(body, computeWant, opts) {
+        opts = opts || {};
+        var delays = [0, 80, 180, 320, 500, 800, 1200, 1800, 2500];
+        // 有主题给滚动容器配了 scroll-behavior: smooth 的话，赋值 scrollTop 会变成动画、立刻读回来还是旧值，落位就乱；落位期间强制直达
+        try { body.style.setProperty("scroll-behavior", "auto", "important"); } catch (eSb) {}
+        body.__adr048LandUntil = Date.now() + 3200;
+        var token = (Number(body.__adr048LandToken) || 0) + 1;   // 新一轮落位开始，旧一轮剩下的拍子作废
+        body.__adr048LandToken = token;
+        adr048LandTrace = [];
+        function apply(want) {
+            body.scrollTop = want;
+            if (Math.abs(body.scrollTop - want) > 4 && want > 0) {
+                // 没吃：换 scrollIntoView（该滚哪个祖先它自己找），再用 scrollTop 微调
+                var el = opts.anchor ? body.querySelector(opts.anchor) : null;
+                if (el && typeof el.scrollIntoView === "function") {
+                    try { el.scrollIntoView({ block: opts.block === "end" ? "end" : "start" }); } catch (eSv) { try { el.scrollIntoView(opts.block !== "end"); } catch (eSv2) {} }
+                }
+                body.scrollTop = want;
+            }
+        }
         function pass(i) {
             try {
-                if (!body || !body.isConnected || body.__adr048Touched) return;
+                if (!body || !body.isConnected || body.__adr048Touched || body.__adr048LandToken !== token) return;
                 var want = computeWant();
-                if (want == null) return;
+                if (want == null) { if (opts.trace) adr048LandNote(body, delays[i] + "ms", "无"); return; }
                 body.__adr048ScrollWant = want;
-                if (Math.abs(body.scrollTop - want) > 4) {
-                    body.scrollTop = want;
-                    // 还是没动（个别 WebKit 在刚显示那一拍不吃 scrollTop）：用 scrollIntoView 把锚点顶上来再微调
-                    if (Math.abs(body.scrollTop - want) > 4 && want > 0) {
-                        var th = body.querySelector("#adr044-lamp-thread");
-                        if (th && typeof th.scrollIntoView === "function") { try { th.scrollIntoView({ block: "start" }); } catch (eSv) {} }
-                        body.scrollTop = want;
-                    }
-                }
+                if (Math.abs(body.scrollTop - want) > 4) apply(want);
+                if (opts.trace) adr048LandNote(body, delays[i] + "ms", want);
             } catch (e) {}
             if (i + 1 < delays.length) setTimeout(function () { pass(i + 1); }, delays[i + 1] - delays[i]);
         }
@@ -9887,8 +9922,8 @@
             if (!body) return false;
             var tab = settings().activeTab || "emotion";
             if (tab === "lamp") {
-                if (adr048LampChatTarget(body) == null) return false;
-                adr048SettleScroll(body, function () { return adr048LampChatTarget(body); });
+                if (adr048LampChatTarget(body) == null) { adr048LandTrace = []; adr048LandNote(body, "起", "无(对话区量不到)"); return false; }
+                adr048SettleScroll(body, function () { return adr048LampChatTarget(body); }, { anchor: ".adr-lamp-send-row", block: "end", trace: true });
                 return true;
             }
             var m = adr048ScrollMemo[tab];
@@ -9899,7 +9934,7 @@
                 var target = (el && el.getClientRects().length) ? adr048TopWithin(body, el) + m.delta : m.top;
                 return Math.max(0, Math.round(target));
             };
-            adr048SettleScroll(body, computeWant);
+            adr048SettleScroll(body, computeWant, { anchor: m.anchor, block: "start" });
             return true;
         } catch (e) { return false; }
     }
@@ -9914,6 +9949,13 @@
             });
             var timer = null;
             body.addEventListener("scroll", function () {
+                // v1.41.6 落位窗口（3.2s）内、用户没划过、却被拨回了 0：谁拨的不管，再设回去并记一笔
+                try {
+                    var want = Number(body.__adr048ScrollWant) || 0;
+                    if (want > 0 && !body.__adr048Touched && Date.now() < (Number(body.__adr048LandUntil) || 0) && body.scrollTop === 0) {
+                        setTimeout(function () { try { if (body.isConnected && !body.__adr048Touched && body.scrollTop === 0) { body.scrollTop = want; adr048LandNote(body, "回0重设", want); } } catch (eRe) {} }, 0);
+                    }
+                } catch (eZ) {}
                 if (timer) return;
                 timer = setTimeout(function () { timer = null; adr048RememberScroll(); }, 150);
             }, { passive: true });
