@@ -7475,3 +7475,45 @@ html #adr044-drawer .adr-lamp-row > button { flex: 0 0 auto; width: auto !import
 @media (prefers-reduced-motion: reduce) { .adr-lamp-live::after { animation: none; } }
 .adr-lamp-empty { font-size: 12px; opacity: .65; padding: 12px 8px; text-align: center; line-height: 1.6; }
 .adr-lamp-hide { display: none !important; }
+
+/* v1.40.0 掌灯两种模式：改稿 / 蛐蛐 */
+.adr-lamp-modes {
+    display: flex;
+    gap: 4px;
+    margin: 4px 0 8px;
+    padding: 4px;
+    border-radius: 14px;
+    border: 1px solid var(--adr-deck-line, rgba(128, 128, 128, .25));
+    background: var(--adr-deck-bg, rgba(128, 128, 128, .06));
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-lamp-modes > button,
+html #adr044-drawer .adr-lamp-modes > button {
+    flex: 1 1 0 !important;
+    width: auto !important;
+    margin: 0 !important;
+    min-height: 34px !important;
+    border-radius: 10px !important;
+    border: 1px solid transparent !important;
+    background: transparent !important;
+    color: var(--adr-deck-muted, inherit) !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+}
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-lamp-modes > button.active,
+html #adr044-drawer .adr-lamp-modes > button.active {
+    background: var(--adr-deck-card, rgba(255, 255, 255, .5)) !important;
+    border-color: var(--adr-deck-line, rgba(128, 128, 128, .3)) !important;
+    color: var(--adr-deck-ink, inherit) !important;
+    font-weight: 700 !important;
+}
+.adr-lamp-divider {
+    align-self: center;
+    font-size: 10.5px;
+    letter-spacing: .02em;
+    opacity: .6;
+    padding: 1px 8px;
+    border-radius: 999px;
+    border: 1px dashed var(--adr-deck-line, rgba(128, 128, 128, .35));
+    color: var(--adr-deck-muted, inherit);
+}
+.adr-lamp-divider-new { opacity: .85; border-style: solid; color: var(--adr-deck-accent, inherit); border-color: var(--adr-deck-accent, rgba(128, 128, 128, .5)); }

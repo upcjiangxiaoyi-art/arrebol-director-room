@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.39.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.40.0｜ripple & GPT & Claude
+ * v1.40.0 掌灯蛐蛐模式：和朋友一起追剧——对话一把聊天一本账、不按楼分、不自动清，跟着剧情一楼一楼走，用户那句前标「剧情走到 #N 了」；只聊不改稿；改稿模式照旧（提议 江；施工 Claude）
  * v1.39.1 掌灯替换后自动清空本轮对话（默认开，可关）：这一楼改完了，下一次开口是新的指令；按钮改名「清空本轮对话」（提议 江；施工 Claude）
  * v1.39.0 小红霞掌灯：第四页纯聊天——看得见本篇原文、未隐藏楼层的摘要标签、角色卡/世界书/人设与基调；聊天位借统筹可自填，执笔位可另接主模型；「改好给我」按讨论重写这一楼，只换正文/摘要标签里面，原版留前一页 swipe（提议 江；施工 Claude）
  * v1.38.5 导演不抢半楼：3 分钟保险丝改为看证据（停止按钮亮着 / 最后一楼字数还在长）再降旗；漏事件时楼安静 4 秒才读；等生成写完的上限 3 → 20 分钟（报告 用户经江转达；施工 Claude）
@@ -181,7 +182,9 @@
         lampSummaryTags: "report",
         lampSummaryFloors: 60,
         lampTemp: 0.8,
-        lampResetAfterApply: true   // v1.39.1 替换后这轮对话自动清空：这一楼改完了，下一次开口是新的指令
+        lampResetAfterApply: true,  // v1.39.1 替换后这轮对话自动清空：这一楼改完了，下一次开口是新的指令
+        lampMode: "edit",           // v1.40.0 edit 改稿 / gossip 蛐蛐（一起追剧，不清空，只聊不改）
+        lampGossipPreset: ""
     };
 
     var initialized = false;
@@ -6490,6 +6493,20 @@
         "5. 输出只有标签块：正文放在指定的正文标签里；若要求了摘要，再给一个摘要标签块，摘要是对改后正文的简短概括。标签外不要有任何字——不解释、不加标题、不写\"好的\"。"
     ].join("\n");
 
+    var ADR_LAMP_GOSSIP_PRESET = [
+        "你是 Arrebol，小红霞。你和作者在追同一部剧——就是她正在写的这篇。你是陪她一起看的朋友，不是编辑、不是导演。",
+        "",
+        "你们干的事：蛐蛐主角、替配角不值、嗑或者拆、猜下一步、翻旧账（「他第三楼说过的话呢」）、给角色打分、吐槽剧情走向。有自己的立场和偏爱，可以站队、可以不服作者，但每一句都要落在具体情节上——引用原文要准，别凭印象编。",
+        "",
+        "素材都在下面：这局的基调、角色卡/世界书/人设、未隐藏楼层的摘要（剧情走到哪了看这里）、以及最新一楼的全文。作者的消息前若带「（剧情走到 #N 了）」，说明又出了新楼，先看最新一楼再接着聊。被隐藏的楼你看不见，作者提到了就当真。",
+        "",
+        "记住你们之前聊过什么、你站过谁、押过什么——押中了可以得意，押错了认。",
+        "",
+        "语言像朋友发消息：短句、口语、可以有语气词和表情，不列大纲、不分点、不写标题。一次一两件事，有梗就接。不写正文；不主动给修改意见，除非作者问「这里是不是该改」。"
+    ].join("\n");
+    var ADR_LAMP_GOSSIP_MAX = 200;    // 蛐蛐记录最多留这么多句（画面与存档）
+    var ADR_LAMP_GOSSIP_SEND = 40;    // 每次请求只带最近这么多句，记录再长也不把上下文撑爆
+
     var adrLampRun = { busy: false, abort: null, mode: "", idx: -1 };
     var adrLampLiveText = "";
     var adrLampLivePaintAt = 0;
@@ -6527,6 +6544,7 @@
 
     function adrLampTargetFloor() {
         var chat = adrLampChat();
+        if (adrLampIsGossip()) return findLastMessageIndex(chat);   // v1.40.0 蛐蛐模式永远对着最新一楼
         var want = -1;
         try { want = Number(adrLampState().floor); } catch (e) {}
         if (Number.isFinite(want) && want >= 0 && chat[want] && !adrLampIsUser(chat[want]) && String(chat[want].mes || "").trim()) return want;
@@ -6627,7 +6645,8 @@
     function adrLampNormMsg(x) {
         if (!x || typeof x !== "object" || typeof x.t !== "string" || !x.t) return null;
         var r = x.r === "u" ? "u" : (x.r === "n" ? "n" : "a");
-        return { r: r, t: x.t, at: Number(x.at) || 0 };
+        var f = Number(x.f);
+        return { r: r, t: x.t, at: Number(x.at) || 0, f: Number.isFinite(f) && f >= 0 ? Math.floor(f) : -1 };
     }
 
     function adrLampNormDraft(d) {
@@ -6650,7 +6669,11 @@
             threads[k] = { msgs: msgs, draft: draft, at: Number(t.at) || 0 };
         });
         var floor = Number(o.floor);
-        return { v: 1, floor: Number.isFinite(floor) && floor >= 0 ? Math.floor(floor) : -1, threads: threads };
+        // v1.40.0 蛐蛐模式：一把聊天一本账，不按楼分、不自动清，跟着剧情一路记
+        var g = o.gossip && typeof o.gossip === "object" ? o.gossip : {};
+        var gm = (Array.isArray(g.msgs) ? g.msgs : []).map(adrLampNormMsg).filter(Boolean);
+        while (gm.length > ADR_LAMP_GOSSIP_MAX) gm.shift();
+        return { v: 1, floor: Number.isFinite(floor) && floor >= 0 ? Math.floor(floor) : -1, threads: threads, gossip: { msgs: gm, at: Number(g.at) || 0 } };
     }
 
     function adrLampState() {
@@ -6699,6 +6722,11 @@
         return state.threads[k] || null;
     }
 
+    function adrLampCurrentThread(state, idx, create) {
+        if (adrLampIsGossip()) return state.gossip;
+        return adrLampThread(state, idx, create);
+    }
+
     // ---- API 位：聊天位默认借统筹，执笔位默认跟聊天位；都能自己填 ----
     var ADR_LAMP_BORROW_LABEL = { plot: "统筹", emotion: "情感导演", expand: "展开", cd: "小眼睛", self: "自己填", lamp: "聊天位" };
 
@@ -6735,6 +6763,42 @@
         return p || ADR_LAMP_PRESET;
     }
 
+    // ---- v1.40.0 两种模式：改稿（对着一楼聊，聊完改好替换，替换后清）／蛐蛐（和朋友一起追剧，一直留着，只聊不改）----
+    function adrLampMode() {
+        try { return settings().lampMode === "gossip" ? "gossip" : "edit"; } catch (e) { return "edit"; }
+    }
+    function adrLampIsGossip() { return adrLampMode() === "gossip"; }
+    function adrLampGossipPresetText() {
+        var p = "";
+        try { p = String(settings().lampGossipPreset || "").trim(); } catch (e) {}
+        return p || ADR_LAMP_GOSSIP_PRESET;
+    }
+    function adrLampSetMode(mode) {
+        var m = mode === "gossip" ? "gossip" : "edit";
+        save("lampMode", m);
+        saveNow();
+        adrLampRefreshAll();
+        adrLampStatus(m === "gossip" ? "蛐蛐模式：对话跟着剧情一直留着，只聊不改稿" : "改稿模式：对着一楼聊，聊完能改好替换", "#8ed99d");
+    }
+
+    // 发给 API 的历史：记录行不进；蛐蛐模式只带最近 N 句，用户那句前面标剧情走到哪一楼了（换楼才标）
+    function adrLampApiHistory(msgs, gossip) {
+        var list = msgs.filter(function (m) { return m.r !== "n"; });
+        if (gossip && list.length > ADR_LAMP_GOSSIP_SEND) list = list.slice(list.length - ADR_LAMP_GOSSIP_SEND);
+        var lastF = -1;
+        return list.map(function (m) {
+            var content = m.t;
+            if (gossip && m.r === "u") {
+                var f = Number.isFinite(Number(m.f)) ? Number(m.f) : -1;
+                if (f >= 0 && f !== lastF) {
+                    content = (lastF < 0 ? "（剧情现在在 #" + f + "）" : (f > lastF ? "（剧情走到 #" + f + " 了）" : "（剧情回到 #" + f + "）")) + "\n" + content;
+                    lastF = f;
+                }
+            }
+            return { role: m.r === "u" ? "user" : "assistant", content: content };
+        });
+    }
+
     // ---- 聊 ----
     function adrLampTranscript(msgs) {
         return msgs.filter(function (m) { return m.r !== "n"; }).map(function (m) { return (m.r === "u" ? "作者：" : "小红霞：") + m.t; }).join("\n\n");
@@ -6751,10 +6815,12 @@
         if (mat.idx < 0) { adrLampStatus("这把聊天还没有可聊的助手楼", "#d4726a"); return false; }
 
         var homeKey = adrDChatKey();
+        var gossip = adrLampIsGossip();
         var state = adrLampState();
-        var th = adrLampThread(state, mat.idx, true);
-        th.msgs.push({ r: "u", t: text, at: Date.now() });
-        while (th.msgs.length > ADR_LAMP_MSG_MAX) th.msgs.shift();
+        var th = adrLampCurrentThread(state, mat.idx, true);
+        th.msgs.push({ r: "u", t: text, at: Date.now(), f: mat.idx });
+        var cap = gossip ? ADR_LAMP_GOSSIP_MAX : ADR_LAMP_MSG_MAX;
+        while (th.msgs.length > cap) th.msgs.shift();
         th.at = Date.now();
         adrLampSaveState(state);
         adrCdSetValueSafe("adr044-lamp-input", "");
@@ -6764,10 +6830,10 @@
         adrLampLiveText = "";
         adrLampSetButtons();
         adrLampRenderThread();
-        adrLampStatus("小红霞在看稿…", "#8ed99d");
+        adrLampStatus(gossip ? "小红霞在看剧…" : "小红霞在看稿…", "#8ed99d");
 
-        var messages = [{ role: "system", content: adrLampPresetText() + "\n\n" + adrLampMaterialsText(mat) }]
-            .concat(th.msgs.filter(function (m) { return m.r !== "n"; }).map(function (m) { return { role: m.r === "u" ? "user" : "assistant", content: m.t }; }));
+        var messages = [{ role: "system", content: (gossip ? adrLampGossipPresetText() : adrLampPresetText()) + "\n\n" + adrLampMaterialsText(mat) }]
+            .concat(adrLampApiHistory(th.msgs, gossip));
         var partial = "";
         var outcome = "";
         try {
@@ -6780,13 +6846,13 @@
                 }
             });
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这段话没存", "#d6b177"); return false; }
-            adrLampCommitReply(mat.idx, String(out || "").trim());
+            adrLampCommitReply(gossip ? "gossip" : mat.idx, String(out || "").trim(), mat.idx);
             adrLampStatus("说完了 · " + adrLampApiNote("lamp"), "#8ed99d");
             outcome = "ok";
         } catch (e) {
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这段话没存", "#d6b177"); return false; }
             if (e && e.name === "LampAbort") {
-                if (partial.trim()) adrLampCommitReply(mat.idx, partial.trim() + "\n（被打断了）");
+                if (partial.trim()) adrLampCommitReply(gossip ? "gossip" : mat.idx, partial.trim() + "\n（被打断了）", mat.idx);
                 adrLampStatus("打断了", "#d6b177");
                 outcome = "abort";
             } else {
@@ -6802,12 +6868,14 @@
         return outcome === "ok";
     }
 
-    function adrLampCommitReply(idx, text) {
+    function adrLampCommitReply(key, text, f) {
         if (!text) return;
         var state = adrLampState();
-        var th = adrLampThread(state, idx, true);
-        th.msgs.push({ r: "a", t: text, at: Date.now() });
-        while (th.msgs.length > ADR_LAMP_MSG_MAX) th.msgs.shift();
+        var gossip = key === "gossip";
+        var th = gossip ? state.gossip : adrLampThread(state, key, true);
+        th.msgs.push({ r: "a", t: text, at: Date.now(), f: Number.isFinite(Number(f)) ? Number(f) : -1 });
+        var cap = gossip ? ADR_LAMP_GOSSIP_MAX : ADR_LAMP_MSG_MAX;
+        while (th.msgs.length > cap) th.msgs.shift();
         th.at = Date.now();
         adrLampSaveState(state);
     }
@@ -6819,15 +6887,16 @@
     }
 
     function adrLampClear(btn) {
-        return adrDTwoStepConfirm("lamp-clear", btn || qForm("adr044-lamp-clear"), "确定清空？", "再点一次清空本轮对话（改稿预览也一起扔）",
+        var gossip = adrLampIsGossip();
+        return adrDTwoStepConfirm("lamp-clear", btn || qForm("adr044-lamp-clear"), "确定清空？", gossip ? "再点一次清空蛐蛐记录（这把聊天从头追）" : "再点一次清空本轮对话（改稿预览也一起扔）",
             function (msg) { adrLampStatus(msg, "#d6a26a"); },
             function () {
                 var state = adrLampState();
-                var idx = adrLampTargetFloor();
-                delete state.threads[String(idx)];
+                if (gossip) state.gossip = { msgs: [], at: Date.now() };
+                else delete state.threads[String(adrLampTargetFloor())];
                 adrLampSaveState(state);
                 adrLampRenderThread();
-                adrLampStatus("本轮对话清空了", "#8ed99d");
+                adrLampStatus(gossip ? "蛐蛐记录清空了" : "本轮对话清空了", "#8ed99d");
             });
     }
 
@@ -6860,6 +6929,7 @@
 
     async function adrLampRewrite() {
         if (adrLampRun.busy) { adrLampStatus("小红霞还在说，先听完或点「打断」", "#d6b177"); return false; }
+        if (adrLampIsGossip()) { adrLampStatus("蛐蛐模式只聊不改稿；想改这一楼，切到「改稿」模式再说", "#d6b177"); return false; }
         var cfg = adrLampApiCfg("pen");
         if (!cfg.endpoint || !cfg.model) { adrLampStatus("执笔位没有可用的 API：" + adrLampApiNote("pen"), "#d4726a"); return false; }
         var mat = adrLampMaterials();
@@ -7122,12 +7192,28 @@
     function adrLampRenderThread() {
         try {
             var d = rootDoc();
+            var gossip = adrLampIsGossip();
             var idx = adrLampTargetFloor();
             var state = adrLampState();
-            var th = adrLampThread(state, idx, false);
+            var th = gossip ? state.gossip : adrLampThread(state, idx, false);
             var msgs = th ? th.msgs : [];
-            var html = msgs.length ? msgs.map(adrLampBubble).join("")
-                : '<div class="adr-lamp-empty">' + (idx < 0 ? "这把聊天还没有可聊的助手楼。" : "对着 #" + idx + " 说点什么——哪里不对、哪里想改、哪里看着别扭。小红霞看得见上面那三块素材。") + '</div>';
+            var html = "";
+            if (!msgs.length) {
+                html = '<div class="adr-lamp-empty">' + (idx < 0 ? "这把聊天还没有可聊的助手楼。"
+                    : (gossip ? "剧情到 #" + idx + " 了。蛐蛐两句？主角这楼干的事、配角的下场、你押谁——她都接得住，而且记仇。"
+                        : "对着 #" + idx + " 说点什么——哪里不对、哪里想改、哪里看着别扭。小红霞看得见上面那三块素材。")) + '</div>';
+            } else {
+                // 蛐蛐模式按楼号打分隔线，一眼看出这段话是追到哪一楼时聊的
+                var lastF = -1;
+                msgs.forEach(function (m) {
+                    if (gossip && m.r !== "n") {
+                        var f = Number.isFinite(Number(m.f)) ? Number(m.f) : -1;
+                        if (f >= 0 && f !== lastF) { html += '<div class="adr-lamp-divider">📍 #' + f + '</div>'; lastF = f; }
+                    }
+                    html += adrLampBubble(m);
+                });
+                if (gossip && idx >= 0 && lastF >= 0 && idx > lastF && !adrLampRun.busy) html += '<div class="adr-lamp-divider adr-lamp-divider-new">📍 剧情走到 #' + idx + ' 了，下一句她就能看到</div>';
+            }
             if (adrLampRun.busy && adrLampRun.mode === "chat") {
                 html += '<div class="adr-lamp-msg a adr-lamp-live"><span class="adr-lamp-who">小红霞</span>' + esc(adrLampLiveText || "") + '</div>';
             }
@@ -7146,15 +7232,16 @@
             Array.prototype.slice.call(d.querySelectorAll("#adr044-lamp-draft-summary-wrap")).forEach(function (el) {
                 el.classList.toggle("adr-lamp-hide", !(draft && draft.summary));
             });
-            adrCdSetTextAll("adr044-lamp-topline", adrLampTopLineText(idx, msgs, draft));
+            adrCdSetTextAll("adr044-lamp-topline", adrLampTopLineText(idx, msgs, draft, gossip));
         } catch (e) {
             try { console.warn("[Arrebol D] lamp render failed", e); } catch (e2) {}
         }
     }
 
-    function adrLampTopLineText(idx, msgs, draft) {
+    function adrLampTopLineText(idx, msgs, draft, gossip) {
         if (idx < 0) return "🏮 掌灯 · 没有可聊的楼";
         var said = msgs.filter(function (m) { return m.r !== "n"; }).length;
+        if (gossip) return "🏮 蛐蛐 · 剧情到 #" + idx + (said ? " · 聊了 " + said + " 句" : " · 还没开口");
         return "🏮 掌灯 · 对着 #" + idx + (said ? " · 聊了 " + said + " 句" : " · 还没开口") + (draft ? " · 有一版改稿待看" : "");
     }
 
@@ -7210,9 +7297,28 @@
                 adrCdSetValueSafe("adr044-" + p + "-model", st[p + "Model"] || "");
             });
             adrCdSetValueSafe("adr044-lamp-preset", st.lampPreset || "");
+            adrCdSetValueSafe("adr044-lamp-gossip-preset", st.lampGossipPreset || "");
             adrCdSetCheckedSafe("adr044-lamp-reset-after-apply", st.lampResetAfterApply !== false);
             adrLampToggleSelfBlocks();
+            adrLampApplyModeUI();
             adrCdSetTextAll("adr044-lamp-api-note", adrLampApiNote("lamp") + "　｜　" + adrLampApiNote("pen"));
+        } catch (e) {}
+    }
+
+    // 模式切换只动显隐与文案，不重建 DOM：楼号行、改好给我、自动清空是改稿专属；蛐蛐模式输入框换提示语
+    function adrLampApplyModeUI() {
+        try {
+            var gossip = adrLampIsGossip();
+            var d = rootDoc();
+            Array.prototype.slice.call(d.querySelectorAll(".adr-lamp-edit-only")).forEach(function (el) { el.classList.toggle("adr-lamp-hide", gossip); });
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-lamp-mode-edit")).forEach(function (el) { el.classList.toggle("active", !gossip); el.setAttribute("aria-pressed", String(!gossip)); });
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-lamp-mode-gossip")).forEach(function (el) { el.classList.toggle("active", gossip); el.setAttribute("aria-pressed", String(gossip)); });
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-lamp-input")).forEach(function (el) {
+                el.placeholder = gossip ? "蛐蛐两句：主角这楼干的事、配角的下场、你押谁……Ctrl/⌘+Enter 发送" : "哪里不对、哪里想改、哪里看着别扭……Ctrl/⌘+Enter 发送";
+            });
+            adrCdSetTextAll("adr044-lamp-mode-note", gossip
+                ? "蛐蛐：和朋友一起追剧。对话一直留着、跟着剧情一楼一楼走，她记得你押过谁；只聊不改稿。"
+                : "改稿：对着一楼聊，聊完让执笔位改好、预览、替换；替换后这轮清空，下一楼从头说。");
         } catch (e) {}
     }
 
@@ -7261,11 +7367,17 @@
                 + '</div>'
                 + '<div class="adr044-template-status" id="adr044-' + p + '-status"></div>';
         }
-        return secOpen("🏮 本篇 · 她看得见的素材", false, "lamp-mat")
+        var gossip = adrLampIsGossip();
+        return '<div class="adr-lamp-modes" role="group" aria-label="掌灯模式">'
+            + '<button type="button" id="adr044-lamp-mode-edit" class="' + (gossip ? "" : "active") + '" aria-pressed="' + (!gossip) + '">✏️ 改稿</button>'
+            + '<button type="button" id="adr044-lamp-mode-gossip" class="' + (gossip ? "active" : "") + '" aria-pressed="' + gossip + '">🍉 蛐蛐</button>'
+            + '</div>'
+            + '<div class="' + noteClass + '" id="adr044-lamp-mode-note"></div>'
+            + secOpen("🏮 本篇 · 她看得见的素材", false, "lamp-mat")
             + '<div class="' + noteClass + '">掌灯不是导演：不数楼、不自动触发、不投卡，你点她才开口。她读的就是下面这三块，一字不多。</div>'
-            + '<label>聊哪一楼（酒馆楼号 #；空着＝最新一楼助手正文）</label>'
+            + '<div class="adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><label>聊哪一楼（酒馆楼号 #；空着＝最新一楼助手正文）</label>'
             + '<div class="adr-lamp-row"><input type="number" id="adr044-lamp-floor" min="0" placeholder="最新" value="' + (Number(adrLampState().floor) >= 0 ? esc(String(adrLampState().floor)) : "") + '">'
-            + '<button id="adr044-lamp-floor-latest" type="button">最新一楼</button><button id="adr044-lamp-refresh" type="button">重新读取</button></div>'
+            + '<button id="adr044-lamp-floor-latest" type="button">最新一楼</button><button id="adr044-lamp-refresh" type="button">重新读取</button></div></div>'
             + '<div class="adr-lamp-topline" id="adr044-lamp-mat-title">…</div>'
             + '<details class="adr-lamp-fold" open><summary>本篇原文</summary><div class="adr-lamp-mat" id="adr044-lamp-mat-body"></div></details>'
             + '<details class="adr-lamp-fold"><summary>此前剧情 · 未隐藏楼层的摘要</summary><div class="adr-lamp-mat" id="adr044-lamp-mat-summary"></div></details>'
@@ -7280,8 +7392,8 @@
             + '<div class="adr-lamp-thread" id="adr044-lamp-thread"></div>'
             + '<textarea id="adr044-lamp-input" rows="3" placeholder="哪里不对、哪里想改、哪里看着别扭……Ctrl/⌘+Enter 发送"></textarea>'
             + '<div class="' + actionsClass + '"><button id="adr044-lamp-send" type="button">发送</button><button id="adr044-lamp-stop" type="button" disabled>打断</button></div>'
-            + '<div class="' + actionsClass + '"><button id="adr044-lamp-rewrite" type="button">改好给我</button><button id="adr044-lamp-clear" type="button">清空本轮对话</button></div>'
-            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-lamp-reset-after-apply"' + (st.lampResetAfterApply !== false ? " checked" : "") + '> 替换后自动清空本轮对话（这一楼改完了，下一次从头说）</label>'
+            + '<div class="' + actionsClass + '"><button id="adr044-lamp-rewrite" type="button" class="adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '">改好给我</button><button id="adr044-lamp-clear" type="button">清空本轮对话</button></div>'
+            + '<label class="' + checkClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><input type="checkbox" id="adr044-lamp-reset-after-apply"' + (st.lampResetAfterApply !== false ? " checked" : "") + '> 替换后自动清空本轮对话（这一楼改完了，下一次从头说）</label>'
             + '<div class="adr044-template-status" id="adr044-lamp-chat-status">聊到你觉得可以了，点「改好给我」：执笔位读完整段讨论重写这一楼，先预览再替换。</div>'
             + '<div id="adr044-lamp-draft-wrap" class="adr-lamp-hide">'
             + '<label>📝 改稿 · 正文（能改两笔再替换）</label>'
@@ -7303,10 +7415,15 @@
             + secClose()
 
             + secOpen("🎭 小红霞的人设", true, "lamp-preset")
-            + '<div class="' + noteClass + '">这是她聊天时的性子，不是导演框架。留空用出厂：高级文字编辑、有审美有坚持、反对要带依据（人的真实情感心理 / 此刻的物理处境 / 世界书规矩），活泼有趣。执笔位的规矩由代码接管，不在这里。</div>'
-            + '<textarea id="adr044-lamp-preset" rows="8" placeholder="留空＝出厂人设">' + esc(st.lampPreset || "") + '</textarea>'
+            + '<div class="' + noteClass + '">两种模式各一份性子，不是导演框架，留空用出厂。改稿：高级文字编辑、有审美有坚持、反对要带依据（人的真实情感心理 / 此刻的物理处境 / 世界书规矩）。蛐蛐：一起追剧的朋友，站队、押注、翻旧账，只聊不改。执笔位的规矩由代码接管，不在这里。</div>'
+            + '<label>✏️ 改稿模式的人设</label>'
+            + '<textarea id="adr044-lamp-preset" rows="6" placeholder="留空＝出厂人设">' + esc(st.lampPreset || "") + '</textarea>'
             + '<div class="' + actionsClass + '"><button id="adr044-lamp-preset-reset" type="button">恢复出厂人设</button></div>'
-            + '<details class="adr-lamp-fold"><summary>看看出厂人设全文</summary><div class="adr-lamp-mat">' + esc(ADR_LAMP_PRESET) + '</div></details>'
+            + '<details class="adr-lamp-fold"><summary>看看改稿出厂人设全文</summary><div class="adr-lamp-mat">' + esc(ADR_LAMP_PRESET) + '</div></details>'
+            + '<label>🍉 蛐蛐模式的人设</label>'
+            + '<textarea id="adr044-lamp-gossip-preset" rows="6" placeholder="留空＝出厂人设">' + esc(st.lampGossipPreset || "") + '</textarea>'
+            + '<div class="' + actionsClass + '"><button id="adr044-lamp-gossip-preset-reset" type="button">恢复出厂人设</button></div>'
+            + '<details class="adr-lamp-fold"><summary>看看蛐蛐出厂人设全文</summary><div class="adr-lamp-mat">' + esc(ADR_LAMP_GOSSIP_PRESET) + '</div></details>'
             + secClose();
     }
 
@@ -7344,6 +7461,9 @@
         if (id === "adr044-lamp-test") { adrLampTestConnection("lamp"); return true; }
         if (id === "adr044-pen-test") { adrLampTestConnection("pen"); return true; }
         if (id === "adr044-lamp-preset-reset") { adrCdSetValueSafe("adr044-lamp-preset", ""); save("lampPreset", ""); saveNow(); adrLampStatus("已恢复出厂人设 ✓", "#8ed99d"); return true; }
+        if (id === "adr044-lamp-gossip-preset-reset") { adrCdSetValueSafe("adr044-lamp-gossip-preset", ""); save("lampGossipPreset", ""); saveNow(); adrLampStatus("蛐蛐人设已恢复出厂 ✓", "#8ed99d"); return true; }
+        if (id === "adr044-lamp-mode-edit") { adrLampSetMode("edit"); return true; }
+        if (id === "adr044-lamp-mode-gossip") { adrLampSetMode("gossip"); return true; }
         return false;
     }
 
@@ -7422,6 +7542,10 @@
                 guard(el);
                 el.addEventListener("change", function () { save("lampPreset", String(el.value || "")); saveNow(); });
             });
+            each("adr044-lamp-gossip-preset", function (el) {
+                guard(el);
+                el.addEventListener("change", function () { save("lampGossipPreset", String(el.value || "")); saveNow(); });
+            });
             each("adr044-lamp-draft", function (el) { guard(el); el.addEventListener("change", adrLampSaveDraftEdits); });
             each("adr044-lamp-draft-summary", function (el) { guard(el); el.addEventListener("change", adrLampSaveDraftEdits); });
         } catch (e) {
@@ -7433,7 +7557,8 @@
         rootWin().__adrLampTest = {
             materials: adrLampMaterials, compose: adrLampComposeFloor, parsePen: adrLampParsePen, splitTail: adrLampSplitTail,
             apiCfg: adrLampApiCfg, state: adrLampState, send: adrLampSend, rewrite: adrLampRewrite, applyNow: adrLampApplyDraftNow,
-            pushSwipe: adrLampPushSwipe, preset: ADR_LAMP_PRESET, penPreset: ADR_LAMP_PEN_PRESET
+            pushSwipe: adrLampPushSwipe, preset: ADR_LAMP_PRESET, penPreset: ADR_LAMP_PEN_PRESET,
+            setMode: adrLampSetMode, apiHistory: adrLampApiHistory, gossipPreset: ADR_LAMP_GOSSIP_PRESET
         };
     } catch (eLampHook) {}
     // ================= 小红霞掌灯 模块结束 =================
@@ -8909,7 +9034,8 @@
         ids["adr044-tab-cd"] = function () { switchTab("cd"); };
         // v1.39.0 掌灯页按钮：直接绑定 + 兜底表双注册（同抽卡）。
         ["adr044-tab-lamp", "adr044-lamp-send", "adr044-lamp-stop", "adr044-lamp-rewrite", "adr044-lamp-clear", "adr044-lamp-apply", "adr044-lamp-draft-discard",
-         "adr044-lamp-refresh", "adr044-lamp-floor-latest", "adr044-lamp-load-models", "adr044-pen-load-models", "adr044-lamp-test", "adr044-pen-test", "adr044-lamp-preset-reset"].forEach(function (lid) {
+         "adr044-lamp-refresh", "adr044-lamp-floor-latest", "adr044-lamp-load-models", "adr044-pen-load-models", "adr044-lamp-test", "adr044-pen-test", "adr044-lamp-preset-reset",
+         "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip"].forEach(function (lid) {
             ids[lid] = function () { adrLampHandleButtonId(lid, qForm(lid)); };
         });
         ids["adr044-api-profile-save-cd"] = function () { adrDSaveCurrentApiProfile("cd"); };
