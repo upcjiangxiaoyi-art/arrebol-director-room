@@ -509,6 +509,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(e.calls.length === callsBefore + 3, "「现在蛐蛐一句」勾选关着也发一次（v1.42.0）");
     const popM = d.getElementById("adr044-auto-trigger-popup");
     ok(!!popM && popM.querySelector(".adr044-auto-trigger-popup-text").textContent.indexOf("悬念当饭吃") >= 0, "手动那句也弹小窗");
+    ok(d.querySelector("#adr048-popup-body #adr044-lamp-chat-status").textContent.indexOf("蛐蛐了一句 ✓") >= 0, "说完状态行收尾，不停在「她在看…」（v1.42.1）");
     await tick(500); click(W, popM.querySelector("#adr044-lamp-quip-ack")); await tick(50);
     await tick(500); click(W, modeBtn); await tick(100);
     const whoAuto = [...th.querySelectorAll(".adr-lamp-who")].map(x => x.textContent);
