@@ -7572,3 +7572,24 @@ html #adr044-drawer#adr044-drawer .adr-lamp-jump.adr-lamp-jump.adr-lamp-jump {
     font-size: 12px !important;
     font-weight: 600 !important;
 }
+
+/* v1.43.0 红霞剧场：插在聊天楼里的那一块。酒馆会给消息里的类名加 custom- 前缀，两种写法都认；颜色跟酒馆主题走 */
+.mes_text details.arrebol-d-theater,
+.mes_text details.custom-arrebol-d-theater {
+    margin: 12px 0 2px;
+    padding: 8px 12px 10px;
+    border-radius: 12px;
+    border: 1px dashed var(--SmartThemeBorderColor, rgba(128, 128, 128, .45));
+    background: rgba(128, 128, 128, .10);
+    font-size: .92em;
+    line-height: 1.65;
+}
+.mes_text details.arrebol-d-theater > summary,
+.mes_text details.custom-arrebol-d-theater > summary {
+    cursor: pointer;
+    font-weight: 700;
+    opacity: .85;
+    margin-bottom: 4px;
+}
+.mes_text details.arrebol-d-theater:not([open]) > summary,
+.mes_text details.custom-arrebol-d-theater:not([open]) > summary { margin-bottom: 0; }

@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.42.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.43.0｜ripple & GPT & Claude
+ * v1.43.0 红霞剧场：每层助手正文落地后在楼尾插一场（弹幕 / 场外嗑瓜子 / Q 版四格 / 花絮 / 采访间 / 评论区，主题仓可自写，固定或随机），范围同掌灯；整段包在 details.arrebol-d-theater 里，配剥离正则（提议 江；施工 Claude）
  * v1.42.1 蛐蛐说完状态行收尾「#N 蛐蛐了一句 ✓」，不再停在「她在看…」（截图自查；施工 Claude）
  * v1.42.0 掌灯不设限：角色卡 / 世界书 / 人设全量、本篇与各楼原话不截、默认读全部未隐藏楼层、蛐蛐历史全带；自动蛐蛐去掉 max_tokens 400（思考模型把配额花在思考上正文为空就"不触发"），失败写进账，加「现在蛐蛐一句」手动键（提议 江；施工 Claude）
  * v1.41.9 掌灯对话框重开浮窗停在最顶上：重建面板时它还藏着、卷到底等于没卷，改为面板显示后再卷；回顶回底只管对话框；v1.41.2–1.41.8 整页落位那套全部撤掉恢复原样，分区顺序恢复（报告 江「我说的是框框里的内容」；施工 Claude）
@@ -101,7 +102,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.42.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.43.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -199,7 +200,12 @@
         lampResetAfterApply: true,  // v1.39.1 替换后这轮对话自动清空：这一楼改完了，下一次开口是新的指令
         lampMode: "edit",           // v1.40.0 edit 改稿 / gossip 蛐蛐（一起追剧，不清空，只聊不改）
         lampGossipPreset: "",
-        lampAutoQuip: false         // v1.41.0 新楼落地自动蛐蛐一句并弹小窗（走聊天位 API，花钱，默认关）
+        lampAutoQuip: false,        // v1.41.0 新楼落地自动蛐蛐一句并弹小窗（走聊天位 API，花钱，默认关）
+        // v1.43.0 红霞剧场：每层楼尾插一场。主题仓 theaterStore 走懒初始化（同基调仓），不放这里免得对象引用共享
+        theaterEnabled: false,
+        theaterPick: "fixed",       // fixed 固定用选中的 / random 每层随机抽
+        theaterCurrent: "",
+        theaterFold: false
     };
 
     var initialized = false;
@@ -782,7 +788,7 @@
         text = text.replace(/<!--ARREBOL_DIRECTOR_START-->[\s\S]*?<!--ARREBOL_DIRECTOR_END-->/g, "").trim();
         text = text.replace(/<!--\s*ARREBOL_D_START:(?:emotion|plot)\s*-->[\s\S]*?<!--\s*ARREBOL_D_END:(?:emotion|plot)\s*-->/g, "").trim();
         text = text.replace(/<!--\s*ARREBOL_D_START:(?:emotion|plot)[\s\S]*?ARREBOL_D_END:(?:emotion|plot)\s*-->/g, "").trim();
-        text = text.replace(/<details[^>]*class=["']arrebol-d-(?:injection|card)["'][^>]*>[\s\S]*?<\/details>/g, "").trim();
+        text = text.replace(/<details[^>]*class=["']arrebol-d-(?:injection|card|theater)["'][^>]*>[\s\S]*?<\/details>/g, "").trim();
         text = text.replace(/\n?arrebol_d(?:_visible)?(?::(?:emotion|plot))?###[\s\S]*?###/g, "").trim();
         return text;
     }
@@ -7035,7 +7041,7 @@
             /<!--ARREBOL_DIRECTOR_START-->[\s\S]*?<!--ARREBOL_DIRECTOR_END-->/g,
             /<!--\s*ARREBOL_D_START:(?:emotion|plot)\s*-->[\s\S]*?<!--\s*ARREBOL_D_END:(?:emotion|plot)\s*-->/g,
             /<!--\s*ARREBOL_D_START:(?:emotion|plot)[\s\S]*?ARREBOL_D_END:(?:emotion|plot)\s*-->/g,
-            /<details[^>]*class=["']arrebol-d-(?:injection|card)["'][^>]*>[\s\S]*?<\/details>/g,
+            /<details[^>]*class=["']arrebol-d-(?:injection|card|theater)["'][^>]*>[\s\S]*?<\/details>/g,
             /\n?arrebol_d(?:_visible)?(?::(?:emotion|plot))?###[\s\S]*?###/g
         ].forEach(function (re) {
             body = body.replace(re, function (x) { tails.push(String(x).trim()); return ""; });
@@ -7578,6 +7584,8 @@
             + '</div>'
             + secClose()
 
+            + adrTheaterSectionHTML(secOpen, secClose, checkClass, actionsClass, noteClass)   // v1.43.0 红霞剧场
+
             + secOpen("🔌 API · 聊天位与执笔位", true, "lamp-api")
             + '<div class="' + noteClass + '">聊天位是和你掰扯的那个，执笔位是真正下笔改稿的那个。想让改出来的文风和前后楼一致，执笔位填主聊天用的模型。</div>'
             + '<label>聊天位</label><select id="adr044-lamp-borrow">' + borrowOpts(st.lampBorrow || "plot", false) + '</select>'
@@ -7767,6 +7775,384 @@
             try { console.warn("[Arrebol D] lamp bind failed", e); } catch (e2) {}
         }
     }
+
+
+    // ================= v1.43.0 红霞剧场 =================
+    // 每层助手正文落地后，霞姐在楼尾插一场：弹幕吐槽、场外嗑瓜子、Q 版四格、花絮 NG、采访间、评论区……
+    // 看到的范围与掌灯一样（基调、角色卡 / 世界书 / 人设、未隐藏楼层的摘要、本篇全文），走聊天位 API，每层一次。
+    // 它插在楼里，是给人看的，不该进主模型的上下文——所以整段包在一个带固定类名的 <details> 里，
+    // 配一条剥离正则（面板里能复制），酒馆「正则」扩展勾「仅格式提示词」就只在发给模型时剥掉、画面照留。
+    // 小红霞自己读楼（导演、掌灯、蛐蛐）也一律当它不存在：cleanMessage 与 adrLampSplitTail 的 details 那条认它。
+    var ADR_THEATER_STRIP_REGEX_TEXT = '/\\s*<details class="arrebol-d-theater"[\\s\\S]*?<\\/details>/g';
+    function adrTheaterBlockRe() { return /\s*<details class="arrebol-d-theater"[\s\S]*?<\/details>/g; }
+
+    var ADR_THEATER_PRESET = [
+        "你是 Arrebol，小红霞。你在给这篇文的每一楼配「红霞剧场」——贴在正文后面的一小段场外内容，给作者看着乐的。",
+        "它不是正文：不推进剧情、不替角色做正文里没做的决定、不剧透后面、不给修改意见。",
+        "",
+        "规矩：",
+        "① 只针对本篇这一楼刚发生的事，引用细节要准，别凭印象编；此前剧情只用来接梗、翻旧账。",
+        "② 短小，一屏以内。主题里写了条数 / 格数就照它来；没写就 120–200 字。",
+        "③ 好笑或者戳人，二选一，别端着；可以损，但损的是剧情和角色，不损作者。",
+        "④ 人设不崩：角色可以出戏，但嘴脸还是那个人；场外人物说的话要像那种人会说的。",
+        "⑤ 这局的基调（如果有）是底色：甜的局别写成虐的，虐的局可以苦中作乐。",
+        "⑥ 纯文本，用换行分条分格，可以有少量 emoji；不要 markdown 标题、不要代码块、不要任何 HTML 标签。",
+        "⑦ 只输出剧场正文本身：不要标题行、不要「好的」、不要解释你在干什么。"
+    ].join("\n");
+
+    var ADR_THEATER_FACTORY = {
+        "弹幕吐槽": "模拟视频网站的弹幕飘过这一楼：8–12 条，每条一行，短、快、带梗。可以有「前排」「+1」「哈哈哈哈」「高能预警」「课代表来了」这类弹幕腔，也要有两三条真在吐槽这楼细节的。不写 ID、不写颜色、不编号。",
+        "场外嗑瓜子": "两三个与剧情无关的场外人（保安大爷、楼下奶茶店小妹、路过的同事、对门邻居……每次自己挑合场景的）围观了这一楼，嗑着瓜子点评。对话体，一人一行，「谁：说了什么」，6–10 句，要有一个人看得最明白、一个人完全看岔了。",
+        "Q版四格": "把这一楼最戳的一幕改成 Q 版四格小剧场。四格，每格一行，格式「①（画面 / 动作）台词」，前三格铺垫、第四格抖包袱。角色都是二头身，情绪放大三倍。",
+        "花絮NG": "这一楼拍完，导演喊卡。写镜头外的片场花絮：演这场戏的角色出戏之后的反应、一条 NG 镜头、互相吐槽对方刚才那句台词。对话加括注动作，6–10 行，结尾导演说一句「再来一条」或者「过」。",
+        "角色采访间": "场外记者逮住这一楼的当事角色，问一个扎心的问题（就问这楼他 / 她干的那件事）。角色嘴硬作答，每句后面括注一句真实心理活动。一问一答两到三轮，最后记者补一刀。",
+        "读者评论区": "模拟连载小说的评论区：6–8 条读者评论，每条一行，格式「#楼层 昵称：评论（👍数字）」。要有嗑 CP 的、骂主角的、心疼配角的、催更的、课代表总结的、还有一条完全歪楼的。昵称起得像真读者。"
+    };
+
+    function adrTheaterStore() {
+        var st = settings();
+        if (!st.theaterStore || typeof st.theaterStore !== "object" || Array.isArray(st.theaterStore)) st.theaterStore = {};
+        var seeded = Array.isArray(st.theaterSeeded) ? st.theaterSeeded.slice() : [];
+        var touched = false;
+        Object.keys(ADR_THEATER_FACTORY).forEach(function (k) {
+            if (typeof st.theaterStore[k] === "string") {
+                if (seeded.indexOf(k) < 0) { seeded.push(k); touched = true; }
+                return;
+            }
+            if (seeded.indexOf(k) >= 0) return;   // 删过就尊重，不复活
+            st.theaterStore[k] = ADR_THEATER_FACTORY[k];
+            seeded.push(k);
+            touched = true;
+        });
+        if (touched) { st.theaterSeeded = seeded; save("theaterStore", st.theaterStore); save("theaterSeeded", seeded); }
+        return st.theaterStore;
+    }
+
+    function adrTheaterNames() { return Object.keys(adrTheaterStore()); }
+
+    function adrTheaterCurrentName() {
+        var names = adrTheaterNames();
+        var cur = String(settings().theaterCurrent || "");
+        if (cur && names.indexOf(cur) >= 0) return cur;
+        return names.length ? names[0] : "";
+    }
+
+    function adrTheaterPickMode() { return settings().theaterPick === "random" ? "random" : "fixed"; }
+
+    var adrTheaterState = { busy: false, lastSig: "", lastName: "", timer: null };
+
+    // 这一场用哪个主题：固定＝选中的那个；随机＝仓里抽一个，仓里不止一个时不连着抽到同一个
+    function adrTheaterPickTheme(rng) {
+        var store = adrTheaterStore();
+        var names = Object.keys(store);
+        if (!names.length) return { name: "弹幕吐槽", text: ADR_THEATER_FACTORY["弹幕吐槽"] };
+        var name;
+        if (adrTheaterPickMode() === "random") {
+            var pool = names.length > 1 ? names.filter(function (n) { return n !== adrTheaterState.lastName; }) : names;
+            var r = typeof rng === "function" ? rng() : Math.random();
+            name = pool[Math.min(pool.length - 1, Math.floor(r * pool.length))];
+        } else {
+            name = adrTheaterCurrentName();
+        }
+        return { name: name, text: String(store[name] || "") };
+    }
+
+    function adrTheaterStatus(text, color) { adrCdSetTextAll("adr044-theater-status", text, color || "#d6b177"); }
+
+    function adrTheaterEscape(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+    // 模型回来的东西洗成纯文本：去围栏、去它自己加的标题行、去标签，空行最多留一个
+    function adrTheaterClean(raw) {
+        var t = adrLampStripFences(String(raw || "").replace(/\r/g, ""));
+        t = t.replace(/<\/?(?:details|summary|br|p|div|span)[^>]*>/gi, "\n");
+        t = t.replace(/^\s*(?:🎭\s*)?(?:【\s*)?红霞剧场[^\n]*\n+/, "");
+        t = t.split("\n").map(function (line) { return line.replace(/\s+$/, ""); }).join("\n");
+        return t.replace(/\n{3,}/g, "\n\n").trim();
+    }
+
+    // 整段写成一行：行与行之间用 <br>，不留裸换行——酒馆的 markdown 管不到 HTML 块里面，裸换行在画面上会并成空格
+    function adrTheaterBlock(name, text, folded) {
+        var body = adrTheaterEscape(text).split("\n").join("<br>");
+        return "\n\n<details class=\"arrebol-d-theater\"" + (folded ? "" : " open") + "><summary>🎭 红霞剧场 · " + adrTheaterEscape(name) + "</summary>" + body + "</details>";
+    }
+
+    function adrTheaterStrip(mes) { return String(mes || "").replace(adrTheaterBlockRe(), ""); }
+    function adrTheaterHas(mes) { return adrTheaterBlockRe().test(String(mes || "")); }
+
+    // 写进这一楼：先摘掉旧的那场（一楼只留一场），再接到楼尾；当前 swipe 同写，自己这一笔不算"楼还在生成"
+    function adrTheaterWrite(idx, name, text) {
+        var chat = adrLampChat();
+        var m = chat[idx];
+        if (!m) return false;
+        var base = adrTheaterStrip(m.mes).replace(/\s+$/, "");
+        adrDSetMessageText(m, base + adrTheaterBlock(name, text, settings().theaterFold === true));
+        adrLampAcknowledgeOwnWrite();
+        adrDNoteRedraw(idx);
+        return true;
+    }
+
+    function adrTheaterEnabled() {
+        try { return settings().theaterEnabled === true && adrDMasterEnabled(); } catch (e) { return false; }
+    }
+
+    // MESSAGE_RECEIVED 进门只排一拍；真正干活在 adrTheaterNow
+    function adrTheaterOnMessage() {
+        try {
+            if (!adrTheaterEnabled()) return;
+            if (adrTheaterState.timer) clearTimeout(adrTheaterState.timer);
+            adrTheaterState.timer = setTimeout(function () {
+                adrTheaterState.timer = null;
+                adrTheaterNow("message-received").catch(function (e) { try { console.warn("[Arrebol D] theater failed", e); } catch (e2) {} });
+            }, 900);
+        } catch (e) {}
+    }
+
+    async function adrTheaterNow(reason, force) {
+        if (!force && !adrTheaterEnabled()) return false;
+        if (adrTheaterState.busy) { if (force) adrTheaterStatus("上一场还在写，等它落幕", "#d6b177"); return false; }
+        var cfg = adrLampApiCfg("lamp");
+        if (!cfg.endpoint || !cfg.model) { adrTheaterStatus("聊天位没有可用的 API：" + adrLampApiNote("lamp"), "#d4726a"); return false; }
+        var homeKey = adrDChatKey();
+        adrTheaterState.busy = true;
+        var idx = -1;
+        try {
+            await adrDWaitForGenerationIdle(120000);   // 楼还在出字就等，导演同款证据
+            if (adrDChatKey() !== homeKey) return false;
+            var chat = adrLampChat();
+            idx = findLastMessageIndex(chat);
+            if (idx < 0) { if (force) adrTheaterStatus("这把聊天还没有助手楼", "#d4726a"); return false; }
+            var sig = adrLampFloorSig(chat, idx);
+            if (!force && sig === adrTheaterState.lastSig) return false;               // 这一版的这一楼演过了
+            if (!force && adrTheaterHas(chat[idx].mes)) { adrTheaterState.lastSig = sig; return false; }   // 楼里已经有一场（刷新后同一楼再来事件）
+            adrTheaterState.lastSig = sig;
+            var theme = adrTheaterPickTheme();
+            var mat = adrLampMaterialsAt(idx);
+            if (!mat.body) { if (force) adrTheaterStatus("#" + idx + " 没有正文可演", "#d4726a"); return false; }
+            adrTheaterStatus("🎬 #" + idx + " 开演「" + theme.name + "」…", "#8ed99d");
+            var messages = [
+                { role: "system", content: ADR_THEATER_PRESET + "\n\n" + adrLampMaterialsText(mat) },
+                { role: "user", content: "【本场主题 · " + theme.name + "】\n" + theme.text + "\n\n【任务】针对本篇（#" + idx + "）写一场。只输出剧场正文本身：不要标题、不要解释、不要 markdown 围栏、不要 HTML 标签。" }
+            ];
+            var lastPaint = 0;
+            var out = await adrDChatCompletionText({
+                endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrLampTemp(), messages: messages,
+                onProgress: function (chars, thought) {
+                    var now = Date.now();
+                    if (now - lastPaint < 250) return;
+                    lastPaint = now;
+                    adrTheaterStatus(chars > 0 ? "🎬 #" + idx + "「" + theme.name + "」在写…已收到 " + chars + " 字" : (thought > 0 ? "🎬 霞姐在想（" + thought + " 字）…" : "🎬 等霞姐开口…"), "#8ed99d");
+                }
+            });
+            var text = adrTheaterClean(out);
+            if (!text) throw new Error("写回来是空的");
+            if (adrDChatKey() !== homeKey) { adrTheaterStatus("中途换了聊天，这一场作废", "#d6b177"); return false; }
+            var chat2 = adrLampChat();
+            if (!chat2[idx] || adrLampFloorSig(chat2, idx) !== sig) { adrTheaterStatus("#" + idx + " 在写的时候变了（重 roll / 编辑 / 删楼），这一场作废", "#d6b177"); return false; }
+            if (!adrTheaterWrite(idx, theme.name, text)) throw new Error("没写进楼里");
+            adrTheaterState.lastName = theme.name;
+            adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾，等酒馆存盘…", "#8ed99d");
+            try { await adrDSaveThenRedrawAfterInject(); adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾 ✓", "#8ed99d"); }
+            catch (eSave) { adrTheaterStatus("#" + idx + " 楼里已插，但聊天保存没确认：" + (eSave && eSave.message ? eSave.message : String(eSave)), "#d4726a"); }
+            try { console.log("[Arrebol D] theater #" + idx + " 「" + theme.name + "」 (" + (reason || "") + ")"); } catch (eL) {}
+            return true;
+        } catch (e) {
+            adrTheaterStatus("这一场没写出来" + (idx >= 0 ? "（#" + idx + "）" : "") + "：" + (e && e.message ? e.message : String(e)), "#d4726a");
+            return false;
+        } finally {
+            adrTheaterState.busy = false;
+        }
+    }
+
+    function adrTheaterRemoveLatest() {
+        try {
+            var chat = adrLampChat();
+            var idx = findLastMessageIndex(chat);
+            if (idx < 0 || !chat[idx] || !adrTheaterHas(chat[idx].mes)) { adrTheaterStatus("最新一楼没有剧场可撤", "#d6b177"); return false; }
+            if (adrDGenerationLooksLive()) { adrTheaterStatus("这一楼还在生成，等写完再撤", "#d6b177"); return false; }
+            adrDSetMessageText(chat[idx], adrTheaterStrip(chat[idx].mes).replace(/\s+$/, ""));
+            adrLampAcknowledgeOwnWrite();
+            adrDNoteRedraw(idx);
+            adrTheaterStatus("#" + idx + " 的剧场撤掉了，等酒馆存盘…", "#8ed99d");
+            adrDSaveThenRedrawAfterInject().then(function () { adrTheaterStatus("#" + idx + " 的剧场撤掉了 ✓", "#8ed99d"); })
+                .catch(function (e) { adrTheaterStatus("已撤，但聊天保存没确认：" + (e && e.message ? e.message : String(e)), "#d4726a"); });
+            return true;
+        } catch (e) { return false; }
+    }
+
+    // ---- 主题仓的面板动作 ----
+    function adrTheaterOptionsHTML(sel) {
+        var names = adrTheaterNames();
+        if (!names.length) return '<option value="">（主题仓是空的，写一个存进来）</option>';
+        return names.map(function (n) { return '<option value="' + esc(n) + '"' + (n === sel ? " selected" : "") + '>' + esc(n) + '</option>'; }).join("");
+    }
+
+    function adrTheaterRefreshFields(fillText) {
+        try {
+            var d = rootDoc();
+            var st = settings();
+            var sel = adrTheaterCurrentName();
+            var names = adrTheaterNames();
+            var sig = adrCdOptSig("theater", names, sel);
+            var html = adrTheaterOptionsHTML(sel);
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-theater-select")).forEach(function (el) { adrCdFillSelect(el, html, sel, sig); });
+            adrCdSetCheckedSafe("adr044-theater-enabled", st.theaterEnabled === true);
+            adrCdSetCheckedSafe("adr044-theater-fold", st.theaterFold === true);
+            adrCdSetValueSafe("adr044-theater-pick", adrTheaterPickMode());
+            if (fillText !== false) {
+                var active = d.activeElement;
+                var store = adrTheaterStore();
+                Array.prototype.slice.call(d.querySelectorAll("#adr044-theater-name")).forEach(function (el) { if (el !== active) el.value = sel; });
+                Array.prototype.slice.call(d.querySelectorAll("#adr044-theater-text")).forEach(function (el) { if (el !== active) el.value = sel ? String(store[sel] || "") : ""; });
+            }
+        } catch (e) {}
+    }
+
+    function adrTheaterSelect(name) {
+        save("theaterCurrent", String(name || ""));
+        saveNow();
+        adrTheaterRefreshFields();
+        adrTheaterStatus(name ? "选中「" + name + "」" + (adrTheaterPickMode() === "random" ? "（现在是随机抽，选中只影响下面显示的写法）" : "，固定用它") : "主题仓是空的", "#8ed99d");
+    }
+
+    function adrTheaterSaveFromFields() {
+        var nameEl = qForm("adr044-theater-name"), textEl = qForm("adr044-theater-text");
+        var name = nameEl ? String(nameEl.value || "").trim() : "";
+        var text = textEl ? String(textEl.value || "").trim() : "";
+        if (!name) { adrTheaterStatus("先给这个主题起个名", "#d4726a"); return false; }
+        if (!text) { adrTheaterStatus("主题的写法是空的，没什么可存", "#d4726a"); return false; }
+        var store = adrTheaterStore();
+        var existed = typeof store[name] === "string";
+        store[name] = text;
+        save("theaterStore", store);
+        save("theaterCurrent", name);
+        saveNow();
+        adrTheaterRefreshFields();
+        adrTheaterStatus((existed ? "已更新「" : "已存进主题仓「") + name + "」✓", "#8ed99d");
+        return true;
+    }
+
+    function adrTheaterDeleteFromFields(btn) {
+        var name = adrTheaterCurrentName();
+        if (!name) { adrTheaterStatus("主题仓已经空了", "#d6b177"); return false; }
+        return adrDTwoStepConfirm("theater-delete", btn || qForm("adr044-theater-delete"), "确定删除？", "再点一次从主题仓删掉「" + name + "」",
+            function (msg) { adrTheaterStatus(msg, "#d6a26a"); },
+            function () {
+                var store = adrTheaterStore();
+                delete store[name];
+                save("theaterStore", store);
+                var st = settings();
+                var seeded = Array.isArray(st.theaterSeeded) ? st.theaterSeeded.slice() : [];
+                if (seeded.indexOf(name) < 0) { seeded.push(name); save("theaterSeeded", seeded); }   // 出厂条目删过就记账，不复活
+                save("theaterCurrent", "");
+                saveNow();
+                adrTheaterRefreshFields();
+                adrTheaterStatus("已从主题仓删掉「" + name + "」", "#d6b177");
+            });
+    }
+
+    function adrTheaterCopyRegex() {
+        var text = ADR_THEATER_STRIP_REGEX_TEXT;
+        function done(ok) { adrTheaterStatus(ok ? "剥离正则已复制 ✓ 去酒馆「正则」里新建一条贴进去" : "没复制上，长按上面那一行手动复制", ok ? "#8ed99d" : "#d4726a"); }
+        try {
+            var nav = rootWin().navigator;
+            if (nav && nav.clipboard && typeof nav.clipboard.writeText === "function") { nav.clipboard.writeText(text).then(function () { done(true); }, function () { fallback(); }); return true; }
+        } catch (e) {}
+        function fallback() {
+            try {
+                var el = qForm("adr044-theater-regex");
+                if (!el) return done(false);
+                el.focus(); el.select();
+                done(!!rootDoc().execCommand && rootDoc().execCommand("copy"));
+            } catch (e2) { done(false); }
+        }
+        fallback();
+        return true;
+    }
+
+    function adrTheaterSectionHTML(secOpen, secClose, checkClass, actionsClass, noteClass) {
+        var st = settings();
+        var sel = adrTheaterCurrentName();
+        var names = adrTheaterNames();
+        var store = adrTheaterStore();
+        return secOpen("🎭 红霞剧场 · 每层楼尾来一场", false, "lamp-theater")
+            + '<div class="' + noteClass + '">开了以后，每层助手正文落地，霞姐在楼尾插一场：弹幕、场外嗑瓜子、Q 版四格、花絮……她看到的和掌灯一样。插在楼里是给你看的，别让主模型看见——底下那条剥离正则贴进酒馆「正则」就行。</div>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-enabled"' + (st.theaterEnabled === true ? " checked" : "") + '> 启用红霞剧场（走聊天位 API，每层一次，花钱；「小红霞正在运行」关着就不演）</label>'
+            + '<label>主题怎么选</label><select id="adr044-theater-pick">' + opt(adrTheaterPickMode(), "fixed", "固定：每层都用下面选中的这个") + opt(adrTheaterPickMode(), "random", "随机：每层从主题仓里抽一个，不连着抽同一个") + '</select>'
+            + '<label>主题仓（出厂六个；能改、能加、能删）</label>'
+            + '<select id="adr044-theater-select" data-optsig="' + esc(adrCdOptSig("theater", names, sel)) + '">' + adrTheaterOptionsHTML(sel) + '</select>'
+            + '<input type="text" id="adr044-theater-name" placeholder="主题名，如：弹幕吐槽 / 场外嗑瓜子 / 你自己起" value="' + esc(sel) + '">'
+            + '<textarea id="adr044-theater-text" rows="4" placeholder="这个主题怎么写：谁在说、几条几格、什么腔调。写得越具体越像样。">' + esc(sel ? String(store[sel] || "") : "") + '</textarea>'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-save">存进主题仓</button><button type="button" id="adr044-theater-delete">从仓里删掉</button></div>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-fold"' + (st.theaterFold === true ? " checked" : "") + '> 插进去时默认折叠（点开才看；不勾就是摊开的）</label>'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-now">🎬 现在来一场</button><button type="button" id="adr044-theater-remove">撤掉最新一楼的</button></div>'
+            + '<div class="adr044-template-status" id="adr044-theater-status">没开也能点「现在来一场」试试手感；一楼只留一场，再来一场会换掉旧的。</div>'
+            + '<label>剥离正则（酒馆「正则」扩展新建一条：查找填它，替换留空，作用范围勾「AI 输出」，下面只勾「仅格式提示词」）</label>'
+            + '<input type="text" id="adr044-theater-regex" readonly value="' + esc(ADR_THEATER_STRIP_REGEX_TEXT) + '">'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-regex-copy">复制剥离正则</button></div>'
+            + secClose();
+    }
+
+    function adrTheaterHandleButtonId(id, btn) {
+        if (id === "adr044-theater-save") { adrTheaterSaveFromFields(); return true; }
+        if (id === "adr044-theater-delete") { adrTheaterDeleteFromFields(btn); return true; }
+        if (id === "adr044-theater-now") { adrTheaterNow("manual", true).catch(function () {}); return true; }
+        if (id === "adr044-theater-remove") { adrTheaterRemoveLatest(); return true; }
+        if (id === "adr044-theater-regex-copy") { adrTheaterCopyRegex(); return true; }
+        return false;
+    }
+
+    function adrTheaterBindControls() {
+        try {
+            function each(id, fn) {
+                Array.prototype.slice.call(rootDoc().querySelectorAll("#" + id)).forEach(function (el) {
+                    if (!el || el.__adrTheaterBound) return;
+                    el.__adrTheaterBound = true;
+                    fn(el);
+                });
+            }
+            function tap(el) { ["pointerdown", "touchstart", "mousedown"].forEach(function (evt) { el.addEventListener(evt, function () { adrCdTouch(el); if (String(el.tagName || "").toLowerCase() === "select") el.__adrCdPickerOpenAt = Date.now(); }, { passive: true }); }); }
+            function typing(el) {
+                el.addEventListener("focus", function () { el.__adrCdTyping = true; });
+                el.addEventListener("blur", function () { setTimeout(function () { el.__adrCdTyping = false; }, 400); });
+            }
+            each("adr044-theater-enabled", function (el) {
+                tap(el);
+                el.addEventListener("change", function () {
+                    adrCdTouch(el); save("theaterEnabled", !!el.checked); saveNow();
+                    adrTheaterStatus(el.checked ? "红霞剧场开了：从下一层起每层楼尾来一场（花钱）。记得把剥离正则贴进酒馆" : "红霞剧场关了，已经插进楼里的不动", "#8ed99d");
+                });
+            });
+            each("adr044-theater-fold", function (el) {
+                tap(el);
+                el.addEventListener("change", function () { adrCdTouch(el); save("theaterFold", !!el.checked); saveNow(); });
+            });
+            each("adr044-theater-pick", function (el) {
+                tap(el);
+                el.addEventListener("change", function () {
+                    adrCdTouch(el); el.__adrCdPickerOpenAt = 0;
+                    save("theaterPick", el.value === "random" ? "random" : "fixed"); saveNow();
+                    adrTheaterStatus(el.value === "random" ? "随机抽：每层从主题仓里抽一个" : "固定用「" + adrTheaterCurrentName() + "」", "#8ed99d");
+                });
+            });
+            each("adr044-theater-select", function (el) {
+                tap(el);
+                el.addEventListener("change", function () { adrCdTouch(el); el.__adrCdPickerOpenAt = 0; adrTheaterSelect(String(el.value || "")); });
+            });
+            each("adr044-theater-name", function (el) { typing(el); });
+            each("adr044-theater-text", function (el) { typing(el); });
+        } catch (e) {
+            try { console.warn("[Arrebol D] theater bind failed", e); } catch (e2) {}
+        }
+    }
+
+    try {
+        rootWin().__adrTheaterTest = {
+            now: adrTheaterNow, onMessage: adrTheaterOnMessage, block: adrTheaterBlock, strip: adrTheaterStrip, has: adrTheaterHas, clean: adrTheaterClean,
+            pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, preset: ADR_THEATER_PRESET,
+            regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite
+        };
+    } catch (eTheaterHook) {}
+    // ================= 红霞剧场 模块结束 =================
 
     try {
         rootWin().__adrLampTest = {
@@ -8074,6 +8460,7 @@
             });
             try { adrCdRefreshPanelFields(); } catch (eCdRefresh) {}
             try { adrLampRefreshPanelFields(); } catch (eLampRefresh) {}   // v1.39.0
+            try { adrTheaterRefreshFields(false); } catch (eTheaterRefresh) {}   // v1.43.0 只回填开关与下拉，不冲掉正在写的主题
             adrDRefreshMasterToggleUI();
             adrDUpdateAutoCounters();
         } catch (e) {
@@ -9218,6 +9605,7 @@
             try { adrCdBindControls(); } catch (eCdBind) {} // v1.10.0：抽卡控件随每次重绑一起带起（幂等）
             try { adrDBindToneControls(); } catch (eToneBind) {} // v1.30.0：基调仓控件（幂等）
             try { adrLampBindControls(); } catch (eLampBind) {} // v1.39.0：掌灯页控件（幂等）
+            try { adrTheaterBindControls(); } catch (eTheaterBind) {} // v1.43.0：红霞剧场控件（幂等）
             if (!rootWin().adrDStableAutoSaveBound) {
                 rootWin().adrDStableAutoSaveBound = true;
                 rootDoc().addEventListener("input", function (ev) {
@@ -9255,6 +9643,10 @@
          "adr044-lamp-refresh", "adr044-lamp-floor-latest", "adr044-lamp-load-models", "adr044-pen-load-models", "adr044-lamp-test", "adr044-pen-test", "adr044-lamp-preset-reset",
          "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip", "adr044-lamp-jump-bottom", "adr044-lamp-jump-top", "adr044-lamp-quip-now"].forEach(function (lid) {
             ids[lid] = function () { adrLampHandleButtonId(lid, qForm(lid)); };
+        });
+        // v1.43.0 红霞剧场按钮：同样双注册
+        ["adr044-theater-save", "adr044-theater-delete", "adr044-theater-now", "adr044-theater-remove", "adr044-theater-regex-copy"].forEach(function (tid) {
+            ids[tid] = function () { adrTheaterHandleButtonId(tid, qForm(tid)); };
         });
         ids["adr044-api-profile-save-cd"] = function () { adrDSaveCurrentApiProfile("cd"); };
         ids["adr044-api-profile-delete-cd"] = function () { adrDRequestDeleteCurrentApiProfile("cd"); };
@@ -11372,6 +11764,7 @@
                     es.on(types.MESSAGE_RECEIVED, function () {
                         setTimeout(function () { try { adrLampRefreshAll(); } catch (eLampMr) {} }, 700);
                         try { adrLampAutoQuipOnMessage(); } catch (eLampQuip) {}   // v1.41.0 自动蛐蛐（开关默认关）
+                        try { adrTheaterOnMessage(); } catch (eTheater) {}          // v1.43.0 红霞剧场（开关默认关）
                     });
                 }
             }
@@ -11499,6 +11892,9 @@
             // v1.39.0：掌灯页按钮进兜底表，否则被 450ms 防抖吞掉。
             if (id === "adr044-tab-lamp" || id.indexOf("adr044-lamp-") === 0 || id.indexOf("adr044-pen-") === 0) {
                 if (adrLampHandleButtonId(id, btn)) return true;
+            }
+            if (id.indexOf("adr044-theater-") === 0) {
+                if (adrTheaterHandleButtonId(id, btn)) return true;
             }
             if (id === "adr044-api-profile-save-cd") { adrDSaveCurrentApiProfile("cd"); return true; }
             if (id === "adr044-api-profile-delete-cd") { adrDRequestDeleteCurrentApiProfile("cd"); return true; }
