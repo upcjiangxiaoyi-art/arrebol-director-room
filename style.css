@@ -5997,7 +5997,7 @@ html #adr044-drawer {
 html #adr048-popup-panel[data-arb-theme] #adr048-popup-body .adr-top-tabs,
 html #adr044-drawer .adr-top-tabs {
     display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important; /* v1.39.0 四页：情感导演 / 统筹 / 抽卡 / 掌灯 */
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important; /* v1.45.0 五页：情感导演 / 统筹 / 抽卡 / 掌灯 / 剧场 */
     width: 100% !important;
     box-sizing: border-box !important;
     gap: 4px !important;
@@ -7597,3 +7597,16 @@ html #adr044-drawer#adr044-drawer .adr-lamp-jump.adr-lamp-jump.adr-lamp-jump {
 /* v1.44.0 剧场里的 HTML 排版别撑破楼：内容不超出容器，图片与表格跟着缩 */
 .mes_text details.arrebol-d-theater, .mes_text details.custom-arrebol-d-theater { max-width: 100%; overflow-x: auto; }
 .mes_text details.arrebol-d-theater img, .mes_text details.custom-arrebol-d-theater img { max-width: 100%; height: auto; }
+
+/* v1.45.0 顶部五个页签：手机窄屏上字距收紧、间隙小一点，「情感导演」四个字不折行 */
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs,
+html #adr044-drawer#adr044-drawer .adr-top-tabs.adr-top-tabs { gap: 3px !important; padding: 4px !important; }
+html #adr048-popup-panel[data-arb-theme] #adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs button,
+html #adr044-drawer#adr044-drawer .adr044-box .adr-top-tabs.adr-top-tabs.adr-top-tabs button {
+    padding-left: 2px !important;
+    padding-right: 2px !important;
+    letter-spacing: 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+}

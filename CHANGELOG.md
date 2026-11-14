@@ -6,6 +6,14 @@
 
 ---
 
+## v1.45.0
+
+红霞剧场独立成页、独立 API 位（提议：江「能不能给它单独开一个平行页面，和掌灯一样有个平行页面和独立的 api，挪过去」；施工：Claude）。顶部页签五个：情感导演 / 统筹 / 抽卡 / 掌灯 / 剧场（`adrDTopDeckHTML` 的 `kinds` 加 `theater`，`switchTab` 认它，网格 4 → 5 列；窄屏上页签字距收到 0、左右内边距 2px、不折行）。剧场从掌灯页的一节搬成 `adr044-page-theater` / `adr048-page-theater`，内层 `adrTheaterPageInnerHTML` 分四节：「🎭 红霞剧场」（开关、选法、排版、折叠、现在来一场 / 撤掉、状态行）、「📚 主题仓」（下拉、名字、写法、存 / 删、导入 / 导出、清空 / 补回、计数）、「✂️ 剥离正则」、「🔌 API · 剧场位」。顶部工作台剧场那一格是一行 `adr044-theater-topline`：「🎭 剧场 · 每层楼尾一场 / 没开（可以手动来一场） · 固定「主题名」/ 随机抽（仓里 N 个）」，开关、选法、主题仓变了跟着变。控件 id 一个没改，只是换了住处，掌灯页里不再有第二份。
+
+剧场位。设置 `theaterBorrow`（默认 `lamp`）+ `stageApiEndpoint` / `stageApiKey` / `stageModel` + `theaterTemp`（默认 0.9）。`adrTheaterApiCfg()`：`lamp` 取 `adrLampApiCfg("lamp")`（掌灯聊天位当前实际用的那一套，和搬家前行为一致）；`plot` / `emotion` / `expand` / `cd` 取对应前缀；`self` 取 `stage*`。`prefixOf("stage")` 让 `loadModels("stage")`、`fillModelSelect`、`status("stage")` 原样可用，「加载模型」「测试连接」打的都是剧场位。`adrTheaterNow` 改用 `adrTheaterApiCfg()` 与 `adrTheaterTemp()`，没有可用 API 时状态行直说「剧场位没有可用的 API」。掌灯的聊天位、执笔位、温度一概不受影响。说明行 `adr044-theater-api-note` 写明此刻用的是谁的、哪个模型。
+
+test_theater.js 158 → 180 项：两端都有自己的剧场页、掌灯页里那一节搬走且不留两份、四节齐全、第五个页签、切页与切回、抽屉同步、顶上一行的文字随开关变；剧场位默认跟掌灯聊天位、改借情感导演、自己填（自填框显隐、空着直说、存设置并生效、两端同步）、掌灯两个位不受影响、温度默认与单独存、「现在来一场」走剧场位的地址钥匙模型温度、「测试连接」打剧场位、自填却没填地址不发请求、改回跟掌灯。test_lamp.js 两条「顶部四页」改成五页。原有 15 套全过。
+
 ## v1.44.0
 
 导演稿静默上屏、剧场主题包、剧场 HTML / CSS 排版（提议：江「导演也该静默」「可以导入和导出小剧场提示词预设包，比如 100 个小剧场脑洞，不用一个个复制，直接打包 json」「小剧场能支持 css 等类型的渲染哈」「小剧场能看到的范围也是角色卡世界书当前正文和之前的摘要对不，不然莫名其妙，得有沉浸感」；施工：Claude）。

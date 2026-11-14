@@ -111,9 +111,17 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     const P = s => d.querySelector("#adr048-popup-body " + s);
 
     section("面板");
-    ok(!!d.querySelector('#adr044-drawer [data-drawer-id="lamp-theater"]') && !!P('[data-drawer-id="lamp-theater"]'), "抽屉与浮窗的掌灯页里都有「红霞剧场」一节");
-    const chatDr = P('[data-drawer-id="lamp-chat"]'), thDr = P('[data-drawer-id="lamp-theater"]'), apiDr = P('[data-drawer-id="lamp-api"]');
-    ok((chatDr.compareDocumentPosition(thDr) & 4) !== 0 && (thDr.compareDocumentPosition(apiDr) & 4) !== 0, "排在聊天区之后、API 之前");
+    ok(!!d.querySelector('#adr044-drawer #adr044-page-theater [data-drawer-id="theater-main"]') && !!P('#adr048-page-theater [data-drawer-id="theater-main"]'), "抽屉与浮窗里都有自己的「剧场」页（v1.45.0）");
+    ok(!P('#adr048-page-lamp #adr044-theater-enabled') && !d.querySelector('[data-drawer-id="lamp-theater"]') && d.querySelectorAll("#adr048-popup-body #adr044-theater-enabled").length === 1, "掌灯页里那一节已经搬走，没有留两份");
+    ok(["theater-main", "theater-lib", "theater-regex", "theater-api"].every(k => !!P('#adr048-page-theater [data-drawer-id="' + k + '"]')), "剧场页四节：开关与手动、主题仓、剥离正则、API");
+    ok(P("#adr044-tab-theater") && P("#adr044-tab-theater").textContent === "剧场" && d.querySelectorAll("#adr048-popup-body .adr-top-tabs button").length === 5 && d.querySelectorAll("#adr044-drawer .adr-top-tabs button").length === 5, "顶部第五个页签「剧场」，两端都有");
+    ok(P("#adr048-page-theater").style.display === "none" && P("#adr048-page-lamp").style.display === "", "没点之前还停在原来的页");
+    await tick(500); click(W, P("#adr044-tab-theater")); await tick(100);
+    ok(e.st().activeTab === "theater" && P("#adr048-page-theater").style.display === "" && P("#adr048-page-lamp").style.display === "none" && P("#adr044-tab-theater").classList.contains("active") && !P("#adr044-tab-lamp").classList.contains("active"), "点页签切到剧场页，掌灯页收起");
+    ok(d.querySelector("#adr044-drawer #adr044-page-theater").style.display === "" && d.querySelector("#adr044-drawer #adr044-page-lamp").style.display === "none", "抽屉那份同步切过去");
+    ok(!P('.adr-top-pane[data-director="theater"]').hidden && P('.adr-top-pane[data-director="lamp"]').hidden && P("#adr044-theater-topline").textContent === "🎭 剧场 · 没开（可以手动来一场） · 固定「弹幕吐槽」", "顶上一行写着开没开、怎么选主题", P("#adr044-theater-topline").textContent);
+    await tick(500); click(W, P("#adr044-tab-lamp")); await tick(100);
+    ok(e.st().activeTab === "lamp" && P("#adr048-page-theater").style.display === "none", "切回掌灯");
     ok(P("#adr044-theater-enabled") && !P("#adr044-theater-enabled").checked && e.st().theaterEnabled !== true, "开关在、默认关");
     const names = T.names();
     ok(names.length === 6 && names[0] === "弹幕吐槽" && names.indexOf("场外嗑瓜子") >= 0 && names.indexOf("读者评论区") >= 0, "主题仓出厂六个", names.join("/"));
@@ -130,6 +138,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     section("开了：每层楼尾来一场");
     const en = P("#adr044-theater-enabled"); en.checked = true; change(W, en); await tick(50);
     ok(e.st().theaterEnabled === true, "勾上存进设置");
+    ok(P("#adr044-theater-topline").textContent.indexOf("🎭 剧场 · 每层楼尾一场") === 0, "顶上那行跟着变成「每层楼尾一场」");
     ok(P("#adr044-theater-status").textContent.indexOf("剥离正则") >= 0, "开的时候提醒贴剥离正则");
     e.setScript((n, body) => isTheater(body)
         ? "```\n🎭 红霞剧场 · 弹幕吐槽\n前排围观\n哈哈哈哈 <b>她答应得也太快了</b>\n\n\n\n高能预警：信 & 人一起到\n```"
@@ -494,6 +503,39 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     await tick(600); click(W, inj); await tick(500); click(W, inj); await tick(900);
     ok(e.chat[iH].mes.indexOf("藏起来的一份稿") > 0 && boxH.querySelectorAll(".arrebol-d-live").length === 0 && boxH.children.length === 1 && e.redraws().length === rD, "美化正则把稿藏了：楼里有、画面不留空壳、不重画");
     delete e.context.messageFormatting;
+    W.__adrDGenTest.setQuietMs(4000);
+
+    section("剧场位：自己的 API（v1.45.0）");
+    W.__adrDGenTest.setQuietMs(60);
+    ok(P("#adr044-stage-borrow").value === "lamp" && T.apiCfg().from === "lamp" && T.apiCfg().endpoint === "https://plot.example/v1" && T.apiCfg().model === "plot-model", "默认跟掌灯聊天位（这里掌灯借的是统筹），和搬家前一样");
+    ok(P("#adr044-stage-self").classList.contains("adr-lamp-hide") && P("#adr044-theater-api-note").textContent === "剧场位：跟掌灯聊天位 · plot-model", "没选自己填时自填框藏着，说明行写明用的是谁", P("#adr044-theater-api-note").textContent);
+    e.st().emotionApiEndpoint = "https://emo.example/v1"; e.st().emotionApiKey = "k-emo"; e.st().emotionModel = "emo-model";
+    const sb = P("#adr044-stage-borrow"); sb.value = "emotion"; change(W, sb); await tick(50);
+    ok(e.st().theaterBorrow === "emotion" && T.apiCfg().endpoint === "https://emo.example/v1" && T.apiCfg().model === "emo-model" && P("#adr044-theater-api-note").textContent === "剧场位：借情感导演的 · emo-model", "改借情感导演的");
+    sb.value = "self"; change(W, sb); await tick(50);
+    ok(e.st().theaterBorrow === "self" && !P("#adr044-stage-self").classList.contains("adr-lamp-hide") && P("#adr044-theater-api-note").textContent.indexOf("地址或模型还空着") > 0, "选自己填：自填框露出来，没填时直说空着");
+    const sEp = P("#adr044-stage-endpoint"); sEp.value = "https://stage.example/v1"; change(W, sEp);
+    const sKy = P("#adr044-stage-key"); sKy.value = "k-stage"; change(W, sKy);
+    const sMd = P("#adr044-stage-model"); sMd.value = "stage-model"; change(W, sMd); await tick(50);
+    ok(e.st().stageApiEndpoint === "https://stage.example/v1" && e.st().stageApiKey === "k-stage" && e.st().stageModel === "stage-model" && T.apiCfg().from === "self" && T.apiCfg().endpoint === "https://stage.example/v1", "自己填的地址、钥匙、模型存进设置并生效");
+    ok(P("#adr044-theater-api-note").textContent === "剧场位：自己填的 · stage-model" && d.querySelector("#adr044-drawer #adr044-stage-endpoint").value === "https://stage.example/v1", "说明行跟着变，抽屉那份同步");
+    ok(W.__adrLampTest.apiCfg("lamp").endpoint === "https://plot.example/v1" && W.__adrLampTest.apiCfg("pen").endpoint === "https://plot.example/v1", "掌灯的聊天位与执笔位一点没被动");
+    const tp = P("#adr044-theater-temp");
+    ok(tp.value === "0.9", "温度默认 0.9");
+    tp.value = "1.2"; change(W, tp); await tick(50);
+    ok(e.st().theaterTemp === 1.2, "温度单独存");
+    e.setScript((n, body) => isTheater(body) ? "走剧场位的一场" : "在");
+    await tick(500); click(W, P("#adr044-theater-now")); await tick(1800);
+    const cS = e.calls[e.calls.length - 1];
+    ok(cS.url.indexOf("stage.example") >= 0 && cS.headers.Authorization === "Bearer k-stage" && cS.body.model === "stage-model" && Math.abs(cS.body.temperature - 1.2) < 1e-9 && isTheater(cS.body), "「现在来一场」走的是剧场位自己的地址、钥匙、模型和温度", cS.url);
+    ok(e.chat[e.chat.length - 1].mes.indexOf("走剧场位的一场") > 0, "这一场照常插在楼尾");
+    await tick(500); click(W, P("#adr044-stage-test")); await tick(400);
+    const cT = e.calls[e.calls.length - 1];
+    ok(cT.url.indexOf("stage.example") >= 0 && cT.body.max_tokens === 200 && P("#adr044-stage-status").textContent.indexOf("通了 ✓") === 0, "「测试连接」打的也是剧场位", P("#adr044-stage-status").textContent);
+    e.st().stageApiEndpoint = "";
+    ok((await T.now("manual", true)) === false && P("#adr044-theater-status").textContent.indexOf("剧场位没有可用的 API") === 0, "自己填却没填地址：不发请求，直说剧场位没有可用的 API");
+    sb.value = "lamp"; change(W, sb); await tick(50);
+    ok(T.apiCfg().from === "lamp" && P("#adr044-stage-self").classList.contains("adr-lamp-hide"), "改回跟掌灯聊天位");
     W.__adrDGenTest.setQuietMs(4000);
 
     section("收尾");

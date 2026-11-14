@@ -99,7 +99,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     let d = e.doc, W = e.win;
     ok(!!d.querySelector("#adr044-drawer #adr044-tab-lamp"), "抽屉顶上有「掌灯」页签");
     ok(d.querySelector("#adr044-drawer #adr044-tab-lamp").textContent === "掌灯", "页签文字是「掌灯」");
-    ok(d.querySelectorAll("#adr044-drawer .adr-top-tabs button").length === 4, "顶部一共四页");
+    ok(d.querySelectorAll("#adr044-drawer .adr-top-tabs button").length === 5, "顶部一共五页（v1.45.0 多了剧场）");
     ok(!!d.querySelector("#adr044-page-lamp"), "抽屉里有掌灯页");
     ok(d.querySelector("#adr044-page-lamp").style.display === "none", "默认不在掌灯页");
     click(W, d.querySelector("#adr044-drawer #adr044-tab-lamp")); await tick(50);
@@ -108,7 +108,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(d.querySelector("#adr044-page-emotion").style.display === "none", "情感导演页收起");
     click(W, d.querySelector("#adr048-fab")); await tick(400);
     ok(!!d.querySelector("#adr048-page-lamp"), "浮窗里也有掌灯页");
-    ok(d.querySelectorAll("#adr048-popup-body .adr-top-tabs button").length === 4, "浮窗顶部也是四页");
+    ok(d.querySelectorAll("#adr048-popup-body .adr-top-tabs button").length === 5, "浮窗顶部也是五页");
     ok(d.querySelector("#adr048-page-lamp").style.display === "", "浮窗打开时停在掌灯页");
 
     section("素材：本篇、未隐藏楼层摘要、角色卡");

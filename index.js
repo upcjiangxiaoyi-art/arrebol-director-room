@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.44.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.45.0｜ripple & GPT & Claude
+ * v1.45.0 红霞剧场搬到自己的一页（第五个页签「剧场」），自己的 API 位「剧场位」：默认跟掌灯聊天位，也能借别人的或自己填，温度单独调（提议 江；施工 Claude）
  * v1.44.0 导演稿也静默上屏（只把稿接到楼尾，不重画整楼、不广播；认不出旧稿或老酒馆才走老路）；红霞剧场主题包导入 / 导出 / 清空 / 补回出厂；剧场支持 HTML / CSS 排版，上屏走酒馆自己的格式化与消毒（提议 江；施工 Claude）
  * v1.43.2 红霞剧场静默插入：只把那一块 DOM 接到画好的楼尾，不重画整楼、不广播 MESSAGE_UPDATED、绝不整聊天重载；存盘 1.5 秒合并一次；掌灯页不在眼前时不再每楼重算素材（报告 江「别让页面一抖、手机嗷嗷烫」；施工 Claude）
  * v1.43.1 随扩展附带可直接导入酒馆的剥离正则脚本 regex/arrebol-theater-strip.json（提议 江；施工 Claude）
@@ -105,7 +106,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.44.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.45.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -209,7 +210,13 @@
         theaterPick: "fixed",       // fixed 固定用选中的 / random 每层随机抽
         theaterCurrent: "",
         theaterFold: false,
-        theaterRich: true           // v1.44.0 允许 HTML / CSS 排版（主题点名要排版时才用；关掉就一律纯文本）
+        theaterRich: true,          // v1.44.0 允许 HTML / CSS 排版（主题点名要排版时才用；关掉就一律纯文本）
+        // v1.45.0 剧场搬到自己的页，自己的 API 位：默认跟掌灯聊天位，也能借别人的或自己填
+        theaterBorrow: "lamp",
+        stageApiEndpoint: "",
+        stageApiKey: "",
+        stageModel: "",
+        theaterTemp: 0.9
     };
 
     var initialized = false;
@@ -672,6 +679,7 @@
         if (type === "expand") return "expand";   // v1.34.0 剧情展开推进的独立 API 位
         if (type === "lamp") return "lamp";       // v1.39.0 掌灯聊天位
         if (type === "pen") return "pen";         // v1.39.0 掌灯执笔位
+        if (type === "stage") return "stage";     // v1.45.0 红霞剧场的剧场位
         return type === "plot" ? "plot" : "emotion";
     }
 
@@ -7651,8 +7659,6 @@
             + '</div>'
             + secClose()
 
-            + adrTheaterSectionHTML(secOpen, secClose, checkClass, actionsClass, noteClass)   // v1.43.0 红霞剧场
-
             + secOpen("🔌 API · 聊天位与执笔位", true, "lamp-api")
             + '<div class="' + noteClass + '">聊天位是和你掰扯的那个，执笔位是真正下笔改稿的那个。想让改出来的文风和前后楼一致，执笔位填主聊天用的模型。</div>'
             + '<label>聊天位</label><select id="adr044-lamp-borrow">' + borrowOpts(st.lampBorrow || "plot", false) + '</select>'
@@ -7940,6 +7946,62 @@
 
     function adrTheaterStatus(text, color) { adrCdSetTextAll("adr044-theater-status", text, color || "#d6b177"); }
 
+    // ---- v1.45.0 剧场位：自己的一页、自己的 API 位。默认跟掌灯聊天位（搬家前就是这样），也能借别人的或自己填 ----
+    var ADR_THEATER_BORROW_LABEL = { lamp: "掌灯聊天位", plot: "统筹", emotion: "情感导演", expand: "展开", cd: "小眼睛", self: "自己填" };
+
+    function adrTheaterBorrow() {
+        var b = String(settings().theaterBorrow || "lamp");
+        return ADR_THEATER_BORROW_LABEL[b] ? b : "lamp";
+    }
+
+    function adrTheaterApiCfg() {
+        var st = settings();
+        var borrow = adrTheaterBorrow();
+        if (borrow === "lamp") {
+            var inner = adrLampApiCfg("lamp");
+            return { endpoint: inner.endpoint, key: inner.key, model: inner.model, from: "lamp" };
+        }
+        var p = borrow === "self" ? "stage" : prefixOf(borrow);
+        return { endpoint: String(st[p + "ApiEndpoint"] || ""), key: String(st[p + "ApiKey"] || ""), model: String(st[p + "Model"] || ""), from: borrow };
+    }
+
+    function adrTheaterApiNote() {
+        var cfg = adrTheaterApiCfg();
+        var src = cfg.from === "self" ? "自己填的" : (cfg.from === "lamp" ? "跟掌灯聊天位" : "借" + ADR_THEATER_BORROW_LABEL[cfg.from] + "的");
+        if (!cfg.endpoint || !cfg.model) return "剧场位：" + src + "，但那边地址或模型还空着";
+        return "剧场位：" + src + " · " + cfg.model;
+    }
+
+    function adrTheaterTemp() {
+        var t = Number(settings().theaterTemp);
+        if (!Number.isFinite(t) || t < 0 || t > 2) return 0.9;
+        return t;
+    }
+
+    function adrTheaterTopLineText() {
+        try {
+            var n = adrTheaterNames().length;
+            var how = adrTheaterPickMode() === "random" ? "随机抽（仓里 " + n + " 个）" : "固定「" + (adrTheaterCurrentName() || "弹幕吐槽") + "」";
+            if (!adrTheaterEnabled()) return "🎭 剧场 · 没开（可以手动来一场） · " + how;
+            return "🎭 剧场 · 每层楼尾一场 · " + how;
+        } catch (e) { return "🎭 剧场"; }
+    }
+
+    async function adrTheaterTestConnection() {
+        var cfg = adrTheaterApiCfg();
+        if (!cfg.endpoint || !cfg.model) { status("stage", "地址或模型空着：" + adrTheaterApiNote(), "#d4726a"); return false; }
+        status("stage", "测试中…", "#8ed99d");
+        try {
+            var out = await adrDChatCompletionText({ endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: 0, maxTokens: 200, stream: false,
+                messages: [{ role: "user", content: "只回一个字：在" }] });
+            status("stage", "通了 ✓ " + adrTheaterApiNote() + " 回：" + adrCdTruncate(String(out || "").trim(), 20), "#8ed99d");
+            return true;
+        } catch (e) {
+            status("stage", "不通：" + (e && e.message ? e.message : String(e)), "#d4726a");
+            return false;
+        }
+    }
+
     function adrTheaterEscape(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 
     // ---- v1.44.0 HTML / CSS 排版 ----
@@ -8109,8 +8171,8 @@
     async function adrTheaterNow(reason, force) {
         if (!force && !adrTheaterEnabled()) return false;
         if (adrTheaterState.busy) { if (force) adrTheaterStatus("上一场还在写，等它落幕", "#d6b177"); return false; }
-        var cfg = adrLampApiCfg("lamp");
-        if (!cfg.endpoint || !cfg.model) { adrTheaterStatus("聊天位没有可用的 API：" + adrLampApiNote("lamp"), "#d4726a"); return false; }
+        var cfg = adrTheaterApiCfg();
+        if (!cfg.endpoint || !cfg.model) { adrTheaterStatus("剧场位没有可用的 API：" + adrTheaterApiNote(), "#d4726a"); return false; }
         var homeKey = adrDChatKey();
         adrTheaterState.busy = true;
         var idx = -1;
@@ -8135,7 +8197,7 @@
             ];
             var lastPaint = 0;
             var out = await adrDChatCompletionText({
-                endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrLampTemp(), messages: messages,
+                endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrTheaterTemp(), messages: messages,
                 onProgress: function (chars, thought) {
                     var now = Date.now();
                     if (now - lastPaint < 250) return;
@@ -8199,6 +8261,14 @@
             adrCdSetCheckedSafe("adr044-theater-rich", st.theaterRich !== false);
             adrCdSetValueSafe("adr044-theater-pick", adrTheaterPickMode());
             adrCdSetTextAll("adr044-theater-count", "主题仓现有 " + names.length + " 个主题");
+            adrCdSetTextAll("adr044-theater-topline", adrTheaterTopLineText());
+            adrCdSetValueSafe("adr044-stage-borrow", adrTheaterBorrow());
+            adrCdSetValueSafe("adr044-stage-endpoint", st.stageApiEndpoint || "");
+            adrCdSetValueSafe("adr044-stage-key", st.stageApiKey || "");
+            adrCdSetValueSafe("adr044-stage-model", st.stageModel || "");
+            adrCdSetValueSafe("adr044-theater-temp", String(adrTheaterTemp()));
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-stage-self")).forEach(function (el) { el.classList.toggle("adr-lamp-hide", adrTheaterBorrow() !== "self"); });
+            adrCdSetTextAll("adr044-theater-api-note", adrTheaterApiNote());
             if (fillText !== false) {
                 var active = d.activeElement;
                 var store = adrTheaterStore();
@@ -8435,32 +8505,75 @@
         return true;
     }
 
-    function adrTheaterSectionHTML(secOpen, secClose, checkClass, actionsClass, noteClass) {
+    function adrTheaterPageInnerHTML(secOpen, secClose, checkClass, actionsClass) {
         var st = settings();
+        var noteClass = checkClass === "adr048-check" ? "adr048-note" : "adr044-note";
         var sel = adrTheaterCurrentName();
         var names = adrTheaterNames();
         var store = adrTheaterStore();
-        return secOpen("🎭 红霞剧场 · 每层楼尾来一场", false, "lamp-theater")
-            + '<div class="' + noteClass + '">开了以后，每层助手正文落地，霞姐在楼尾插一场：弹幕、场外嗑瓜子、Q 版四格、花絮……她看到的和掌灯一样（基调、角色卡、世界书、人设、此前各楼摘要、本篇全文）。插在楼里是给你看的，别让主模型看见——底下那条剥离正则贴进酒馆「正则」就行。</div>'
-            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-enabled"' + (st.theaterEnabled === true ? " checked" : "") + '> 启用红霞剧场（走聊天位 API，每层一次，花钱；「小红霞正在运行」关着就不演）</label>'
-            + '<label>主题怎么选</label><select id="adr044-theater-pick">' + opt(adrTheaterPickMode(), "fixed", "固定：每层都用下面选中的这个") + opt(adrTheaterPickMode(), "random", "随机：每层从主题仓里抽一个，不连着抽同一个") + '</select>'
-            + '<label>主题仓（出厂六个；能改、能加、能删，也能整包导入导出）</label>'
+        var borrow = adrTheaterBorrow();
+        return secOpen("🎭 红霞剧场 · 每层楼尾来一场", false, "theater-main")
+            + '<div class="' + noteClass + '">开了以后，每层助手正文落地，霞姐在楼尾插一场：弹幕、场外嗑瓜子、Q 版四格、花絮……她看到的和掌灯一样（基调、角色卡、世界书、人设、此前各楼摘要、本篇全文），所以说的是这个世界里的话。插在楼里是给你看的，别让主模型看见——「剥离正则」那一节的东西贴进酒馆「正则」就行。</div>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-enabled"' + (st.theaterEnabled === true ? " checked" : "") + '> 启用红霞剧场（走剧场位 API，每层一次，花钱；「小红霞正在运行」关着就不演）</label>'
+            + '<label>主题怎么选</label><select id="adr044-theater-pick">' + opt(adrTheaterPickMode(), "fixed", "固定：每层都用主题仓里选中的那个") + opt(adrTheaterPickMode(), "random", "随机：每层从主题仓里抽一个，不连着抽同一个") + '</select>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-rich"' + (st.theaterRich !== false ? " checked" : "") + '> 允许 HTML / CSS 排版（主题里点名要排版时，她可以回一段带样式的 HTML；不勾就一律纯文本）</label>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-fold"' + (st.theaterFold === true ? " checked" : "") + '> 插进去时默认折叠（点开才看；不勾就是摊开的）</label>'
+            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-now">🎬 现在来一场</button><button type="button" id="adr044-theater-remove">撤掉最新一楼的</button></div>'
+            + '<div class="adr044-template-status" id="adr044-theater-status">没开也能点「现在来一场」试试手感；一楼只留一场，再来一场会换掉旧的。</div>'
+            + secClose()
+
+            + secOpen("📚 主题仓 · 这一场怎么写", false, "theater-lib")
+            + '<div class="' + noteClass + '">出厂六个；能改、能加、能删，也能整包导入导出。每个主题就是一段话：谁在说、几条几格、什么腔调。想要彩色卡片这类排版，就在写法里写明「用 HTML 排版」和长什么样。</div>'
             + '<select id="adr044-theater-select" data-optsig="' + esc(adrCdOptSig("theater", names, sel)) + '">' + adrTheaterOptionsHTML(sel) + '</select>'
             + '<input type="text" id="adr044-theater-name" placeholder="主题名，如：弹幕吐槽 / 场外嗑瓜子 / 你自己起" value="' + esc(sel) + '">'
-            + '<textarea id="adr044-theater-text" rows="4" placeholder="这个主题怎么写：谁在说、几条几格、什么腔调。想要彩色卡片这类排版，就在这里写明「用 HTML 排版」和长什么样。">' + esc(sel ? String(store[sel] || "") : "") + '</textarea>'
+            + '<textarea id="adr044-theater-text" rows="5" placeholder="这个主题怎么写">' + esc(sel ? String(store[sel] || "") : "") + '</textarea>'
             + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-save">存进主题仓</button><button type="button" id="adr044-theater-delete">从仓里删掉</button></div>'
             + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-import">导入主题包</button><button type="button" id="adr044-theater-export">导出主题包</button></div>'
             + '<input type="file" id="adr044-theater-import-file" class="adr044-cd-import-file" accept=".json,application/json,text/json,text/plain">'
             + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-clear">清空主题仓</button><button type="button" id="adr044-theater-restore">补回出厂六个</button></div>'
             + '<div class="adr044-template-status" id="adr044-theater-count">主题仓现有 ' + names.length + ' 个主题</div>'
-            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-rich"' + (st.theaterRich !== false ? " checked" : "") + '> 允许 HTML / CSS 排版（主题里点名要排版时，她可以回一段带样式的 HTML；不勾就一律纯文本）</label>'
-            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-theater-fold"' + (st.theaterFold === true ? " checked" : "") + '> 插进去时默认折叠（点开才看；不勾就是摊开的）</label>'
-            + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-now">🎬 现在来一场</button><button type="button" id="adr044-theater-remove">撤掉最新一楼的</button></div>'
-            + '<div class="adr044-template-status" id="adr044-theater-status">没开也能点「现在来一场」试试手感；一楼只留一场，再来一场会换掉旧的。</div>'
-            + '<label>剥离正则（酒馆「正则」扩展新建一条：查找填它，替换留空，作用范围勾「AI 输出」，下面只勾「仅格式提示词」；懒得手填，扩展目录里有现成的 regex/arrebol-theater-strip.json，「导入脚本」选它）</label>'
+            + secClose()
+
+            + secOpen("✂️ 剥离正则 · 别让主模型看见剧场", true, "theater-regex")
+            + '<div class="' + noteClass + '">酒馆「正则」扩展新建一条：查找填下面这行，替换留空，作用范围勾「AI 输出」，下面只勾「仅格式提示词」。懒得手填，扩展目录里有现成的 regex/arrebol-theater-strip.json，「导入脚本」选它。小红霞自己读楼（导演、掌灯、蛐蛐）本来就当剧场不存在，不用另配。</div>'
             + '<input type="text" id="adr044-theater-regex" readonly value="' + esc(ADR_THEATER_STRIP_REGEX_TEXT) + '">'
             + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-regex-copy">复制剥离正则</button></div>'
+            + secClose()
+
+            + secOpen("🔌 API · 剧场位", true, "theater-api")
+            + '<div class="' + noteClass + '">剧场位是写小剧场的那个模型。默认跟掌灯的聊天位走；想让它用便宜又会玩梗的模型，在这里借别人的或者自己填，和掌灯互不相干。</div>'
+            + '<label>剧场位</label><select id="adr044-stage-borrow">'
+            + opt(borrow, "lamp", "和掌灯聊天位一样") + opt(borrow, "plot", "借统筹的") + opt(borrow, "emotion", "借情感导演的") + opt(borrow, "expand", "借展开的") + opt(borrow, "cd", "借小眼睛的") + opt(borrow, "self", "自己填")
+            + '</select>'
+            + '<div id="adr044-stage-self"' + (borrow === "self" ? "" : ' class="adr-lamp-hide"') + '>'
+            + '<label>剧场位 API 地址</label><input type="text" id="adr044-stage-endpoint" value="' + esc(st.stageApiEndpoint || "") + '" placeholder="https://api.example.com/v1">'
+            + '<label>剧场位 API 密钥</label><input type="password" id="adr044-stage-key" value="' + esc(st.stageApiKey || "") + '" placeholder="sk-...">'
+            + '<label>剧场位模型</label><input type="text" id="adr044-stage-model" value="' + esc(st.stageModel || "") + '" placeholder="可以手填，或加载模型">'
+            + '<select id="adr044-stage-model-select"><option value="">加载后在此选择模型</option></select>'
+            + '<div class="' + actionsClass + '"><button id="adr044-stage-load-models" type="button">加载模型</button><button id="adr044-stage-test" type="button">测试连接</button></div>'
+            + '</div>'
+            + '<div class="adr044-template-status" id="adr044-stage-status"></div>'
+            + '<label>温度（0–2，默认 0.9；高一点梗更野，低一点更稳）</label><input type="number" id="adr044-theater-temp" min="0" max="2" step="0.1" value="' + esc(String(adrTheaterTemp())) + '">'
+            + '<div class="adr044-template-status" id="adr044-theater-api-note">' + esc(adrTheaterApiNote()) + '</div>'
             + secClose();
+    }
+
+    function adrTheaterPageHTML() {
+        var st = settings();
+        function secOpen(title, closed, key) { return adrxDrawerStart(key, title, !closed, true); }
+        function secClose() { return '</details>'; }
+        return '<div class="adr044-page" id="adr044-page-theater"' + (st.activeTab === "theater" ? '' : ' style="display:none"') + '>'
+            + adrTheaterPageInnerHTML(secOpen, secClose, "adr044-check", "adr044-actions")
+            + '</div>';
+    }
+
+    function adrTheater048PageHTML() {
+        var st = settings();
+        function secOpen(title, closed, key) { return adrxDrawerStart(key, title, !closed, true); }
+        function secClose() { return '</details>'; }
+        return '<div class="adr048-page" id="adr048-page-theater"' + (st.activeTab === "theater" ? '' : ' style="display:none"') + '>'
+            + adrTheaterPageInnerHTML(secOpen, secClose, "adr048-check", "adr048-actions")
+            + '</div>';
     }
 
     function adrTheaterHandleButtonId(id, btn) {
@@ -8473,6 +8586,9 @@
         if (id === "adr044-theater-export") { adrTheaterExportPack(); return true; }
         if (id === "adr044-theater-clear") { adrTheaterClearStore(btn); return true; }
         if (id === "adr044-theater-restore") { adrTheaterRestoreFactory(); return true; }
+        if (id === "adr044-tab-theater") { switchTab("theater"); return true; }
+        if (id === "adr044-stage-load-models") { loadModels("stage"); return true; }
+        if (id === "adr044-stage-test") { adrTheaterTestConnection(); return true; }
         return false;
     }
 
@@ -8494,6 +8610,7 @@
                 tap(el);
                 el.addEventListener("change", function () {
                     adrCdTouch(el); save("theaterEnabled", !!el.checked); saveNow();
+                    adrCdSetTextAll("adr044-theater-topline", adrTheaterTopLineText());
                     adrTheaterStatus(el.checked ? "红霞剧场开了：从下一层起每层楼尾来一场（花钱）。记得把剥离正则贴进酒馆" : "红霞剧场关了，已经插进楼里的不动", "#8ed99d");
                 });
             });
@@ -8513,6 +8630,7 @@
                 el.addEventListener("change", function () {
                     adrCdTouch(el); el.__adrCdPickerOpenAt = 0;
                     save("theaterPick", el.value === "random" ? "random" : "fixed"); saveNow();
+                    adrCdSetTextAll("adr044-theater-topline", adrTheaterTopLineText());
                     adrTheaterStatus(el.value === "random" ? "随机抽：每层从主题仓里抽一个" : "固定用「" + adrTheaterCurrentName() + "」", "#8ed99d");
                 });
             });
@@ -8525,6 +8643,35 @@
             each("adr044-theater-import-file", function (el) {
                 el.addEventListener("change", function () { adrTheaterHandleImportFile(el); });
             });
+            // v1.45.0 剧场位
+            each("adr044-stage-borrow", function (el) {
+                tap(el);
+                el.addEventListener("change", function () {
+                    adrCdTouch(el); el.__adrCdPickerOpenAt = 0;
+                    save("theaterBorrow", ADR_THEATER_BORROW_LABEL[el.value] ? String(el.value) : "lamp"); saveNow();
+                    adrTheaterRefreshFields(false);
+                });
+            });
+            [["adr044-stage-endpoint", "stageApiEndpoint"], ["adr044-stage-key", "stageApiKey"], ["adr044-stage-model", "stageModel"]].forEach(function (pair) {
+                each(pair[0], function (el) {
+                    typing(el);
+                    el.addEventListener("change", function () { save(pair[1], String(el.value || "").trim()); saveNow(); adrTheaterRefreshFields(false); });
+                });
+            });
+            each("adr044-stage-model-select", function (el) {
+                tap(el);
+                el.addEventListener("change", function () {
+                    adrCdTouch(el); el.__adrCdPickerOpenAt = 0;
+                    if (!el.value) return;
+                    adrCdSetValueSafe("adr044-stage-model", el.value);
+                    save("stageModel", String(el.value)); saveNow();
+                    adrTheaterRefreshFields(false);
+                });
+            });
+            each("adr044-theater-temp", function (el) {
+                typing(el);
+                el.addEventListener("change", function () { save("theaterTemp", Number(el.value)); var t = adrTheaterTemp(); save("theaterTemp", t); el.value = String(t); saveNow(); });
+            });
         } catch (e) {
             try { console.warn("[Arrebol D] theater bind failed", e); } catch (e2) {}
         }
@@ -8536,6 +8683,7 @@
             pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, preset: ADR_THEATER_PRESET, presetText: adrTheaterPresetText,
             regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite,
             paint: adrTheaterPaint, show: adrTheaterShow, saveSoon: adrTheaterSaveSoon, lampDirty: function () { return adrLampDirty; },
+            apiCfg: adrTheaterApiCfg, apiNote: adrTheaterApiNote, topLine: adrTheaterTopLineText,
             tidyRich: adrTheaterTidyRich, packObject: adrTheaterPackObject, parsePack: adrTheaterParsePack, importText: adrTheaterImportText,
             handleFile: adrTheaterHandleImportFile, restoreFactory: adrTheaterRestoreFactory
         };
@@ -8612,9 +8760,9 @@
     // v1.28.0: one top deck per surface; existing control IDs and save handlers stay intact.
     function adrDTopDeckHTML(popup) {
         var st = settings();
-        var active = st.activeTab === "plot" || st.activeTab === "cd" || st.activeTab === "lamp" ? st.activeTab : "emotion";
-        var kinds = ["emotion", "plot", "cd", "lamp"];
-        var labels = { emotion: "情感导演", plot: "统筹", cd: "抽卡", lamp: "掌灯" };
+        var active = st.activeTab === "plot" || st.activeTab === "cd" || st.activeTab === "lamp" || st.activeTab === "theater" ? st.activeTab : "emotion";
+        var kinds = ["emotion", "plot", "cd", "lamp", "theater"];
+        var labels = { emotion: "情感导演", plot: "统筹", cd: "抽卡", lamp: "掌灯", theater: "剧场" };
         var html = '<div class="' + (popup ? 'adr048-tabs' : 'adr044-tabs') + ' adr-top-tabs" role="group" aria-label="切换导演">';
         kinds.forEach(function (type) {
             html += '<button id="adr044-tab-' + type + '" type="button" aria-pressed="' + (active === type) + '" class="' + (active === type ? 'active' : '') + '">' + labels[type] + '</button>';
@@ -8625,6 +8773,12 @@
                 // v1.39.0 掌灯不是导演：没有计数、没有基准线，顶上只有一行"对着哪一楼、聊了几句"。
                 html += '<div class="adr-top-pane" data-director="lamp"' + (active === type ? '' : ' hidden') + '>'
                     + '<div class="adr-lamp-topline" id="adr044-lamp-topline">🏮 掌灯</div></div>';
+                return;
+            }
+            if (type === 'theater') {
+                // v1.45.0 剧场也不是导演：顶上一行"开没开、怎么选主题、仓里几个"
+                html += '<div class="adr-top-pane" data-director="theater"' + (active === type ? '' : ' hidden') + '>'
+                    + '<div class="adr-lamp-topline" id="adr044-theater-topline">' + esc(adrTheaterTopLineText()) + '</div></div>';
                 return;
             }
             html += '<div class="adr-top-pane" data-director="' + type + '"' + (active === type ? '' : ' hidden') + '>'
@@ -8708,6 +8862,7 @@
             + pageHTML("plot")
             + adrCdPageHTML()
             + adrLampPageHTML()
+            + adrTheaterPageHTML()
             + '</div>'
             + '</div></div></div>';
     }
@@ -8738,7 +8893,7 @@
     }
 
     function switchTab(type) {
-        type = (type === "plot" || type === "cd" || type === "lamp") ? type : "emotion";
+        type = (type === "plot" || type === "cd" || type === "lamp" || type === "theater") ? type : "emotion";
         var changed = settings().activeTab !== type;
         save("activeTab", type);
 
@@ -8770,6 +8925,10 @@
                 el.style.display = type === "lamp" ? "" : "none";
             });
 
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-page-theater, #adr048-page-theater")).forEach(function (el) {
+                el.style.display = type === "theater" ? "" : "none";
+            });
+
             Array.prototype.slice.call(d.querySelectorAll("#adr044-tab-emotion")).forEach(function (el) {
                 el.classList.toggle("active", type === "emotion");
                 el.setAttribute("aria-pressed", String(type === "emotion"));
@@ -8788,6 +8947,11 @@
             Array.prototype.slice.call(d.querySelectorAll("#adr044-tab-lamp")).forEach(function (el) {
                 el.classList.toggle("active", type === "lamp");
                 el.setAttribute("aria-pressed", String(type === "lamp"));
+            });
+
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-tab-theater")).forEach(function (el) {
+                el.classList.toggle("active", type === "theater");
+                el.setAttribute("aria-pressed", String(type === "theater"));
             });
 
             adrDRefreshAllFieldsFromSettings();
@@ -10034,7 +10198,8 @@
         });
         // v1.43.0 红霞剧场按钮：同样双注册
         ["adr044-theater-save", "adr044-theater-delete", "adr044-theater-now", "adr044-theater-remove", "adr044-theater-regex-copy",
-         "adr044-theater-import", "adr044-theater-export", "adr044-theater-clear", "adr044-theater-restore"].forEach(function (tid) {
+         "adr044-theater-import", "adr044-theater-export", "adr044-theater-clear", "adr044-theater-restore",
+         "adr044-tab-theater", "adr044-stage-load-models", "adr044-stage-test"].forEach(function (tid) {
             ids[tid] = function () { adrTheaterHandleButtonId(tid, qForm(tid)); };
         });
         ids["adr044-api-profile-save-cd"] = function () { adrDSaveCurrentApiProfile("cd"); };
@@ -10512,6 +10677,7 @@
             + adr048PageHTML("plot")
             + adrCd048PageHTML()
             + adrLamp048PageHTML()
+            + adrTheater048PageHTML()
             + '</div>'
             + '</div>'
             + '</div>';
@@ -12284,7 +12450,7 @@
             if (id === "adr044-tab-lamp" || id.indexOf("adr044-lamp-") === 0 || id.indexOf("adr044-pen-") === 0) {
                 if (adrLampHandleButtonId(id, btn)) return true;
             }
-            if (id.indexOf("adr044-theater-") === 0) {
+            if (id === "adr044-tab-theater" || id.indexOf("adr044-theater-") === 0 || id.indexOf("adr044-stage-") === 0) {
                 if (adrTheaterHandleButtonId(id, btn)) return true;
             }
             if (id === "adr044-api-profile-save-cd") { adrDSaveCurrentApiProfile("cd"); return true; }
