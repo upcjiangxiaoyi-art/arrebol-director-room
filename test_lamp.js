@@ -134,7 +134,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     section("无摘要标签的楼：截开头；换摘要标签名");
     e.chat[3].mes = "<content>前一楼正文没写摘要</content>";
     mat = e.T().materials();
-    ok(mat.summary.indexOf("无摘要标签，截开头] 前一楼正文没写摘要") >= 0, "没有摘要标签的楼截正文开头顶上");
+    ok(mat.summary.indexOf("无摘要标签，给正文] 前一楼正文没写摘要") >= 0, "没有摘要标签的楼给整段正文顶上");
     e.chat[3].mes = "<content>前一楼正文</content><memo>换了名字的摘要</memo>";
     const tagEl = d.querySelector("#adr048-popup-body #adr044-lamp-summary-tags");
     tagEl.value = "memo"; change(W, tagEl); await tick(50);
@@ -440,7 +440,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     await tick(500); click(W, d.querySelector("#adr048-popup-body #adr044-lamp-gossip-preset-reset")); await tick(50);
     ok(e.st().lampGossipPreset === "" && gpre.value === "", "蛐蛐人设恢复出厂");
     const hist = e.T().apiHistory(Array.from({ length: 60 }, (_, i) => ({ r: i % 2 ? "a" : "u", t: "m" + i, f: 7 })), true);
-    ok(hist.length === 40 && hist[0].content === "（剧情现在在 #7）\nm20" && hist[1].content === "m21", "记录再长也只送最近 40 句，楼号只在第一句标");
+    ok(hist.length === 60 && hist[0].content === "（剧情现在在 #7）\nm0" && hist[1].content === "m1", "历史全带不截，楼号只在第一句标（v1.42.0）");
     const hist2 = e.T().apiHistory([{ r: "u", t: "a", f: 9 }, { r: "a", t: "b", f: 9 }, { r: "u", t: "c", f: 6 }], true);
     ok(hist2[2].content === "（剧情回到 #6）\nc", "楼删了回退也标得出来");
     await tick(500); click(W, modeEdit); await tick(100);
@@ -467,7 +467,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     ok(cq.body.messages[0].content.indexOf("【本篇原文 · #" + idxQ) >= 0 && cq.body.messages[0].content.indexOf("他没说去哪") >= 0, "素材是刚落地那一楼");
     const lastQ = cq.body.messages[cq.body.messages.length - 1];
     ok(lastQ.role === "user" && lastQ.content.indexOf("（剧情走到 #" + idxQ + " 了）") === 0 && lastQ.content.indexOf("【自动蛐蛐】") > 0 && lastQ.content.indexOf("60 字以内") > 0, "末句是合成的自动蛐蛐句，前标剧情走到哪一楼");
-    ok(cq.body.max_tokens === 400, "max_tokens 400");
+    ok(cq.body.max_tokens === undefined, "自动蛐蛐不设 max_tokens（思考模型会把配额花在思考上）");
     const gm = e.meta().gossip.msgs;
     ok(gm.length >= 2 && gm[gm.length - 1].r === "a" && gm[gm.length - 1].auto === true && gm[gm.length - 1].f === idxQ && gm[gm.length - 1].t.indexOf("押她三分钟内") >= 0, "她那句写进蛐蛐账，带 auto 与楼号");
     ok(gm[gm.length - 2].r === "n" && gm[gm.length - 2].t.indexOf("#" + idxQ + " 落地") >= 0, "前面一行记录「#N 落地，她自己蛐蛐了一句」");
@@ -504,6 +504,12 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     e.chat.push({ is_user: false, name: "阿尔", mes: "<content>「到了再说。」</content><report>到了再说。</report>" });
     (e.handlers["message_received"] || []).forEach(f => { try { f(); } catch (x) {} }); await tick(1800);
     ok(e.calls.length === callsBefore + 2 && e.st().lampAutoQuip === false, "关掉勾选就不来");
+    e.setScript((n, body) => body.messages[body.messages.length - 1].content.indexOf("【自动蛐蛐】") >= 0 ? "手动点的也得来：「到了再说」，这人把悬念当饭吃。" : "普通回答");
+    await tick(500); click(W, d.querySelector("#adr048-popup-body #adr044-lamp-quip-now")); await tick(1800);
+    ok(e.calls.length === callsBefore + 3, "「现在蛐蛐一句」勾选关着也发一次（v1.42.0）");
+    const popM = d.getElementById("adr044-auto-trigger-popup");
+    ok(!!popM && popM.querySelector(".adr044-auto-trigger-popup-text").textContent.indexOf("悬念当饭吃") >= 0, "手动那句也弹小窗");
+    await tick(500); click(W, popM.querySelector("#adr044-lamp-quip-ack")); await tick(50);
     await tick(500); click(W, modeBtn); await tick(100);
     const whoAuto = [...th.querySelectorAll(".adr-lamp-who")].map(x => x.textContent);
     ok(whoAuto.indexOf("小红霞 · 自动") >= 0 && th.textContent.indexOf("押她三分钟内") >= 0, "蛐蛐模式画面上那句标「小红霞 · 自动」");

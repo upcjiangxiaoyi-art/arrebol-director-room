@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.41.9｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.42.0｜ripple & GPT & Claude
+ * v1.42.0 掌灯不设限：角色卡 / 世界书 / 人设全量、本篇与各楼原话不截、默认读全部未隐藏楼层、蛐蛐历史全带；自动蛐蛐去掉 max_tokens 400（思考模型把配额花在思考上正文为空就"不触发"），失败写进账，加「现在蛐蛐一句」手动键（提议 江；施工 Claude）
  * v1.41.9 掌灯对话框重开浮窗停在最顶上：重建面板时它还藏着、卷到底等于没卷，改为面板显示后再卷；回顶回底只管对话框；v1.41.2–1.41.8 整页落位那套全部撤掉恢复原样，分区顺序恢复（报告 江「我说的是框框里的内容」；施工 Claude）
  * v1.41.8 掌灯聊天区排到最前，打开就是对话区，不靠滚动（真机诊断：scrollTop 数值到位画面不动，WebKit 刚显示的固定容器老毛病）；滚动后踢一脚重绘；箭头换普通字符；诊断多记窗/体数量与屏幕中心归属（报告 江；施工 Claude）
  * v1.41.7 掌灯手动回顶 / 回底键：顶上那行旁边「⤓ 回底」、聊天区底下「⤒ 回顶」，不靠自动落位，浮窗与内嵌抽屉都有（提议 江；施工 Claude）
@@ -99,7 +100,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.41.9";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.42.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -960,7 +961,9 @@
         return null;
     }
 
+    var adrDExtractNoCap = false;   // v1.42.0 掌灯读素材时置 true：角色卡 / 世界书 / 人设一字不截（导演那边口径不变）
     function asCleanText(v, max) {
+        if (adrDExtractNoCap) max = 0;
         if (v === undefined || v === null) return "";
         var s = "";
         if (typeof v === "string") s = v;
@@ -1209,11 +1212,15 @@
         return arr.join("\n\n---\n\n");
     }
 
-    function buildPreciseContext() {
+    function buildPreciseContext(full) {
         var parts = [];
-        var charText = extractCharacterCardText();
-        var bookText = extractCharacterBookText();
-        var personaText = extractPersonaText();
+        var charText, bookText, personaText;
+        adrDExtractNoCap = !!full;
+        try {
+            charText = extractCharacterCardText();
+            bookText = extractCharacterBookText();
+            personaText = extractPersonaText();
+        } finally { adrDExtractNoCap = false; }
         var st = settings();
 
         if (charText) parts.push("【当前角色卡】\n" + charText);
@@ -6477,11 +6484,9 @@
     // 聊天位与执笔位分开：和你顶嘴的可以是 Claude，下笔的可以是主聊天那个模型，文风和前后楼一致。
     var ADR_LAMP_META_KEY = "arrebol_d_lamp";
     var ADR_LAMP_LS_KEY = "arrebol_d_lamp_v1";
-    var ADR_LAMP_MSG_MAX = 80;        // 一楼的对话最多留这么多句
+    var ADR_LAMP_MSG_MAX = 300;       // 一楼的对话最多存这么多句（v1.42.0 80 → 300；发请求时全带，不另截）
     var ADR_LAMP_THREAD_MAX = 8;      // 一把聊天最多留几楼的对话
-    var ADR_LAMP_CARD_MAX = 12000;    // 角色卡/世界书/人设截断
-    var ADR_LAMP_BODY_MAX = 20000;    // 本篇原文截断（一楼不该有这么长，防万一）
-    var ADR_LAMP_SUMMARY_FLOORS_DEFAULT = 60;
+    var ADR_LAMP_SUMMARY_FLOORS_DEFAULT = 0;   // v1.42.0 默认读全部未隐藏楼层（0 = 不限）
 
     var ADR_LAMP_PRESET = [
         "你是 Arrebol，小红霞。你在和这篇文的作者闲聊、吐槽、掰扯剧情——不是在扮演角色，不是在写正文，是两个懂行的人对着一篇稿子说话。",
@@ -6521,8 +6526,7 @@
         "",
         "语言像朋友发消息：短句、口语、可以有语气词和表情，不列大纲、不分点、不写标题。一次一两件事，有梗就接。不写正文；不主动给修改意见，除非作者问「这里是不是该改」。"
     ].join("\n");
-    var ADR_LAMP_GOSSIP_MAX = 200;    // 蛐蛐记录最多留这么多句（画面与存档）
-    var ADR_LAMP_GOSSIP_SEND = 40;    // 每次请求只带最近这么多句，记录再长也不把上下文撑爆
+    var ADR_LAMP_GOSSIP_MAX = 300;    // 蛐蛐记录最多存这么多句（v1.42.0 200 → 300；发请求时全带，不另截）
 
     var adrLampRun = { busy: false, abort: null, mode: "", idx: -1 };
     var adrLampLiveText = "";
@@ -6604,12 +6608,12 @@
         var raw = m.mes != null ? m.mes : m.message;
         if (adrLampIsUser(m)) {
             var u = cleanMessage(raw);
-            return "[#" + i + " · " + who + "] " + adrCdTruncate(u, 600);
+            return "[#" + i + " · " + who + "] " + u;   // v1.42.0 不截
         }
         var s = adrLampExtractSummary(raw);
         if (s) return "[#" + i + " · " + who + " · 摘要] " + s;
         var b = adrLampExtractBody(raw);
-        return "[#" + i + " · " + who + " · 无摘要标签，截开头] " + adrCdTruncate(b.text, 300);
+        return "[#" + i + " · " + who + " · 无摘要标签，给正文] " + b.text;   // v1.42.0 不截
     }
 
     function adrLampMaterials() { return adrLampMaterialsAt(adrLampTargetFloor()); }
@@ -6619,7 +6623,7 @@
         var out = { idx: idx, body: "", bodyTagged: false, summary: "", summaryFloors: 0, hiddenFloors: 0, card: "", tone: "", origSummary: "" };
         if (idx < 0 || !chat[idx]) return out;
         var b = adrLampExtractBody(chat[idx].mes);
-        out.body = adrCdTruncate(b.text, ADR_LAMP_BODY_MAX);
+        out.body = b.text;   // v1.42.0 不截
         out.bodyTagged = b.tagged;
         out.origSummary = adrLampExtractSummary(chat[idx].mes);
 
@@ -6645,7 +6649,7 @@
         out.summaryFloors = counted;
         var lines = before.concat(["【本篇 · #" + idx + " 在此】"], after);
         out.summary = lines.join("\n");
-        try { out.card = adrCdTruncate(buildPreciseContext(), ADR_LAMP_CARD_MAX); } catch (eC) {}
+        try { out.card = buildPreciseContext(true); } catch (eC) {}   // v1.42.0 全量：角色卡 / 世界书 / 人设一字不截
         try { out.tone = adrDToneText(); } catch (eT) {}
         return out;
     }
@@ -6803,8 +6807,7 @@
 
     // 发给 API 的历史：记录行不进；蛐蛐模式只带最近 N 句，用户那句前面标剧情走到哪一楼了（换楼才标）
     function adrLampApiHistory(msgs, gossip) {
-        var list = msgs.filter(function (m) { return m.r !== "n"; });
-        if (gossip && list.length > ADR_LAMP_GOSSIP_SEND) list = list.slice(list.length - ADR_LAMP_GOSSIP_SEND);
+        var list = msgs.filter(function (m) { return m.r !== "n"; });   // v1.42.0 全带，不截最近 N 句
         var lastF = -1;
         return list.map(function (m) {
             var content = m.t;
@@ -7282,9 +7285,9 @@
         } catch (e) {}
     }
 
-    async function adrLampAutoQuipNow(reason) {
-        if (!adrLampAutoQuipEnabled()) return false;
-        if (adrLampQuipState.busy) return false;
+    async function adrLampAutoQuipNow(reason, force) {
+        if (!force && !adrLampAutoQuipEnabled()) return false;
+        if (adrLampQuipState.busy) { if (force) adrLampStatus("上一句蛐蛐还在路上", "#d6b177"); return false; }
         var cfg = adrLampApiCfg("lamp");
         if (!cfg.endpoint || !cfg.model) return false;
         var homeKey = adrDChatKey();
@@ -7302,15 +7305,17 @@
             var idx = findLastMessageIndex(chat);
             if (idx < 0) return false;
             var sig = adrLampFloorSig(chat, idx);
-            if (sig === adrLampQuipState.lastSig) return false;   // 这一版的这一楼已经蛐蛐过（重 roll 算新一版）
+            if (!force && sig === adrLampQuipState.lastSig) return false;   // 这一版的这一楼已经蛐蛐过（重 roll 算新一版）；手动点的不管
             adrLampQuipState.lastSig = sig;
+            if (force) adrLampStatus("她在看 #" + idx + "…", "#8ed99d");
 
             var mat = adrLampMaterialsAt(idx);
             if (!mat.body) return false;
             var state = adrLampState();
             var history = adrLampApiHistory(state.gossip.msgs.concat([{ r: "u", t: ADR_LAMP_QUIP_ASK, f: idx, at: Date.now() }]), true);
             var messages = [{ role: "system", content: adrLampGossipPresetText() + "\n\n" + adrLampMaterialsText(mat) }].concat(history);
-            var out = await adrDChatCompletionText({ endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrLampTemp(), messages: messages, maxTokens: 400 });
+            // v1.42.0 不设 max_tokens：会思考的模型把配额先花在思考上，400 一到正文为空，自动蛐蛐就"不触发"
+            var out = await adrDChatCompletionText({ endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrLampTemp(), messages: messages });
             var quip = String(out || "").trim();
             if (!quip) return false;
             if (adrDChatKey() !== homeKey) return false;
@@ -7326,7 +7331,17 @@
             try { console.log("[Arrebol D] auto quip #" + idx + " (" + (reason || "") + ")"); } catch (eL) {}
             return true;
         } catch (e) {
-            try { adrLampStatus("自动蛐蛐没发出来：" + (e && e.message ? e.message : String(e)), "#d4726a"); } catch (eS) {}
+            // v1.42.0 失败不再只在状态行说一句——写进蛐蛐账一行记录，画面上看得见为什么没来
+            var why = e && e.message ? e.message : String(e);
+            try { adrLampStatus("自动蛐蛐没发出来：" + why, "#d4726a"); } catch (eS) {}
+            try {
+                if (adrDChatKey() === homeKey) {
+                    var stE = adrLampState();
+                    stE.gossip.msgs.push({ r: "n", t: "📵 这句蛐蛐没发出来：" + adrCdTruncate(why, 160), at: Date.now() });
+                    adrLampSaveState(stE);
+                    adrLampRenderThread();
+                }
+            } catch (eN) {}
             return false;
         } finally {
             adrLampQuipState.busy = false;
@@ -7536,7 +7551,7 @@
             + '<details class="adr-lamp-fold"><summary>基调 · 角色卡 · 世界书 · 人设</summary><div class="adr-lamp-mat" id="adr044-lamp-mat-card"></div></details>'
             + '<label>摘要标签名（主模型每楼写摘要用的标签；多个用英文逗号分隔）</label>'
             + '<input type="text" id="adr044-lamp-summary-tags" placeholder="report" value="' + esc(st.lampSummaryTags || "report") + '">'
-            + '<label>往前读多少楼的摘要（默认 ' + ADR_LAMP_SUMMARY_FLOORS_DEFAULT + '，填 0 读全部未隐藏楼层）</label>'
+            + '<label>往前读多少楼的摘要（默认 0 = 全部未隐藏楼层；想省就填个数）</label>'
             + '<input type="number" id="adr044-lamp-summary-floors" min="0" max="999" value="' + esc(String(adrLampSummaryFloors())) + '">'
             + secClose()
 
@@ -7550,6 +7565,7 @@
             + '<div class="' + actionsClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><button id="adr044-lamp-rewrite" type="button" class="adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '">改好给我</button></div>'
             + '<label class="' + checkClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><input type="checkbox" id="adr044-lamp-reset-after-apply"' + (st.lampResetAfterApply !== false ? " checked" : "") + '> 替换后自动清空本轮对话（这一楼改完了，下一次从头说）</label>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-lamp-auto-quip"' + (st.lampAutoQuip === true ? " checked" : "") + '> 🍉 新楼落地自动蛐蛐一句，弹个小窗（走聊天位 API，每楼一次，花钱；写进蛐蛐记录，你能接着回）</label>'
+            + '<div class="adr-lamp-jumprow"><button type="button" id="adr044-lamp-quip-now" class="adr-lamp-jump" title="不等新楼，现在就对最新一楼蛐蛐一句">🍉 现在蛐蛐一句</button></div>'
             + '<div class="adr044-template-status" id="adr044-lamp-chat-status">聊到你觉得可以了，点「改好给我」：执笔位读完整段讨论重写这一楼，先预览再替换。</div>'
             + '<div id="adr044-lamp-draft-wrap" class="adr-lamp-hide">'
             + '<label>📝 改稿 · 正文（能改两笔再替换）</label>'
@@ -7647,6 +7663,7 @@
         if (id === "adr044-lamp-gossip-preset-reset") { adrCdSetValueSafe("adr044-lamp-gossip-preset", ""); save("lampGossipPreset", ""); saveNow(); adrLampStatus("蛐蛐人设已恢复出厂 ✓", "#8ed99d"); return true; }
         if (id === "adr044-lamp-quip-ack") { return adrLampQuipAck(); }
         if (id === "adr044-lamp-jump-bottom") { adrLampJump("bottom"); return true; }
+        if (id === "adr044-lamp-quip-now") { adrLampAutoQuipNow("manual", true).catch(function () {}); return true; }
         if (id === "adr044-lamp-jump-top") { adrLampJump("top"); return true; }
         if (id === "adr044-lamp-mode-edit") { adrLampSetMode("edit"); return true; }
         if (id === "adr044-lamp-mode-gossip") { adrLampSetMode("gossip"); return true; }
@@ -9234,7 +9251,7 @@
         // v1.39.0 掌灯页按钮：直接绑定 + 兜底表双注册（同抽卡）。
         ["adr044-tab-lamp", "adr044-lamp-send", "adr044-lamp-stop", "adr044-lamp-rewrite", "adr044-lamp-clear", "adr044-lamp-apply", "adr044-lamp-draft-discard",
          "adr044-lamp-refresh", "adr044-lamp-floor-latest", "adr044-lamp-load-models", "adr044-pen-load-models", "adr044-lamp-test", "adr044-pen-test", "adr044-lamp-preset-reset",
-         "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip", "adr044-lamp-jump-bottom", "adr044-lamp-jump-top"].forEach(function (lid) {
+         "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip", "adr044-lamp-jump-bottom", "adr044-lamp-jump-top", "adr044-lamp-quip-now"].forEach(function (lid) {
             ids[lid] = function () { adrLampHandleButtonId(lid, qForm(lid)); };
         });
         ids["adr044-api-profile-save-cd"] = function () { adrDSaveCurrentApiProfile("cd"); };
