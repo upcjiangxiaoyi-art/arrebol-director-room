@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.39.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.39.1｜ripple & GPT & Claude
+ * v1.39.1 掌灯替换后自动清空本轮对话（默认开，可关）：这一楼改完了，下一次开口是新的指令；按钮改名「清空本轮对话」（提议 江；施工 Claude）
  * v1.39.0 小红霞掌灯：第四页纯聊天——看得见本篇原文、未隐藏楼层的摘要标签、角色卡/世界书/人设与基调；聊天位借统筹可自填，执笔位可另接主模型；「改好给我」按讨论重写这一楼，只换正文/摘要标签里面，原版留前一页 swipe（提议 江；施工 Claude）
  * v1.38.5 导演不抢半楼：3 分钟保险丝改为看证据（停止按钮亮着 / 最后一楼字数还在长）再降旗；漏事件时楼安静 4 秒才读；等生成写完的上限 3 → 20 分钟（报告 用户经江转达；施工 Claude）
  * v1.38.4 中途换聊天漏洞：导演等 API 期间换了角色卡，上一把的稿子会挂进新聊天并存成常驻浮动稿；现开跑记家、回稿对表、换聊天当场掐请求，自动检查与抽卡同防（报告 江；施工 Claude）
@@ -179,7 +180,8 @@
         lampPreset: "",
         lampSummaryTags: "report",
         lampSummaryFloors: 60,
-        lampTemp: 0.8
+        lampTemp: 0.8,
+        lampResetAfterApply: true   // v1.39.1 替换后这轮对话自动清空：这一楼改完了，下一次开口是新的指令
     };
 
     var initialized = false;
@@ -6817,7 +6819,7 @@
     }
 
     function adrLampClear(btn) {
-        return adrDTwoStepConfirm("lamp-clear", btn || qForm("adr044-lamp-clear"), "确定清空？", "再点一次清空这一楼的对话（改稿预览也一起扔）",
+        return adrDTwoStepConfirm("lamp-clear", btn || qForm("adr044-lamp-clear"), "确定清空？", "再点一次清空本轮对话（改稿预览也一起扔）",
             function (msg) { adrLampStatus(msg, "#d6a26a"); },
             function () {
                 var state = adrLampState();
@@ -6825,7 +6827,7 @@
                 delete state.threads[String(idx)];
                 adrLampSaveState(state);
                 adrLampRenderThread();
-                adrLampStatus("这一楼的对话清空了", "#8ed99d");
+                adrLampStatus("本轮对话清空了", "#8ed99d");
             });
     }
 
@@ -7021,7 +7023,15 @@
         adrLampAcknowledgeOwnWrite();
         adrDNoteRedraw(idx);
         th.draft = null;
-        th.msgs.push({ r: "n", t: "已替换 #" + idx + " 的正文；原版留在左边一页，向左一划就回来。", at: Date.now() });
+        var note = { r: "n", t: "已替换 #" + idx + " 的正文；原版留在左边一页，向左一划就回来。", at: Date.now() };
+        if (settings().lampResetAfterApply !== false) {
+            // v1.39.1：这一楼改完了，这轮讨论连同来龙去脉一起归档。下一次开口是新的指令，
+            // 执笔位不会把已经落地的结论再执行一遍，素材里的本篇也已经是替换后的正文。
+            note.t += " 这轮对话已清空，下一次从头说。";
+            th.msgs = [note];
+        } else {
+            th.msgs.push(note);
+        }
         th.at = Date.now();
         adrLampSaveState(state);
         adrLampStatus("替换中，等酒馆存盘…", "#8ed99d");
@@ -7200,6 +7210,7 @@
                 adrCdSetValueSafe("adr044-" + p + "-model", st[p + "Model"] || "");
             });
             adrCdSetValueSafe("adr044-lamp-preset", st.lampPreset || "");
+            adrCdSetCheckedSafe("adr044-lamp-reset-after-apply", st.lampResetAfterApply !== false);
             adrLampToggleSelfBlocks();
             adrCdSetTextAll("adr044-lamp-api-note", adrLampApiNote("lamp") + "　｜　" + adrLampApiNote("pen"));
         } catch (e) {}
@@ -7269,7 +7280,8 @@
             + '<div class="adr-lamp-thread" id="adr044-lamp-thread"></div>'
             + '<textarea id="adr044-lamp-input" rows="3" placeholder="哪里不对、哪里想改、哪里看着别扭……Ctrl/⌘+Enter 发送"></textarea>'
             + '<div class="' + actionsClass + '"><button id="adr044-lamp-send" type="button">发送</button><button id="adr044-lamp-stop" type="button" disabled>打断</button></div>'
-            + '<div class="' + actionsClass + '"><button id="adr044-lamp-rewrite" type="button">改好给我</button><button id="adr044-lamp-clear" type="button">清空对话</button></div>'
+            + '<div class="' + actionsClass + '"><button id="adr044-lamp-rewrite" type="button">改好给我</button><button id="adr044-lamp-clear" type="button">清空本轮对话</button></div>'
+            + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-lamp-reset-after-apply"' + (st.lampResetAfterApply !== false ? " checked" : "") + '> 替换后自动清空本轮对话（这一楼改完了，下一次从头说）</label>'
             + '<div class="adr044-template-status" id="adr044-lamp-chat-status">聊到你觉得可以了，点「改好给我」：执笔位读完整段讨论重写这一楼，先预览再替换。</div>'
             + '<div id="adr044-lamp-draft-wrap" class="adr-lamp-hide">'
             + '<label>📝 改稿 · 正文（能改两笔再替换）</label>'
@@ -7401,6 +7413,10 @@
                         adrLampRefreshPanelFields();
                     });
                 });
+            });
+            each("adr044-lamp-reset-after-apply", function (el) {
+                ["pointerdown", "touchstart", "mousedown"].forEach(function (evt) { el.addEventListener(evt, function () { adrCdTouch(el); }, { passive: true }); });
+                el.addEventListener("change", function () { adrCdTouch(el); save("lampResetAfterApply", !!el.checked); saveNow(); });
             });
             each("adr044-lamp-preset", function (el) {
                 guard(el);

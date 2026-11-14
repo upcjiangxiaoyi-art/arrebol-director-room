@@ -246,11 +246,18 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     meta = e.meta();
     ok(!meta.threads["5"].draft, "替换后 draft 清掉");
     ok(th.textContent.indexOf("已替换 #5") >= 0, "对话里记了一笔替换");
+    ok(meta.threads["5"].msgs.length === 1 && meta.threads["5"].msgs[0].r === "n", "替换后这轮对话自动清空，只留一行记录（默认开）");
+    ok(th.querySelectorAll(".adr-lamp-msg.u, .adr-lamp-msg.a").length === 0, "画面上旧的问答没了");
     ok(d.querySelector("#adr048-popup-body #adr044-lamp-draft-wrap").classList.contains("adr-lamp-hide"), "改稿预览区收起");
     mat = e.T().materials();
     ok(mat.body.indexOf("隔了一拍才说") >= 0 && mat.body.indexOf("<status>") < 0, "素材里本篇原文已是新版");
 
     section("替换前对表：原文变了就拒绝");
+    e.setScript(() => "这版还行，就是窗外那句可以再短。");
+    inp.value = "窗外那句太长了"; await e.T().send(); await tick(50);
+    const cF = e.calls[e.calls.length - 1];
+    ok(cF.body.messages.length === 2 && cF.body.messages[1].content === "窗外那句太长了", "替换后再开口是全新一轮：系统 + 这一句，不带上一轮的问答");
+    ok(cF.body.messages[0].content.indexOf("隔了一拍才说") >= 0 && cF.body.messages[0].content.indexOf("立刻答应跟他走") < 0, "新一轮的素材里本篇已是替换后的正文");
     e.setScript(() => "<content>再改一版</content>");
     await tick(500);
     click(W, d.querySelector("#adr048-popup-body #adr044-lamp-rewrite")); await tick(300);
@@ -263,6 +270,22 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     await tick(500);
     click(W, d.querySelector("#adr048-popup-body #adr044-lamp-draft-discard")); await tick(50);
     ok(!e.meta().threads["5"].draft, "丢弃改稿");
+
+    section("关掉自动清空：替换后对话留着");
+    const keep = d.querySelector("#adr048-popup-body #adr044-lamp-reset-after-apply");
+    ok(keep && keep.checked, "「替换后自动清空本轮对话」默认勾着");
+    keep.checked = false; change(W, keep); await tick(50);
+    ok(e.st().lampResetAfterApply === false, "关掉存进设置");
+    e.setScript(() => "<content>第三版</content>");
+    await tick(500);
+    click(W, d.querySelector("#adr048-popup-body #adr044-lamp-rewrite")); await tick(300);
+    ok(e.meta().threads["5"].draft && e.meta().threads["5"].draft.content === "第三版", "第三版改稿到位");
+    const nBefore = e.meta().threads["5"].msgs.filter(m => m.r !== "n").length;
+    const r3 = e.T().applyNow(); await tick(300);
+    ok(r3 === true && e.chat[5].mes.indexOf("<content>\n第三版\n</content>") >= 0 && e.chat[5].mes.indexOf("想了很久才说") < 0, "替换成功（保留原来的首尾换行习惯）", r3 + " / " + d.querySelector("#adr048-popup-body #adr044-lamp-chat-status").textContent);
+    ok(e.meta().threads["5"].msgs.filter(m => m.r !== "n").length === nBefore && nBefore > 0, "关掉后这轮的问答都还在");
+    keep.checked = true; change(W, keep); await tick(50);
+    ok(e.st().lampResetAfterApply === true, "再勾回去");
 
     section("无正文标签的楼：整楼换，导演稿与图标记挪到末尾保留");
     const T = e.T();
