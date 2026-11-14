@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.41.2｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.41.3｜ripple & GPT & Claude
+ * v1.41.3 蛐蛐小窗不自动关：看完点「朕已阅」；没看的排队一条条看，导演提示插队关掉后摆回来（提议 江；施工 Claude）
  * v1.41.2 浮窗记位：关了再开、切页再切回来，落回上次停的地方（按锚点记，不怕上面长了短了）；掌灯页没记忆时直接落到对话区（报告 江「每次回到蛐蛐页面都在最顶上」；施工 Claude）
  * v1.41.1 掌灯按钮排布：发送独占一行、按高 48px；打断与清空退到下一行并排；改好给我在改稿模式里再单独一行（报告 江「发送和打断并排总误触」；施工 Claude）
  * v1.41.0 自动蛐蛐（可选，默认关）：新楼落地她自己随手发一条 60 字以内的吐槽，弹个小窗，写进蛐蛐账；每楼一次、重 roll 算新一版、楼还在出字就等、总开关关着不来；同角色连续消息合并（提议 江；施工 Claude）
@@ -427,6 +428,7 @@
             if (close) {
                 close.addEventListener("click", function () {
                     try { if (box && box.parentNode) box.parentNode.removeChild(box); } catch (eClose) {}
+                    try { adrLampQuipPopupShow(); } catch (eQuipBack2) {}   // v1.41.3
                 });
             }
 
@@ -440,6 +442,7 @@
                     box.setAttribute("data-open", "0");
                     setTimeout(function () {
                         try { if (box && box.parentNode) box.parentNode.removeChild(box); } catch (eRemove) {}
+                        try { adrLampQuipPopupShow(); } catch (eQuipBack) {}   // v1.41.3 没看完的蛐蛐摆回来
                     }, 260);
                 } catch (eTimeout) {}
             }, 12000);
@@ -472,6 +475,7 @@
             if (close) {
                 close.addEventListener("click", function () {
                     try { if (box && box.parentNode) box.parentNode.removeChild(box); } catch (eClose) {}
+                    try { adrLampQuipPopupShow(); } catch (eQuipBack2) {}   // v1.41.3
                 });
             }
             try { box.setAttribute("data-open", "1"); } catch (eOpen) {}
@@ -481,9 +485,10 @@
                     box.setAttribute("data-open", "0");
                     setTimeout(function () {
                         try { if (box && box.parentNode) box.parentNode.removeChild(box); } catch (eRemove) {}
+                        try { adrLampQuipPopupShow(); } catch (eQuipBack) {}   // v1.41.3 没看完的蛐蛐摆回来
                     }, 260);
                 } catch (eTimeout) {}
-            }, kind === "error" ? 18000 : (kind === "quip" ? 25000 : 12000));   // v1.41.0 蛐蛐小窗多留一会儿
+            }, kind === "error" ? 18000 : 12000);
         } catch (e) {}
     }
 
@@ -7198,6 +7203,52 @@
     }
 
 
+
+    // v1.41.3 蛐蛐小窗不自动关：看完点「朕已阅」。没看的排队，一条条看；导演的提示若插进来，关掉后把没看完的再摆回来。
+    var adrLampQuipQueue = [];
+    var ADR_LAMP_QUIP_QUEUE_MAX = 10;
+
+    function adrLampQuipPopupShow() {
+        try {
+            var d = rootDoc();
+            if (!d || !d.body) return;
+            var box = d.getElementById("adr044-auto-trigger-popup");
+            if (!adrLampQuipQueue.length) {
+                if (box && box.getAttribute("data-kind") === "quip" && box.parentNode) box.parentNode.removeChild(box);
+                return;
+            }
+            // 导演的提示正占着位（非 quip），不抢；它关掉时会来叫我们
+            if (box && box.getAttribute("data-kind") !== "quip") return;
+            if (!box) {
+                box = d.createElement("div");
+                box.id = "adr044-auto-trigger-popup";
+                box.setAttribute("role", "status");
+                box.setAttribute("aria-live", "polite");
+                d.body.appendChild(box);
+            }
+            var cur = adrLampQuipQueue[0];
+            var rest = adrLampQuipQueue.length - 1;
+            box.setAttribute("data-kind", "quip");
+            box.innerHTML = ''
+                + '<div class="adr044-auto-trigger-popup-title">' + esc("🍉 小红霞蛐蛐 · #" + cur.idx) + '</div>'
+                + '<div class="adr044-auto-trigger-popup-text">' + esc(cur.text) + '</div>'
+                + '<button type="button" id="adr044-lamp-quip-ack" class="adr044-lamp-quip-ack">朕已阅' + (rest > 0 ? '（还有 ' + rest + ' 条）' : '') + '</button>';
+            box.setAttribute("data-open", "1");
+        } catch (e) {}
+    }
+
+    function adrLampQuipPush(idx, text) {
+        adrLampQuipQueue.push({ idx: idx, text: String(text || "") });
+        while (adrLampQuipQueue.length > ADR_LAMP_QUIP_QUEUE_MAX) adrLampQuipQueue.shift();
+        adrLampQuipPopupShow();
+    }
+
+    function adrLampQuipAck() {
+        adrLampQuipQueue.shift();
+        adrLampQuipPopupShow();
+        return true;
+    }
+
     // ---- v1.41.0 自动蛐蛐：新楼落地，她自己刷到更新似的随手发一条，弹个小窗；写进蛐蛐账，你能接着回 ----
     var ADR_LAMP_QUIP_ASK = "【自动蛐蛐】刚落地一楼，你随手发一条：一段话，60 字以内，像朋友刷到更新时的第一反应——吐槽主角也好、押下一步也好、替谁不值也好。只这一段，不问候、不列点、不复述剧情。";
     var adrLampQuipState = { lastSig: "", busy: false, timer: null };
@@ -7263,7 +7314,7 @@
             while (st2.gossip.msgs.length > ADR_LAMP_GOSSIP_MAX) st2.gossip.msgs.shift();
             st2.gossip.at = Date.now();
             adrLampSaveState(st2);
-            try { adrDPopupMessage("🍉 小红霞蛐蛐 · #" + idx, quip, "quip"); } catch (ePop) {}
+            try { adrLampQuipPush(idx, quip); } catch (ePop) {}   // v1.41.3 不自动关，点「朕已阅」
             try { adrLampRenderThread(); } catch (eR) {}
             try { console.log("[Arrebol D] auto quip #" + idx + " (" + (reason || "") + ")"); } catch (eL) {}
             return true;
@@ -7559,6 +7610,7 @@
         if (id === "adr044-pen-test") { adrLampTestConnection("pen"); return true; }
         if (id === "adr044-lamp-preset-reset") { adrCdSetValueSafe("adr044-lamp-preset", ""); save("lampPreset", ""); saveNow(); adrLampStatus("已恢复出厂人设 ✓", "#8ed99d"); return true; }
         if (id === "adr044-lamp-gossip-preset-reset") { adrCdSetValueSafe("adr044-lamp-gossip-preset", ""); save("lampGossipPreset", ""); saveNow(); adrLampStatus("蛐蛐人设已恢复出厂 ✓", "#8ed99d"); return true; }
+        if (id === "adr044-lamp-quip-ack") { return adrLampQuipAck(); }
         if (id === "adr044-lamp-mode-edit") { adrLampSetMode("edit"); return true; }
         if (id === "adr044-lamp-mode-gossip") { adrLampSetMode("gossip"); return true; }
         return false;
@@ -7660,7 +7712,8 @@
             apiCfg: adrLampApiCfg, state: adrLampState, send: adrLampSend, rewrite: adrLampRewrite, applyNow: adrLampApplyDraftNow,
             pushSwipe: adrLampPushSwipe, preset: ADR_LAMP_PRESET, penPreset: ADR_LAMP_PEN_PRESET,
             setMode: adrLampSetMode, apiHistory: adrLampApiHistory, gossipPreset: ADR_LAMP_GOSSIP_PRESET,
-            autoQuip: adrLampAutoQuipNow, quipAsk: ADR_LAMP_QUIP_ASK
+            autoQuip: adrLampAutoQuipNow, quipAsk: ADR_LAMP_QUIP_ASK,
+            quipPush: adrLampQuipPush, quipAck: adrLampQuipAck, quipQueue: adrLampQuipQueue
         };
     } catch (eLampHook) {}
     // ================= 小红霞掌灯 模块结束 =================
