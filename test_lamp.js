@@ -663,6 +663,73 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
         ok(eR.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eR.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
     }
 
+    section("改稿连带摘要与状态栏：正文改了，这两块也跟着改、跟着换（v1.46.1）");
+    {
+        const eS = build(); await boot(eS);
+        const dS = eS.doc, WS = eS.win, TS = eS.T();
+        click(WS, dS.querySelector("#adr044-drawer #adr044-tab-lamp")); await tick(50);
+        click(WS, dS.querySelector("#adr048-fab")); await tick(400);
+        const Q = s2 => dS.querySelector("#adr048-popup-body " + s2);
+        const has = (t, arr) => arr.every(x => t.indexOf(x) >= 0);
+        const lastNote = () => eS.meta().threads["5"].msgs.filter(m => m.r === "n").pop().t;
+        ok(Q("#adr044-lamp-status-tags").value === "status,StatusBlock,状态栏" && !!dS.querySelector("#adr044-drawer #adr044-lamp-status-tags") && TS.statusTags().join() === "status,StatusBlock,状态栏", "素材那一节多了「状态栏标签名」，出厂认 status / StatusBlock / 状态栏，两端都有");
+        ok(Q("#adr044-lamp-mat-title").textContent.indexOf("本篇有摘要标签") > 0 && Q("#adr044-lamp-mat-title").textContent.indexOf("有状态栏标签（status）") > 0, "素材标题行写明这一楼有没有状态栏标签", Q("#adr044-lamp-mat-title").textContent);
+        ok(JSON.stringify(TS.materials().origStatus) === JSON.stringify([{ tag: "status", inner: "HP 80 · 夜 · 书房" }]), "读得到这一楼的状态栏");
+        const NEWBODY = "他把信放在桌上，说：「三天前就该到的人，今晚到了。」外面下起了雨。她看了眼窗外，隔了一拍才说：「走。」";
+        const PENFULL = "<content>\n" + NEWBODY + "\n</content>\n<report>信送到，下雨了，她看了眼窗外才答应同行。</report>\n<status>HP 80 · 雨夜 · 书房</status>";
+        eS.setScript((n, body) => isPen(body) ? PENFULL : "同意，补一场雨。");
+        Q("#adr044-lamp-input").value = "加一场雨吧"; click(WS, Q("#adr044-lamp-send")); await tick(300);
+        await tick(500); click(WS, Q("#adr044-lamp-rewrite")); await tick(400);
+        const pen = eS.calls[eS.calls.length - 1].body;
+        ok(isPen(pen) && has(pen.messages[0].content, ["正文动了，这一楼的摘要和状态栏也要跟着对上", "摘要按改后的正文重写", "状态栏逐项对照改后的正文", "没变的项原样照抄", "项目、顺序、格式、符号一律照原状态栏，不增不减", "任务里要求了摘要、状态栏的，各给一个标签块"]), "执笔规矩里写明：正文动了，摘要和状态栏跟着对上；状态栏变了的改、没变的照抄、格式不动");
+        const task = pen.messages[1].content;
+        ok(has(task, ["【本篇原摘要 · 改后要跟着重写，写法和长短照它】\n信送到，她当场答应同行。", "【本篇原状态栏 · 改后逐项对照正文更新，格式照它】\n<status>\nHP 80 · 夜 · 书房\n</status>"]), "任务里把原摘要、原状态栏（带着标签）都给了她", task.slice(task.indexOf("【本篇原摘要"), task.indexOf("【本篇原摘要") + 120));
+        ok(has(task, ["正文改了，摘要和状态栏也要跟着对上、一起交回", "<content>…</content>", "然后给 <report>…</report> 新摘要", "然后给新状态栏：<status>…</status>", "标签外不要有任何字"]), "任务写明三块一起交回，各用哪个标签");
+        const dr = eS.meta().threads["5"].draft;
+        ok(dr && dr.content === NEWBODY && dr.summary === "信送到，下雨了，她看了眼窗外才答应同行。" && dr.status === "<status>\nHP 80 · 雨夜 · 书房\n</status>", "改稿里三块都有：正文、新摘要、新状态栏（带标签）", JSON.stringify(dr && dr.status));
+        ok(!Q("#adr044-lamp-draft-status-wrap").classList.contains("adr-lamp-hide") && Q("#adr044-lamp-draft-status").value === "<status>\nHP 80 · 雨夜 · 书房\n</status>" && !Q("#adr044-lamp-draft-summary-wrap").classList.contains("adr-lamp-hide") && dS.querySelector("#adr044-drawer #adr044-lamp-draft-status").value === dr.status, "预览里多一个「新状态栏」框，两端都有");
+        ok(lastNote().indexOf("摘要和状态栏也一起改了") > 0 && lastNote().indexOf("没交回") < 0 && Q("#adr044-lamp-chat-status").textContent.indexOf("摘要、状态栏也改了") > 0, "提示和状态行都说摘要、状态栏一起改了", lastNote());
+        // 预览里再改两笔状态栏
+        const stBox = Q("#adr044-lamp-draft-status"); stBox.value = "<status>\nHP 78 · 雨夜 · 书房\n</status>"; change(WS, stBox); await tick(50);
+        ok(eS.meta().threads["5"].draft.status.indexOf("HP 78") > 0, "预览里手改的状态栏记下了");
+        await tick(500); click(WS, Q("#adr044-lamp-apply")); await tick(500); click(WS, Q("#adr044-lamp-apply")); await tick(600);
+        const f1 = eS.chat[5].mes;
+        ok(f1.indexOf("<status>HP 78 · 雨夜 · 书房</status>") === 0, "替换：状态栏标签里面换成了新的（含手改的那笔），原来不换行的写法保持不换行", f1.slice(0, 50));
+        ok(f1.indexOf(NEWBODY) > 0 && f1.indexOf("立刻答应跟他走") < 0 && f1.indexOf("<report>信送到，下雨了，她看了眼窗外才答应同行。</report>") > 0, "正文和摘要也换了");
+        ok(f1.indexOf("arrebol_d_visible:plot###") > 0 && f1.indexOf("老周送口信") > 0 && (f1.match(/<status>/g) || []).length === 1, "导演稿原样留着，状态栏没有多出一份");
+        ok(lastNote().indexOf("已替换 #5 的正文、摘要、状态栏") === 0 && eS.chat[5].swipes.length === 2 && eS.chat[5].swipes[0].indexOf("HP 80 · 夜 · 书房") > 0, "提示写明换了哪三块；原版（旧状态栏）留在前一页", lastNote());
+        // 她只交回正文
+        eS.setScript((n, body) => isPen(body) ? "<content>\n" + NEWBODY + "她撑开了伞。\n</content>" : "好。");
+        await tick(500); Q("#adr044-lamp-input").value = "让她撑伞"; click(WS, Q("#adr044-lamp-send")); await tick(300);
+        await tick(500); click(WS, Q("#adr044-lamp-rewrite")); await tick(400);
+        const dr2 = eS.meta().threads["5"].draft;
+        ok(dr2 && dr2.status === "" && dr2.summary === "" && Q("#adr044-lamp-draft-status-wrap").classList.contains("adr-lamp-hide") && Q("#adr044-lamp-draft-summary-wrap").classList.contains("adr-lamp-hide"), "她只交回正文：预览里没有摘要框和状态栏框");
+        ok(lastNote().indexOf("她这次没交回新的摘要和状态栏：替换时那一块会保持原样") > 0 && lastNote().indexOf("「摘要和状态栏也改一下」") > 0 && Q("#adr044-lamp-chat-status").textContent.indexOf("没交回新摘要、状态栏，替换时那块不动") > 0, "提示和状态行都说清：这两块没交回、替换时不动、怎么让她补", lastNote());
+        await tick(500); click(WS, Q("#adr044-lamp-apply")); await tick(500); click(WS, Q("#adr044-lamp-apply")); await tick(600);
+        const f2 = eS.chat[5].mes;
+        ok(f2.indexOf("她撑开了伞。") > 0 && f2.indexOf("<status>HP 78 · 雨夜 · 书房</status>") === 0 && f2.indexOf("<report>信送到，下雨了，她看了眼窗外才答应同行。</report>") > 0 && lastNote().indexOf("已替换 #5 的正文；") === 0, "替换后只有正文变了，摘要和状态栏保持原样，提示也只说换了正文", lastNote());
+        // 自己的标签名、多种标签、大小写
+        const tagIn = Q("#adr044-lamp-status-tags"); tagIn.value = "状态栏， StatusBlock"; change(WS, tagIn); await tick(80);
+        eS.chat[5].mes = "<StatusBlock>\n时间：夜\n地点：书房\n</StatusBlock>\n<content>\n正文一段。\n</content>\n<状态栏 data-x=\"1\">好感 30</状态栏>\n<report>摘要一句。</report>";
+        ok(eS.st().lampStatusTags === "状态栏， StatusBlock" && TS.statusTags().join() === "状态栏,StatusBlock" && JSON.stringify(TS.materials().origStatus.map(b => b.tag)) === JSON.stringify(["StatusBlock", "状态栏"]), "标签名自己填（中文逗号也认），一楼里几种状态栏都认得，顺序照楼里的", JSON.stringify(TS.materials().origStatus));
+        const composed = TS.compose(eS.chat[5].mes, "新正文。", "新摘要。", "<statusblock>\n时间：雨夜\n地点：书房\n</statusblock>\n\n<状态栏>好感 35</状态栏>");
+        ok(composed === "<StatusBlock>\n时间：雨夜\n地点：书房\n</StatusBlock>\n<content>\n新正文。\n</content>\n<状态栏 data-x=\"1\">好感 35</状态栏>\n<report>新摘要。</report>", "两种状态栏各换各的：标签大小写、开标签上的属性、换行习惯都照楼里原来的", composed);
+        ok(TS.compose(eS.chat[5].mes, "新正文。", "", "<别的标签>x</别的标签>") === eS.chat[5].mes.replace("正文一段。", "新正文。"), "交回来的标签楼里没有：不乱塞，状态栏不动");
+        // 解析：正文里恰好出现同名标签不算；没按标签交稿时把状态栏块摘掉再当正文
+        const p1 = TS.parsePen("<content>他说：<状态栏>这是台词</状态栏></content>\n<状态栏>好感 40</状态栏>", false, ["状态栏"]);
+        ok(p1.status === "<状态栏>\n好感 40\n</状态栏>" && p1.content.indexOf("这是台词") > 0, "状态栏在正文标签之外找，正文里引用了同名标签不会被当成状态栏", p1.status);
+        const p2 = TS.parsePen("改好的正文一段。\n<状态栏>好感 41</状态栏>\n<report>摘要。</report>", true, ["状态栏"]);
+        ok(p2.content === "改好的正文一段。" && p2.status.indexOf("好感 41") > 0 && p2.summary === "摘要。", "她没用正文标签：摘要块、状态栏块摘出来，剩下的才当正文", JSON.stringify(p2));
+        // 留空＝不管状态栏
+        tagIn.value = ""; change(WS, tagIn); await tick(80);
+        eS.setScript((n, body) => isPen(body) ? "<content>\n再改一版。\n</content>\n<report>新摘要二。</report>\n<状态栏>好感 99</状态栏>" : "好。");
+        await tick(500); Q("#adr044-lamp-input").value = "再改"; click(WS, Q("#adr044-lamp-send")); await tick(300);
+        await tick(500); click(WS, Q("#adr044-lamp-rewrite")); await tick(400);
+        const task3 = eS.calls[eS.calls.length - 1].body.messages[1].content;
+        ok(eS.st().lampStatusTags === "" && TS.statusTags().length === 0 && task3.indexOf("【本篇原状态栏") < 0 && task3.indexOf("新状态栏") < 0 && task3.indexOf("【本篇原摘要") > 0 && eS.meta().threads["5"].draft.status === "" && Q("#adr044-lamp-mat-title").textContent.indexOf("状态栏") < 0, "标签名留空：不管状态栏——任务里不提、交回来的也不收，摘要照常");
+        ok(eS.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eS.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
+    }
+
     section("API 预设：聊天位 / 执笔位，三位共用一份，导演那边存的也能直接选（v1.46.0）");
     {
         const eA = build({ settings: { apiProfilesStore: {

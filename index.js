@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.46.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.46.1｜ripple & GPT & Claude
+ * v1.46.1 改稿连带摘要与状态栏：正文改了，这一楼的摘要和状态栏也让她一起改、一起进预览、一起替换；状态栏按标签名认，可自己填（报告 江「霞改了原文，那摘要和状态栏也得改和替换」；施工 Claude）
  * v1.46.0 掌灯聊天位、执笔位与剧场位加 API 预设：下拉一选就切、不用每次敲 key；三个位共用一份预设单，导演和抽卡那边存好的也能直接选（提议 江「换 api 预设直接换」；施工 Claude）
  * v1.45.8–1.45.10 小红霞三份人设的措辞微调（提议 江；施工 Claude）
  * v1.45.7 改稿、蛐蛐、剧场三份人设对齐：屏幕前是书外的成年读者（不是剧情里的 user）；两个成年人愉快地讨论，艺术创作也不可能毫无边界和底线；读者问意见时可以给回复建议，走向一起商量（提议 江；施工 Claude）
@@ -115,7 +116,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.46.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.46.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -208,6 +209,7 @@
         penModel: "",
         lampPreset: "",
         lampSummaryTags: "report",
+        lampStatusTags: "status,StatusBlock,状态栏",   // v1.46.1 改稿时状态栏跟着正文一起更新；多个用逗号分隔，留空＝不管状态栏
         lampSummaryFloors: 60,
         lampTemp: 0.8,
         lampResetAfterApply: true,  // v1.39.1 替换后这轮对话自动清空：这一楼改完了，下一次开口是新的指令
@@ -6684,6 +6686,7 @@
         "· 文笔和原文一致，读起来是同一个人写的；改到的地方，合理的话可以润色得更好。",
         "· 字数听读者的；TA 没提，改后的篇幅和原文基本持平。",
         "· 文字干净、有质感，不低俗、不恶俗。",
+        "· 正文改了，这一楼的摘要和状态栏也跟着改对，不留旧的。",
         "",
         "你看得见的素材都在下面：这局的基调（读者亲口定的，压过一切）、角色卡 / 世界书 / 人设、未隐藏楼层的摘要、以及本篇原文。聊的时候引用原文要准，别凭印象编。隐藏掉的楼层你看不见，读者提到了就当真。",
         "",
@@ -6715,7 +6718,8 @@
         "4. 字数听读者的：读者说了要多长、要扩要删，就照办；没说，改后的篇幅和原文基本持平。",
         "5. 文字干净、有质感：不低俗、不恶俗、不油腻，不写套话。",
         "6. 不加讨论里没有的新人物、新线索。角色卡、世界书与基调只用来判断什么合情理，不是拿来往里填设定的。",
-        "7. 输出只有标签块：正文放在指定的正文标签里；若要求了摘要，再给一个摘要标签块，摘要是对改后正文的简短概括。标签外不要有任何字——不解释、不加标题、不写\"好的\"。"
+        "7. 正文动了，这一楼的摘要和状态栏也要跟着对上（任务里会把原来的给你）。摘要按改后的正文重写，写法和长短照原摘要。状态栏逐项对照改后的正文：变了的项改掉（时间、地点、在场的人、身体与情绪状态、数值……），没变的项原样照抄；项目、顺序、格式、符号一律照原状态栏，不增不减。",
+        "8. 输出只有标签块：正文放在指定的正文标签里；任务里要求了摘要、状态栏的，各给一个标签块。标签外不要有任何字——不解释、不加标题、不写\"好的\"。"
     ].join("\n");
 
     var ADR_LAMP_GOSSIP_PRESET = [
@@ -6758,6 +6762,37 @@
     }
 
     function adrLampSummaryRegex() { return adrLampTagRegex(adrLampSummaryTagNames()); }
+
+    // v1.46.1 状态栏标签（江：「如果霞改了原文，那摘要和状态栏也得改和替换」）。
+    // 楼里的状态栏是主模型按正文填的：时间、地点、人物状态、数值……正文一改，它就对不上了。
+    // 认法和摘要一样：按标签名找。每种标签取楼里的第一块；标签名照楼里实际写的大小写。留空＝不管状态栏。
+    var ADR_LAMP_STATUS_TAGS_DEFAULT = "status,StatusBlock,状态栏";
+    function adrLampStatusTagsRaw() {
+        var raw = null;
+        try { raw = settings().lampStatusTags; } catch (e) {}
+        return raw == null ? ADR_LAMP_STATUS_TAGS_DEFAULT : String(raw);
+    }
+    function adrLampStatusTagNames() {
+        return adrLampStatusTagsRaw().split(/[,，]/).map(function (x) { return x.trim(); }).filter(Boolean);
+    }
+    function adrLampExtractStatusBlocks(text) {
+        var names = adrLampStatusTagNames();
+        if (!names.length) return [];
+        var re = adrLampTagRegex(names);
+        var src = String(text || "");
+        var out = [], seen = {}, m;
+        while ((m = re.exec(src)) !== null) {
+            var key = String(m[1]).toLowerCase();
+            if (seen[key]) continue;
+            seen[key] = true;
+            out.push({ tag: m[1], inner: String(m[2] || "").trim() });
+        }
+        return out;
+    }
+    // 带着标签的写法：喂给执笔位当「原状态栏」，也是预览框里的样子（可以直接改两笔，标签留着）
+    function adrLampStatusBlocksText(blocks) {
+        return (blocks || []).filter(function (b) { return b && b.inner; }).map(function (b) { return "<" + b.tag + ">\n" + b.inner + "\n</" + b.tag + ">"; }).join("\n\n");
+    }
 
     function adrLampContentTagName() {
         var names = adrDContentTagNames().filter(function (s) { return s !== "*"; });
@@ -6829,12 +6864,13 @@
 
     function adrLampMaterialsAt(idx) {
         var chat = adrLampChat();
-        var out = { idx: idx, body: "", bodyTagged: false, summary: "", summaryFloors: 0, hiddenFloors: 0, card: "", tone: "", origSummary: "" };
+        var out = { idx: idx, body: "", bodyTagged: false, summary: "", summaryFloors: 0, hiddenFloors: 0, card: "", tone: "", origSummary: "", origStatus: [] };
         if (idx < 0 || !chat[idx]) return out;
         var b = adrLampExtractBody(chat[idx].mes);
         out.body = b.text;   // v1.42.0 不截
         out.bodyTagged = b.tagged;
         out.origSummary = adrLampExtractSummary(chat[idx].mes);
+        out.origStatus = adrLampExtractStatusBlocks(chat[idx].mes);
 
         var cap = adrLampSummaryFloors();
         var before = [];
@@ -6885,7 +6921,7 @@
 
     function adrLampNormDraft(d) {
         if (!d || typeof d !== "object" || typeof d.content !== "string" || !d.content.trim()) return null;
-        return { content: d.content, summary: typeof d.summary === "string" ? d.summary : "", base: typeof d.base === "string" ? d.base : "", at: Number(d.at) || 0 };
+        return { content: d.content, summary: typeof d.summary === "string" ? d.summary : "", status: typeof d.status === "string" ? d.status : "", base: typeof d.base === "string" ? d.base : "", at: Number(d.at) || 0 };
     }
 
     function adrLampNormState(raw) {
@@ -7165,7 +7201,8 @@
         return m ? m[1].trim() : t;
     }
 
-    function adrLampParsePen(raw, wantSummary) {
+    // statusTags：这一楼实际有的状态栏标签名（没有就不传）。回来的状态栏整理成带标签的文本，放进预览框
+    function adrLampParsePen(raw, wantSummary, statusTags) {
         var src = String(raw || "");
         var cre = adrDContentTagRegex();
         var cm = cre.exec(src);
@@ -7176,13 +7213,22 @@
             var sm = sre.exec(src);
             summary = sm ? String(sm[2] || "").trim() : "";
         }
+        var tags = Array.isArray(statusTags) ? statusTags.filter(Boolean) : [];
+        var blocks = [];
+        // 状态栏要在正文之外找：先把正文标签整块挖掉，免得正文里恰好引用了同名标签
+        var outside = cm ? src.slice(0, cm.index) + src.slice(cm.index + cm[0].length) : src;
+        tags.forEach(function (tag) {
+            var m = adrLampTagRegex([tag]).exec(outside);
+            if (m && String(m[2] || "").trim()) blocks.push({ tag: tag, inner: String(m[2]).trim() });
+        });
         if (!content) {
-            // 没按标签来：把摘要块摘掉，剩下的整段当正文
+            // 没按标签来：把摘要块、状态栏块摘掉，剩下的整段当正文
             var rest = src;
             if (wantSummary) rest = rest.replace(adrLampSummaryRegex(), "");
+            if (tags.length) rest = rest.replace(adrLampTagRegex(tags), "");
             content = adrLampStripFences(rest);
         }
-        return { content: content, summary: summary };
+        return { content: content, summary: summary, status: adrLampStatusBlocksText(blocks) };
     }
 
     async function adrLampRewrite() {
@@ -7200,16 +7246,33 @@
         var cTag = adrLampContentTagName();
         var sTag = adrLampSummaryTagNames()[0];
         var wantSummary = !!mat.origSummary;
+        var statusBlocks = Array.isArray(mat.origStatus) ? mat.origStatus.filter(function (b) { return b && b.inner; }) : [];
+        var statusTags = statusBlocks.map(function (b) { return b.tag; });
+        var wantStatus = statusTags.length > 0;
         var origLen = String(mat.body || "").length;
+        var fmt = "输出格式：正文放在 <" + cTag + ">…</" + cTag + "> 里";
+        if (wantSummary) fmt += "；然后给 <" + sTag + ">…</" + sTag + "> 新摘要";
+        if (wantStatus) fmt += "；然后给新状态栏：" + statusTags.map(function (t) { return "<" + t + ">…</" + t + ">"; }).join("、");
+        fmt += "。标签外不要有任何字。";
         var task = [
             "【讨论记录 · 读者与小红霞】",
-            adrLampTranscript(th.msgs),
+            adrLampTranscript(th.msgs)
+        ];
+        if (wantSummary) task.push("", "【本篇原摘要 · 改后要跟着重写，写法和长短照它】", mat.origSummary);
+        if (wantStatus) task.push("", "【本篇原状态栏 · 改后逐项对照正文更新，格式照它】", adrLampStatusBlocksText(statusBlocks));
+        task.push(
             "",
             "【任务】",
             "按讨论定下的改法，把本篇（#" + mat.idx + "）改好，交整楼全文：要改的地方照讨论改，没说要改的地方逐字照抄。",
-            "原文正文 " + origLen + " 字。读者对字数有要求就照办；没有要求，改后的篇幅和原文基本持平。",
-            "输出格式：正文放在 <" + cTag + ">…</" + cTag + "> 里" + (wantSummary ? "；然后再给 <" + sTag + ">…</" + sTag + "> 一段新摘要（原楼有摘要标签，摘要也要跟着正文更新）" : "") + "。标签外不要有任何字。"
-        ].join("\n");
+            "原文正文 " + origLen + " 字。读者对字数有要求就照办；没有要求，改后的篇幅和原文基本持平。"
+        );
+        if (wantSummary || wantStatus) {
+            task.push("正文改了，" + [wantSummary ? "摘要" : "", wantStatus ? "状态栏" : ""].filter(Boolean).join("和") + "也要跟着对上、一起交回："
+                + (wantSummary ? "摘要按改后的正文重写。" : "")
+                + (wantStatus ? "状态栏里因为这次改动而变了的项改掉，没变的项原样照抄，项目、顺序、格式、符号都照原状态栏。" : ""));
+        }
+        task.push(fmt);
+        task = task.join("\n");
         var messages = [
             { role: "system", content: ADR_LAMP_PEN_PRESET + "\n\n" + adrHxStance("pen") },
             { role: "user", content: adrLampMaterialsText(mat) + "\n\n" + task }
@@ -7233,20 +7296,27 @@
                 }
             });
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这份改稿没存", "#d6b177"); return false; }
-            var parsed = adrLampParsePen(raw, wantSummary);
+            var parsed = adrLampParsePen(raw, wantSummary, statusTags);
             if (!parsed.content) throw new Error("执笔位没给出正文");
             var st2 = adrLampState();
             var th2 = adrLampThread(st2, mat.idx, true);
-            th2.draft = { content: parsed.content, summary: parsed.summary, base: mat.body, at: Date.now() };
+            th2.draft = { content: parsed.content, summary: parsed.summary, status: parsed.status, base: mat.body, at: Date.now() };
+            // 摘要、状态栏有没有一起交回：交了的预览里看得到，没交的替换时那一块保持原样——得让读者知道，免得正文新、摘要旧
+            var got = [], missing = [];
+            if (wantSummary) (parsed.summary ? got : missing).push("摘要");
+            if (wantStatus) (parsed.status ? got : missing).push("状态栏");
+            var partNote = (got.length ? "，" + got.join("和") + "也一起改了" : "")
+                + (missing.length ? "\n她这次没交回新的" + missing.join("和") + "：替换时那一块会保持原样。想一起更新，跟她说一声「" + missing.join("和") + "也改一下」再让她改一次。" : "");
             // 字数摆出来：没让扩也没让删、篇幅却差得多，多半是只交了改的那一段——替换前让读者自己看一眼
             var newLen = String(parsed.content || "").length;
             var lenNote = "原文 " + origLen + " 字 → 改后 " + newLen + " 字";
             var lenOff = origLen > 0 && (newLen < origLen * 0.6 || newLen > origLen * 1.6);
-            th2.msgs.push({ r: "n", t: "改好了一版，在下面的「改稿」里（" + lenNote + "）。看看预览，改两笔也行，满意就「替换这篇」。"
+            th2.msgs.push({ r: "n", t: "改好了一版，在下面的「改稿」里（" + lenNote + "）" + (got.length ? partNote.split("\n")[0] : "") + "。看看预览，改两笔也行，满意就「替换这篇」。"
+                + (missing.length ? "\n" + partNote.split("\n").slice(1).join("\n") : "")
                 + (lenOff ? "\n篇幅和原文差得多：如果不是你要她扩写或删减，可能只交了改的那一段，别急着替换，让她重改一次。" : ""), at: Date.now() });
             th2.at = Date.now();
             adrLampSaveState(st2);
-            adrLampStatus("改好了 ✓ 预览在「改稿」里 · " + lenNote + (lenOff ? " · 篇幅差得多，替换前看一眼" : "") + (wantSummary && !parsed.summary ? "（执笔位没给摘要，替换时摘要不动）" : ""), lenOff ? "#d6a26a" : "#8ed99d");
+            adrLampStatus("改好了 ✓ 预览在「改稿」里 · " + lenNote + (got.length ? " · " + got.join("、") + "也改了" : "") + (lenOff ? " · 篇幅差得多，替换前看一眼" : "") + (missing.length ? " · 没交回新" + missing.join("、") + "，替换时那块不动" : ""), (lenOff || missing.length) ? "#d6a26a" : "#8ed99d");
             ok = true;
         } catch (e) {
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这份改稿没存", "#d6b177"); return false; }
@@ -7287,7 +7357,7 @@
         return src.slice(0, match.index) + open + lead + inner.trim() + trail + close + src.slice(match.index + whole.length);
     }
 
-    function adrLampComposeFloor(mes, content, summary) {
+    function adrLampComposeFloor(mes, content, summary, statusText) {
         var src = String(mes || "");
         var re = adrDContentTagRegex();
         var first = null, others = [], mm;
@@ -7305,6 +7375,14 @@
             var sre = adrLampSummaryRegex();
             var sm = sre.exec(out);
             if (sm) out = adrLampReplaceInner(out, sm, summary);
+        }
+        // v1.46.1 状态栏：预览框里是带标签的文本，按标签名对号换进楼里对应那一块的里面（开标签上的属性、首尾换行习惯都留着）
+        if (statusText && String(statusText).trim()) {
+            adrLampExtractStatusBlocks(statusText).forEach(function (b) {
+                if (!b.inner) return;
+                var mo = adrLampTagRegex([b.tag]).exec(out);
+                if (mo) out = adrLampReplaceInner(out, mo, b.inner);
+            });
         }
         return out;
     }
@@ -7335,7 +7413,8 @@
         if (!d) return null;
         var c = qForm("adr044-lamp-draft");
         var s = qForm("adr044-lamp-draft-summary");
-        return { content: c && String(c.value || "").trim() ? String(c.value) : d.content, summary: s ? String(s.value || "") : d.summary, base: d.base, at: d.at };
+        var t = qForm("adr044-lamp-draft-status");
+        return { content: c && String(c.value || "").trim() ? String(c.value) : d.content, summary: s ? String(s.value || "") : d.summary, status: t ? String(t.value || "") : (d.status || ""), base: d.base, at: d.at };
     }
 
     function adrLampApplyDraftNow() {
@@ -7353,12 +7432,17 @@
             adrLampStatus("这一楼的正文和改稿时不一样了（被改过或翻页了），重新「改好给我」一次再替换", "#d4726a");
             return false;
         }
-        var newMes = adrLampComposeFloor(m.mes, draft.content, draft.summary);
+        var oldMes = String(m.mes || "");
+        var newMes = adrLampComposeFloor(m.mes, draft.content, draft.summary, draft.status);
+        // 这次实际换了哪几块（摘要、状态栏有没有跟着换），提示里说清楚
+        var parts = ["正文"];
+        if (adrLampExtractSummary(newMes) !== adrLampExtractSummary(oldMes)) parts.push("摘要");
+        if (adrLampStatusBlocksText(adrLampExtractStatusBlocks(newMes)) !== adrLampStatusBlocksText(adrLampExtractStatusBlocks(oldMes))) parts.push("状态栏");
         adrLampPushSwipe(m, newMes);
         adrLampAcknowledgeOwnWrite();
         adrDNoteRedraw(idx);
         th.draft = null;
-        var note = { r: "n", t: "已替换 #" + idx + " 的正文；原版留在左边一页，向左一划就回来。", at: Date.now() };
+        var note = { r: "n", t: "已替换 #" + idx + " 的" + parts.join("、") + "；原版留在左边一页，向左一划就回来。", at: Date.now() };
         if (settings().lampResetAfterApply !== false) {
             // v1.39.1：这一楼改完了，这轮讨论连同来龙去脉一起归档。下一次开口是新的指令，
             // 执笔位不会把已经落地的结论再执行一遍，素材里的本篇也已经是替换后的正文。
@@ -7418,6 +7502,7 @@
             if (!d) return;
             th.draft.content = d.content;
             th.draft.summary = d.summary;
+            th.draft.status = d.status;
             adrLampSaveState(state);
         } catch (e) {}
     }
@@ -7630,9 +7715,13 @@
             if (draft) {
                 adrCdSetValueSafe("adr044-lamp-draft", draft.content);
                 adrCdSetValueSafe("adr044-lamp-draft-summary", draft.summary || "");
+                adrCdSetValueSafe("adr044-lamp-draft-status", draft.status || "");
             }
             Array.prototype.slice.call(d.querySelectorAll("#adr044-lamp-draft-summary-wrap")).forEach(function (el) {
                 el.classList.toggle("adr-lamp-hide", !(draft && draft.summary));
+            });
+            Array.prototype.slice.call(d.querySelectorAll("#adr044-lamp-draft-status-wrap")).forEach(function (el) {
+                el.classList.toggle("adr-lamp-hide", !(draft && draft.status));
             });
             adrCdSetTextAll("adr044-lamp-topline", adrLampTopLineText(idx, msgs, draft, gossip));
         } catch (e) {
@@ -7665,7 +7754,8 @@
         try {
             var mat = adrLampMaterials();
             var title = mat.idx < 0 ? "没有可聊的楼"
-                : "#" + mat.idx + " · " + (mat.bodyTagged ? "正文标签里 " : "整楼当正文 ") + mat.body.length + " 字 · 摘要读了 " + mat.summaryFloors + " 楼" + (mat.hiddenFloors ? "，跳过隐藏 " + mat.hiddenFloors + " 楼" : "") + (mat.origSummary ? " · 本篇有摘要标签" : " · 本篇无摘要标签");
+                : "#" + mat.idx + " · " + (mat.bodyTagged ? "正文标签里 " : "整楼当正文 ") + mat.body.length + " 字 · 摘要读了 " + mat.summaryFloors + " 楼" + (mat.hiddenFloors ? "，跳过隐藏 " + mat.hiddenFloors + " 楼" : "") + (mat.origSummary ? " · 本篇有摘要标签" : " · 本篇无摘要标签")
+                    + (mat.origStatus && mat.origStatus.length ? " · 有状态栏标签（" + mat.origStatus.map(function (b) { return b.tag; }).join("、") + "）" : (adrLampStatusTagNames().length ? " · 没找到状态栏标签" : ""));
             adrCdSetTextAll("adr044-lamp-mat-title", title);
             adrCdSetTextAll("adr044-lamp-mat-body", mat.body);
             adrCdSetTextAll("adr044-lamp-mat-summary", mat.summary);
@@ -7689,6 +7779,7 @@
         try {
             var st = settings();
             adrCdSetValueSafe("adr044-lamp-summary-tags", st.lampSummaryTags || "report");
+            adrCdSetValueSafe("adr044-lamp-status-tags", adrLampStatusTagsRaw());
             adrCdSetValueSafe("adr044-lamp-summary-floors", String(adrLampSummaryFloors()));
             adrCdSetValueSafe("adr044-lamp-temp", String(adrLampTemp()));
             adrCdSetValueSafe("adr044-lamp-borrow", st.lampBorrow || "plot");
@@ -7802,6 +7893,8 @@
             + '<details class="adr-lamp-fold"><summary>基调 · 角色卡 · 世界书 · 人设</summary><div class="adr-lamp-mat" id="adr044-lamp-mat-card"></div></details>'
             + '<label>摘要标签名（主模型每楼写摘要用的标签；多个用英文逗号分隔）</label>'
             + '<input type="text" id="adr044-lamp-summary-tags" placeholder="report" value="' + esc(st.lampSummaryTags || "report") + '">'
+            + '<label>状态栏标签名（改稿时状态栏跟着正文一起更新；多个用英文逗号分隔，留空＝不管状态栏）</label>'
+            + '<input type="text" id="adr044-lamp-status-tags" placeholder="' + esc(ADR_LAMP_STATUS_TAGS_DEFAULT) + '" value="' + esc(adrLampStatusTagsRaw()) + '">'
             + '<label>往前读多少楼的摘要（默认 0 = 全部未隐藏楼层；想省就填个数）</label>'
             + '<input type="number" id="adr044-lamp-summary-floors" min="0" max="999" value="' + esc(String(adrLampSummaryFloors())) + '">'
             + secClose()
@@ -7822,8 +7915,9 @@
             + '<label>📝 改稿 · 正文（能改两笔再替换）</label>'
             + '<textarea id="adr044-lamp-draft" rows="10"></textarea>'
             + '<div id="adr044-lamp-draft-summary-wrap" class="adr-lamp-hide"><label>改稿 · 新摘要（原楼有摘要标签才会换）</label><textarea id="adr044-lamp-draft-summary" rows="3"></textarea></div>'
+            + '<div id="adr044-lamp-draft-status-wrap" class="adr-lamp-hide"><label>改稿 · 新状态栏（原楼有状态栏标签才会换；标签留着别删）</label><textarea id="adr044-lamp-draft-status" rows="5"></textarea></div>'
             + '<div class="' + actionsClass + '"><button id="adr044-lamp-apply" type="button">替换这篇（原版留前一页）</button><button id="adr044-lamp-draft-discard" type="button">丢弃改稿</button></div>'
-            + '<div class="' + noteClass + '">只换正文标签里面与摘要标签里面；楼里的状态栏、变量块、导演稿不动。没有正文标签的楼整楼换，导演稿与图标记挪到末尾保留。原版存成前一页 swipe，向左一划就回来。</div>'
+            + '<div class="' + noteClass + '">换的是正文标签、摘要标签、状态栏标签的里面（摘要和状态栏跟着正文一起改；她没交回的那一块保持原样）；楼里的变量块、导演稿不动。没有正文标签的楼整楼换，导演稿与图标记挪到末尾保留。原版存成前一页 swipe，向左一划就回来。</div>'
             + '</div>'
             + secClose()
 
@@ -7960,6 +8054,10 @@
                 guard(el);
                 el.addEventListener("change", function () { save("lampSummaryTags", String(el.value || "").trim() || "report"); saveNow(); adrLampRefreshAll(); });
             });
+            each("adr044-lamp-status-tags", function (el) {
+                guard(el);
+                el.addEventListener("change", function () { save("lampStatusTags", String(el.value || "").trim()); saveNow(); adrLampRefreshAll(); });
+            });
             each("adr044-lamp-summary-floors", function (el) {
                 guard(el);
                 el.addEventListener("change", function () { save("lampSummaryFloors", Number(el.value)); var v = adrLampSummaryFloors(); save("lampSummaryFloors", v); saveNow(); adrLampRefreshAll(); });
@@ -8029,6 +8127,7 @@
             });
             each("adr044-lamp-draft", function (el) { guard(el); el.addEventListener("change", adrLampSaveDraftEdits); });
             each("adr044-lamp-draft-summary", function (el) { guard(el); el.addEventListener("change", adrLampSaveDraftEdits); });
+            each("adr044-lamp-draft-status", function (el) { guard(el); el.addEventListener("change", adrLampSaveDraftEdits); });
         } catch (e) {
             try { console.warn("[Arrebol D] lamp bind failed", e); } catch (e2) {}
         }
@@ -9032,6 +9131,7 @@
     try {
         rootWin().__adrLampTest = {
             materials: adrLampMaterials, materialsText: adrLampMaterialsText, compose: adrLampComposeFloor, parsePen: adrLampParsePen, splitTail: adrLampSplitTail,
+            statusBlocks: adrLampExtractStatusBlocks, statusText: adrLampStatusBlocksText, statusTags: adrLampStatusTagNames,
             apiCfg: adrLampApiCfg, state: adrLampState, send: adrLampSend, rewrite: adrLampRewrite, applyNow: adrLampApplyDraftNow,
             pushSwipe: adrLampPushSwipe, preset: ADR_LAMP_PRESET, penPreset: ADR_LAMP_PEN_PRESET,
             editProtocol: ADR_LAMP_EDIT_PROTOCOL, penMark: ADR_LAMP_PEN_MARK, hasPenMark: adrLampHasPenMark, stripPenMark: adrLampStripPenMark,
