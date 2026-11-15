@@ -7674,7 +7674,7 @@ html #adr048-fab[data-lamp="out"].adr048-analyzing { overflow: visible !importan
    只管浮窗（手机上用的就是它）；酒馆扩展页里的内嵌抽屉不动。
    ============================================================ */
 html #adr048-popup-panel[data-arb-theme][data-arb-theme] {
-    --hx-serif: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    --hx-serif: "Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Noto Serif Display", "Cochin", "Baskerville", "Hoefler Text", Georgia, "Times New Roman", -apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
     --hx-hair: rgba(90, 100, 125, .16);
     --hx-hair-soft: rgba(90, 100, 125, .09);
     --hx-veil: rgba(255, 255, 255, .46);
@@ -7931,7 +7931,7 @@ html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr0
     box-shadow: 0 24px 60px -24px rgba(5, 3, 20, .8), 0 0 0 1px rgba(255, 255, 255, .03) inset !important;
 }
 #adr044-auto-trigger-popup#adr044-auto-trigger-popup .adr044-auto-trigger-popup-title {
-    font-family: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif !important;
+    font-family: "Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Noto Serif Display", "Cochin", "Baskerville", "Hoefler Text", Georgia, "Times New Roman", -apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif !important;
     font-size: 13px !important;
     font-weight: 600 !important;
     letter-spacing: 2.4px !important;
@@ -7951,7 +7951,7 @@ html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr0
     padding: 0 18px !important;
     border: 1px solid rgba(236, 220, 246, .26) !important;
     background: rgba(255, 255, 255, .06) !important;
-    font-family: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif !important;
+    font-family: "Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Noto Serif Display", "Cochin", "Baskerville", "Hoefler Text", Georgia, "Times New Roman", -apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif !important;
     font-size: 12px !important;
     font-weight: 500 !important;
     letter-spacing: 3px !important;
@@ -7971,7 +7971,7 @@ html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr0
 }
 .mes_text details.arrebol-d-theater > summary,
 .mes_text details.custom-arrebol-d-theater > summary {
-    font-family: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    font-family: "Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Noto Serif Display", "Cochin", "Baskerville", "Hoefler Text", Georgia, "Times New Roman", -apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
     font-weight: 600;
     font-size: .95em;
     letter-spacing: 2px;
@@ -7986,7 +7986,7 @@ html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr0
 
 /* —— 放大编辑框：标题用宋体，纸面的边淡一点，两枚按钮收成胶囊 —— */
 html #adrx-editor#adrx-editor .adrx-editor-title {
-    font-family: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif !important;
+    font-family: "Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Noto Serif Display", "Cochin", "Baskerville", "Hoefler Text", Georgia, "Times New Roman", -apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif !important;
     font-weight: 600 !important;
     letter-spacing: 1.6px !important;
 }
@@ -8094,3 +8094,297 @@ html #adr048-popup-panel[data-arb-theme="dusk"][data-arb-theme] #adr048-popup-bo
 }
 /* 单行输入框同样给放大钮让位 */
 html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adrx-ta > input[type="text"] { padding-right: 42px !important; }
+
+/* ============================================================
+   v1.48.0 幕布（江：「把周围一圈毛玻璃清掉，正常就行，不需要毛玻璃遮盖」）
+   浮窗背后原来盖着三层：index.js 行内样式里按配色染的薄纱（已在那边改成透明）、这里的全屏模糊、一层全屏的静态柔光。
+   这一段把后两层去掉。单独成段：下面「留白」那段版式不喜欢可以整段删，这一段留着，幕布仍然是清的。
+   ============================================================ */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme][data-arb-theme] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-image: none !important;
+}
+/* 幕布上还有一层全屏的静态柔光（v1.2x 留下的 ::before，铺的是 --arb-backdrop 那几团渐变），一样盖在聊天上，也去掉 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme][data-arb-theme]::before { content: none !important; display: none !important; background: none !important; }
+
+
+/* ============================================================
+   v1.48.0 「云岫 · 留白」（江：「周围一圈毛玻璃清掉，正常就行」「更有设计感一点，允许动 ui，更加仙气高级一点」）
+   两件事（幕布在上面单独一段）：
+   · 字：iPhone 的网页用不了宋体（Songti SC 在 iOS 上是要另外下载的字体，网页拿不到），上两版写的宋体在手机上
+     其实一直是苹方。这一版不再指望宋体：中文标题用系统黑体的细字重（苹方细体）拉开字距；
+     拉丁字母和数字用 Didot / Bodoni 这类 iPhone 自带的高反差衬线。两种系统上长得一样。
+   · 形：少画盒子。总开关和页签不再各套一个胶囊；收起的分节是一行字加一道细线，像目录，展开的才是一张卡；
+     状态条是左边一道细霞线；台头底下的直线换成一道水纹，小红珠周围几圈涟漪。
+   还是全静态：不加模糊、不加动画。页签「吸没吸顶」由 index.js 标一个 data-hx-stuck，这里只看这个标记换底。
+   ============================================================ */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] {
+    --hx-display: "Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Noto Serif Display", "Cochin", "Baskerville", "Hoefler Text", "Noto Serif", Georgia, "Times New Roman", serif;
+    --hx-serif: "Didot", "Bodoni 72", "Bodoni MT", "Playfair Display", "Noto Serif Display", "Cochin", "Baskerville", "Hoefler Text", Georgia, "Times New Roman", -apple-system, "PingFang SC", "HarmonyOS Sans SC", "MiSans", "Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+    --hx-paper: var(--adr-deck-bg);
+}
+
+/* —— 外壳：小红珠周围几圈涟漪（静态的同心细线，越远越淡），压在底色上、内容下 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-shell#adr048-popup-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    border: 0;   /* 这个伪元素原来是压在最上面的一圈白描边，和外壳自己的边叠成了一道粗白边；现在只留外壳那一道细的 */
+    border-radius: inherit;
+    background:
+        radial-gradient(circle at 26px 45px, transparent 37.4px, var(--hx-ring-1) 38px, transparent 38.6px),
+        radial-gradient(circle at 26px 45px, transparent 73.4px, var(--hx-ring-2) 74px, transparent 74.6px),
+        radial-gradient(circle at 26px 45px, transparent 121.4px, var(--hx-ring-3) 122px, transparent 122.6px),
+        radial-gradient(circle at 26px 45px, transparent 181.4px, var(--hx-ring-4) 182px, transparent 182.6px);
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] { --hx-ring-1: rgba(255, 255, 255, .55); --hx-ring-2: rgba(255, 255, 255, .42); --hx-ring-3: rgba(255, 255, 255, .30); --hx-ring-4: rgba(255, 255, 255, .18); }
+html #adr048-popup-panel[data-arb-theme="dusk"][data-arb-theme] { --hx-ring-1: rgba(255, 255, 255, .12); --hx-ring-2: rgba(255, 255, 255, .09); --hx-ring-3: rgba(255, 255, 255, .06); --hx-ring-4: rgba(255, 255, 255, .035); }
+
+/* —— 台头：字标用高反差衬线，中文副题是细字重拉开；底下一道水纹 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head { padding: 20px 18px 17px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head .adr048-title::before,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head .adr048-title-d {
+    font-family: var(--hx-display) !important;
+    font-size: 23px !important;
+    font-weight: 400 !important;
+    letter-spacing: .5px !important;
+    line-height: 1.1 !important;
+}
+/* 「D」原来用主题色，落在台头最浓的那片霞色上几乎看不见（晴空粉霞上是粉字压粉底）。改成墨色的半透明，哪套配色上都读得出 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head .adr048-title-d {
+    font-style: italic !important;
+    margin-left: 5px !important;
+    background: none !important;
+    color: var(--adr-deck-ink) !important;
+    -webkit-text-fill-color: var(--adr-deck-ink) !important;
+    opacity: .46 !important;
+    text-shadow: none !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head .adr048-title-cn {
+    display: block !important;
+    font-family: var(--hx-serif) !important;
+    font-size: 10px !important;
+    font-weight: 300 !important;
+    letter-spacing: 5px !important;
+    line-height: 1.4 !important;
+    margin: 7px 0 0 1px !important;
+    opacity: .8;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head #adr048-popup-sub {
+    font-size: 9.5px !important;
+    font-weight: 400 !important;
+    letter-spacing: .9px !important;
+    line-height: 1.4 !important;
+    margin-top: 4px !important;
+    white-space: nowrap !important;
+    opacity: .52;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head .adr048-head-txt::before { top: 4px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head { align-items: flex-start !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head::after {
+    left: 18px !important; right: 18px !important; bottom: 0 !important; height: 7px !important;
+    background: linear-gradient(90deg, transparent, var(--adr-deck-accent) 22%, var(--adr-deck-muted) 62%, transparent);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='7' viewBox='0 0 56 7'%3E%3Cpath d='M0 3.5 Q 14 .6 28 3.5 T 56 3.5' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") left center / 56px 7px repeat-x;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='7' viewBox='0 0 56 7'%3E%3Cpath d='M0 3.5 Q 14 .6 28 3.5 T 56 3.5' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E") left center / 56px 7px repeat-x;
+    opacity: .5;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head#adr048-popup-head button {
+    width: 34px !important; height: 34px !important; min-width: 34px !important; min-height: 34px !important;
+    background: transparent !important;
+    border: 1px solid var(--hx-hair) !important;
+}
+
+/* —— 总开关：不套胶囊，一行字，右边一枚小签 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body #adr044-master-toggle#adr044-master-toggle {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 0 2px 0 4px !important;
+    margin: 2px 0 0 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body #adr044-master-toggle#adr044-master-toggle::before { letter-spacing: 1.6px !important; font-weight: 400 !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body #adr044-master-toggle#adr044-master-toggle::after { letter-spacing: 1.2px !important; }
+
+/* —— 页签：停在原位时没有底，只是一行细字和一道线；吸顶以后垫一层纸底 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs {
+    width: calc(100% + 24px) !important;
+    margin: 4px -12px 16px !important;
+    padding: 0 12px !important;
+    gap: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs::after {
+    left: 12px; right: 12px; bottom: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--hx-hair) 12%, var(--hx-hair) 88%, transparent);
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs[data-hx-stuck="1"] {
+    background: var(--hx-paper) !important;
+    box-shadow: 0 14px 22px -20px rgba(40, 30, 70, .6) !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs.adr-top-tabs button {
+    font-size: 13px !important;
+    font-weight: 300 !important;
+    letter-spacing: 2.6px !important;
+    padding: 13px 0 14px 2px !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs.adr-top-tabs button.active {
+    font-weight: 500 !important;
+    background: transparent !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs.adr-top-tabs button.active::after {
+    bottom: -1px; width: 18px; height: 2px; margin-left: -9px;
+}
+
+/* —— 顶上的状态：不要卡片，左边一道细霞线 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane > .adr044-auto-counter,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane > .adr-lamp-topline {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 2px 0 2px 14px !important;
+    margin: 0 2px !important;
+    position: relative !important;
+    font-weight: 400 !important;
+    letter-spacing: .8px !important;
+    line-height: 1.7 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane > .adr044-auto-counter::before,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane > .adr-lamp-topline::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 0 !important; right: auto !important; top: 5px !important; bottom: 5px !important;
+    width: 2px !important; height: auto !important;
+    border-radius: 2px !important;
+    background: linear-gradient(180deg, var(--adr-deck-accent), var(--hx-glow)) !important;
+    opacity: 1 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane .arb-ct-top { letter-spacing: 2px !important; font-size: 11px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane .arb-ct-msg { letter-spacing: .6px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane > .adr044-auto-calibrate-row { margin: 12px 2px 6px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-progress { margin-bottom: 0 !important; }
+
+/* —— 分节：收起时是一行字加一道线（像目录），展开了才是一张卡 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer {
+    background: transparent !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--hx-hair-soft) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer > summary {
+    margin: 0 !important;
+    width: auto !important;
+    font-family: var(--hx-serif) !important;
+    font-size: 13.5px !important;
+    font-weight: 400 !important;
+    letter-spacing: 2.6px !important;
+    padding: 16px 6px !important;
+    align-items: center !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer > summary::before { content: none !important; }
+/* 右边一枚细十字，展开后是一横 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer > summary::after,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer[open] > summary::after {
+    content: "" !important;
+    position: static !important;
+    flex: 0 0 auto !important;
+    width: 11px !important; height: 11px !important;
+    margin-left: auto !important;
+    opacity: .55;
+    background:
+        linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat,
+        linear-gradient(currentColor, currentColor) center / 1px 100% no-repeat !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer[open] > summary::after {
+    background: linear-gradient(currentColor, currentColor) center / 100% 1px no-repeat !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer[open] {
+    background: var(--hx-veil) !important;
+    border: 1px solid var(--hx-hair-soft) !important;
+    border-radius: 22px !important;
+    margin: 12px 0 !important;
+    padding: 0 0 12px !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer[open] > summary {
+    padding: 15px 14px 13px !important;
+    margin: 0 0 4px !important;
+    background: linear-gradient(90deg, transparent, var(--hx-hair) 6%, var(--hx-hair-soft) 94%, transparent) left bottom / 100% 1px no-repeat !important;
+}
+/* 「API 配置」「预设」这一类分节，里面的东西没有自带的左右边距，靠分节自己的内边距 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer.adr-fold-card[open] { padding: 0 12px 12px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer.adr-fold-card[open] > summary { margin: 0 -12px 4px !important; }
+/* 带放大钮的文字框原来按 100% 宽再加左右边距，会顶出卡片右边 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer > .adrx-ta { width: auto !important; }
+
+/* 分节里面再套的分节：小一号，不做卡 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details details.adrx-drawer,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details details.adrx-drawer[open] {
+    background: transparent !important;
+    border: 0 !important;
+    border-top: 1px solid var(--hx-hair-soft) !important;
+    border-radius: 0 !important;
+    margin: 10px 10px 0 !important;
+    padding: 0 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details details.adrx-drawer > summary,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details details.adrx-drawer[open] > summary {
+    font-size: 12px !important;
+    letter-spacing: 1.6px !important;
+    padding: 12px 2px !important;
+    background: none !important;
+    margin-bottom: 0 !important;
+    opacity: .9;
+}
+
+/* 页里第一样东西不是分节时（掌灯的「改稿 / 蛐蛐」），和上面那道线之间留点空 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr048-page > :first-child:not(details) { margin-top: 14px !important; }
+
+/* —— 表单：小标签细而开，下拉用一枚细尖角，说明文字左边一道线 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body label:not(.adr048-check) { font-size: 11px !important; letter-spacing: 1.4px !important; opacity: .82; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a8fa6' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+    background-position: right 14px center !important;
+    background-size: 10px 6px !important;
+    background-repeat: no-repeat !important;
+    padding-right: 34px !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr048-note,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr044-template-status {
+    border-left: 1px solid var(--hx-hair) !important;
+    padding-left: 10px !important;
+    letter-spacing: .4px !important;
+    line-height: 1.8 !important;
+    opacity: .86;
+}
+
+/* 还没有字的状态行不画那道线 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr048-note:empty,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr044-template-status:empty { border-left-color: transparent !important; }
+
+/* —— 页尾：一行很淡的落款 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body::after {
+    content: "A R R E B O L";
+    display: block;
+    margin: 28px 0 4px;
+    text-align: center;
+    font-family: var(--hx-display);
+    font-size: 9px;
+    letter-spacing: 5px;
+    color: var(--adr-deck-muted);
+    opacity: .38;
+}
