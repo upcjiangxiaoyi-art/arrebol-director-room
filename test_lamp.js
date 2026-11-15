@@ -92,6 +92,8 @@ async function boot(e) {
 }
 const click = (W, el) => el.dispatchEvent(new W.Event("click", { bubbles: true }));
 const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true }));
+// v1.45.6 执笔请求的系统提示：小红霞自己动笔（不再是另一个「执笔人」）
+const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完这部互动小说的这一楼，现在动笔") > 0;
 
 (async () => {
     section("页签与页面");
@@ -208,7 +210,7 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
 
     section("改好给我：执笔位读讨论，只认标签");
     e.setScript((n, body) => {
-        if (body.messages[0].content.indexOf("你是这篇的执笔人") === 0) {
+        if (isPen(body)) {
             return "<content>\n他把信放在桌上，说：「三天前就该到的人，今晚到了。」她看了眼窗外，雨还没停，隔了一拍才说：「走。」\n</content>\n<report>信送到，她看了眼窗外才答应同行。</report>";
         }
         return "聊天回答";
@@ -217,9 +219,10 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     click(W, d.querySelector("#adr048-popup-body #adr044-lamp-rewrite")); await tick(300);
     const c3 = e.calls[e.calls.length - 1];
     ok(c3.url.indexOf("gemini.example") >= 0 && c3.body.model === "gemini-main", "改稿走执笔位", c3.url);
-    ok(c3.body.messages[0].content.indexOf("你是这篇的执笔人") === 0, "执笔系统提示是执笔人规矩");
-    ok(c3.body.messages[0].content.indexOf("你是 Arrebol，小红霞") < 0, "执笔位不带聊天人设");
-    ok(c3.body.messages[1].content.indexOf("【讨论记录 · 作者与小红霞】") >= 0 && c3.body.messages[1].content.indexOf("作者：她答应得太快了吧") >= 0 && c3.body.messages[1].content.indexOf("小红霞：同意。补一拍") >= 0, "整段讨论喂给了执笔位");
+    ok(c3.body.messages[0].content === e.T().penPreset && c3.body.messages[0].content.indexOf("你是 Arrebol，小红霞：审美极高的高级改稿员，不是扮演者。你刚和读者讨论完") === 0, "执笔系统提示是她自己动笔的规矩（v1.45.6）");
+    ok(c3.body.messages[0].content.indexOf("【怎么动笔") < 0 && c3.body.messages[0].content.indexOf("聊天的语言活泼有趣") < 0, "执笔位不带聊天那套（聊天人设、动笔手续）");
+    ok(c3.body.messages[1].content.indexOf("【讨论记录 · 读者与小红霞】") >= 0 && c3.body.messages[1].content.indexOf("读者：她答应得太快了吧") >= 0 && c3.body.messages[1].content.indexOf("小红霞：同意。补一拍") >= 0, "整段讨论喂给了执笔位，屏幕前这位叫读者");
+    ok(c3.body.messages[1].content.indexOf("交整楼全文") > 0 && c3.body.messages[1].content.indexOf("原文正文 " + mat.body.length + " 字") > 0 && c3.body.messages[1].content.indexOf("基本持平") > 0, "任务里写明交整楼全文、原文多少字、没要求就基本持平");
     ok(c3.body.messages[1].content.indexOf("<content>…</content>") >= 0 && c3.body.messages[1].content.indexOf("<report>…</report>") >= 0, "要求按正文标签与摘要标签输出");
     ok(c3.body.messages[1].content.indexOf("【本篇原文 · #5") >= 0, "执笔位也看得到素材");
     meta = e.meta();
@@ -522,6 +525,87 @@ const change = (W, el) => el.dispatchEvent(new W.Event("change", { bubbles: true
     const merged = e.T().apiHistory([{ r: "u", t: "a", f: 1 }, { r: "u", t: "b", f: 1 }, { r: "a", t: "c", f: 1 }, { r: "a", t: "d", f: 2 }], true);
     ok(merged.length === 2 && merged[0].content === "（剧情现在在 #1）\na\n\nb" && merged[1].content === "c\n\nd", "u/u 与 a/a 连续合并成一条");
     await tick(500); click(W, modeEdit); await tick(100);
+
+    section("改稿人设与动笔：聊天里说改就改（v1.45.6）");
+    {
+        const eP = build(); await boot(eP);
+        const dP = eP.doc, WP = eP.win, TP = eP.T();
+        click(WP, dP.querySelector("#adr044-drawer #adr044-tab-lamp")); await tick(50);
+        click(WP, dP.querySelector("#adr048-fab")); await tick(400);
+        const Q = s2 => dP.querySelector("#adr048-popup-body " + s2);
+        const has = (t, arr) => arr.every(x => t.indexOf(x) >= 0);
+        // 人设
+        ok(has(TP.preset, ["审美极高的高级改稿员", "你不是扮演者", "不扮演剧中任何角色"]), "改稿人设：审美极高的高级改稿员，不是扮演者");
+        ok(has(TP.preset, ["这部互动小说的读者", "不是剧情里的 user", "成年、清醒、有生活阅历、文艺", "讨厌低俗文笔", "拒绝恶俗的文字"]), "写明读者是谁：书外的成年读者，不是剧情里的 user，讨厌低俗、拒绝恶俗");
+        ok(has(TP.preset, ["改稿是你的本职", "读者让你改，你就改，不推辞", "修正一整篇", "只动一段"]) && TP.preset.indexOf("不写正文") < 0 && TP.preset.indexOf("不是在写正文") < 0, "改稿是本职、说改就改；旧人设里「不写正文」那两句没了");
+        ok(has(TP.preset, ["是整楼全文", "原样保留、一字不动", "文笔和原文一致", "润色", "字数听读者的", "基本持平", "不低俗、不恶俗"]), "改稿的四条：整楼全文、文笔一致可润色、字数听读者的、文字干净");
+        ok(has(TP.preset, ["反对要带依据", "真实的人类情感心理", "物理处境与现实逻辑", "角色卡与世界书定下的规矩", "痛快地承认"]), "讨论的那套没丢：有坚持、反对带三样依据、对了就认");
+        ok(TP.preset.indexOf("作者") < 0 && TP.penPreset.indexOf("作者") < 0, "改稿这一路不再把屏幕前这位叫作者");
+        // 执笔规矩
+        ok(has(TP.penPreset, ["交的是整楼全文", "逐字照抄", "哪怕只改了一段", "更不要拒绝动笔", "文笔与原文一致", "合理的范围内润色", "字数听读者的", "基本持平", "不低俗、不恶俗", "标签外不要有任何字"]), "执笔规矩：整楼全文、没改的逐字照抄、不拒绝、文笔一致可润色、字数、干净、只出标签块");
+        ok(has(TP.penPreset, ["不是剧情里的 user", "成年、清醒、有生活阅历、文艺"]), "执笔时也知道稿子是改给谁看的");
+        // 聊天请求：人设 → 动笔手续 → 素材
+        eP.setScript(() => "快是快，但她前一楼就在等这封信了。");
+        const inpP = Q("#adr044-lamp-input"); inpP.value = "她答应得太快了吧"; click(WP, Q("#adr044-lamp-send")); await tick(300);
+        const sysP = eP.calls[0].body.messages[0].content;
+        ok(sysP.indexOf(TP.preset) === 0 && sysP.indexOf(TP.editProtocol) > TP.preset.length && sysP.indexOf("【本篇原文 · #5") > sysP.indexOf(TP.editProtocol), "聊天的系统提示三层：人设 → 动笔手续（代码接管）→ 素材");
+        ok(has(TP.editProtocol, ["【怎么动笔 · 这一段由系统接管】", "[[动笔]]", "可以举一两句例子", "整楼的改稿不要贴在聊天里", "不要说「我不写正文」", "读者没让你动笔的时候，不要写"]), "动笔手续写明：应下、单独一行写记号、不推辞、没让动笔不写");
+        ok(eP.calls.length === 1 && !eP.meta().threads["5"].draft, "还在讨论（回复里没有记号）：不改稿");
+        ok(TP.materialsText({ tone: "甜", idx: 5, body: "x" }, "读者").indexOf("【这局的基调 · 读者亲口定的") === 0 && TP.materialsText({ tone: "甜", idx: 5, body: "x" }).indexOf("【这局的基调 · 作者亲口定的") === 0, "基调那行：改稿这一路写读者，蛐蛐和剧场照旧");
+        // 记号的认法
+        ok(TP.hasPenMark("好。\n[[动笔]]") && TP.hasPenMark("［［动笔］］") && TP.hasPenMark("[[ 动笔 ]]") && !TP.hasPenMark("我这就动笔") && !TP.hasPenMark("[动笔]"), "记号认 [[动笔]]（全角括号、带空格也认），正文里说「动笔」两个字不算");
+        ok(TP.stripPenMark("行，往后挪一拍。\n[[动笔]]\n") === "行，往后挪一拍。" && TP.stripPenMark("[[动笔]]") === "", "记号摘得干净");
+        // 读者说改吧，她应下：自动动笔
+        const NEWBODY = "他把信放在桌上，说：「三天前就该到的人，今晚到了。」她看了眼窗外，雨还没停，隔了一拍才说：「走。」";
+        eP.setScript((n, body) => isPen(body) ? "<content>\n" + NEWBODY + "\n</content>\n<report>信送到，她看了眼窗外才答应同行。</report>" : "行，我把她答应那句往后挪一拍，其余不动。\n[[动笔]]");
+        const floorBefore = eP.chat[5].mes, origLen = TP.materials().body.length;
+        await tick(500); inpP.value = "改吧"; click(WP, Q("#adr044-lamp-send")); await tick(600);
+        ok(eP.calls.length === 3 && !isPen(eP.calls[1].body) && isPen(eP.calls[2].body), "读者说「改吧」，她应下并写了记号：紧跟着自动发了执笔请求，不用去点按钮", String(eP.calls.length));
+        const thrP = eP.meta().threads["5"];
+        const lastA = thrP.msgs.filter(m => m.r === "a").pop();
+        ok(lastA.t === "行，我把她答应那句往后挪一拍，其余不动。" && Q("#adr044-lamp-thread").textContent.indexOf("[[动笔]]") < 0, "存下来和画出来的回复里都没有记号", lastA.t);
+        const penUser = eP.calls[2].body.messages[1].content;
+        ok(has(penUser, ["读者：她答应得太快了吧", "读者：改吧", "小红霞：行，我把她答应那句往后挪一拍，其余不动。"]) && penUser.indexOf("[[动笔]]") < 0, "执笔位拿到的讨论记录里有这句「改吧」和她应下的改法，没有记号");
+        ok(thrP.draft && thrP.draft.content === NEWBODY && thrP.draft.summary === "信送到，她看了眼窗外才答应同行。" && !Q("#adr044-lamp-draft-wrap").classList.contains("adr-lamp-hide") && Q("#adr044-lamp-draft").value === NEWBODY, "改好的整楼进了「改稿」预览");
+        const noteP = thrP.msgs.filter(m => m.r === "n").pop().t;
+        ok(noteP.indexOf("原文 " + origLen + " 字 → 改后 " + NEWBODY.length + " 字") > 0 && noteP.indexOf("差得多") < 0, "提示里摆出原文与改后的字数；篇幅相近不报警", noteP);
+        ok(eP.chat[5].mes === floorBefore, "只是进了预览：楼没动，等读者点「替换这篇」");
+        ok(Q("#adr044-lamp-send").disabled === false && Q("#adr044-lamp-stop").disabled === true, "改完按钮回到平时的样子");
+        await tick(500); click(WP, Q("#adr044-lamp-apply")); await tick(500); click(WP, Q("#adr044-lamp-apply")); await tick(600);
+        ok(eP.chat[5].mes.indexOf(NEWBODY) > 0 && eP.chat[5].mes.indexOf("立刻答应跟他走") < 0 && eP.chat[5].mes.indexOf("<status>HP 80") === 0, "点「替换这篇」：正文换进楼里，状态栏原样留着", eP.chat[5].mes.slice(0, 80));
+        // 只回了记号：不留空气泡，照样动笔
+        eP.setScript((n, body) => isPen(body) ? "<content>\n" + NEWBODY + "再补一句。\n</content>" : "[[动笔]]");
+        const nA = eP.meta().threads["5"] ? eP.meta().threads["5"].msgs.filter(m => m.r === "a").length : 0;
+        const nCalls = eP.calls.length;
+        await tick(500); Q("#adr044-lamp-input").value = "再顺一遍最后一句，改吧"; click(WP, Q("#adr044-lamp-send")); await tick(600);
+        const thrQ = eP.meta().threads["5"];
+        ok(eP.calls.length === nCalls + 2 && thrQ.msgs.filter(m => m.r === "a").length === nA && thrQ.draft && thrQ.draft.content.indexOf("再补一句。") > 0, "她只回了一行记号：不留空气泡，照样动笔改好");
+        // 篇幅差得多：提醒别急着替换
+        eP.setScript((n, body) => isPen(body) ? "<content>\n走。\n</content>" : "好，我来。\n[[动笔]]");
+        await tick(500); Q("#adr044-lamp-input").value = "把她那句再改改，改吧"; click(WP, Q("#adr044-lamp-send")); await tick(600);
+        const noteS = eP.meta().threads["5"].msgs.filter(m => m.r === "n").pop().t;
+        ok(noteS.indexOf("篇幅和原文差得多") > 0 && Q("#adr044-lamp-chat-status").textContent.indexOf("篇幅差得多") > 0, "交回来的比原文短太多（多半只交了改的那一段）：提示和状态行都提醒别急着替换", noteS);
+        // 改稿失败：聊天那句还在，状态行说原因，按钮还能点
+        eP.setScript((n, body) => { if (isPen(body)) throw new Error("boom"); return "行。\n[[动笔]]"; });
+        const nBefore = eP.calls.length;
+        await tick(500); Q("#adr044-lamp-input").value = "再来，改吧"; click(WP, Q("#adr044-lamp-send")); await tick(600);
+        ok(eP.calls.length === nBefore + 2 && Q("#adr044-lamp-chat-status").textContent.indexOf("改稿失败") === 0 && eP.meta().threads["5"].msgs.filter(m => m.r === "a").pop().t === "行。" && Q("#adr044-lamp-send").disabled === false, "自动动笔那一步出错：她那句话留着，状态行说改稿失败，还能再点「改好给我」", Q("#adr044-lamp-chat-status").textContent);
+        // 自己改过人设：动笔手续照样跟着
+        eP.st().lampPreset = "你是个只会说好的编辑";
+        eP.setScript(() => "好");
+        await tick(500); Q("#adr044-lamp-input").value = "看看人设"; click(WP, Q("#adr044-lamp-send")); await tick(300);
+        const sysC = eP.calls[eP.calls.length - 1].body.messages[0].content;
+        ok(sysC.indexOf("你是个只会说好的编辑\n\n" + TP.editProtocol) === 0, "自己写的改稿人设：动笔手续照样跟在后面，说改就改这条路还通");
+        eP.st().lampPreset = "";
+        // 蛐蛐模式：不认记号、不带动笔手续
+        TP.setMode("gossip"); await tick(50);
+        eP.setScript(() => "哈哈他完了 [[动笔]]");
+        const nG = eP.calls.length;
+        await tick(500); Q("#adr044-lamp-input").value = "他是不是完了"; click(WP, Q("#adr044-lamp-send")); await tick(400);
+        const sysG = eP.calls[eP.calls.length - 1].body.messages[0].content;
+        ok(eP.calls.length === nG + 1 && sysG.indexOf("【怎么动笔") < 0 && sysG.indexOf("你是 Arrebol，小红霞。你和作者在追同一部剧") === 0, "蛐蛐模式：不带动笔手续，回复里出现记号也不改稿");
+        ok(eP.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eP.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
+    }
 
     section("不碰导演那套");
     ok(e.calls.every(c => c.body.messages[0].content.indexOf("【情感方向】") < 0 && c.body.messages[0].content.indexOf("【派人】") < 0), "掌灯的请求里没有导演预设");

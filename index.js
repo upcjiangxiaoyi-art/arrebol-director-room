@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.45.5｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.45.6｜ripple & GPT & Claude
+ * v1.45.6 改稿小红霞人设重写：审美极高的高级改稿员、不是扮演者，读者让改就改；读者是书外的成年读者，不是剧情里的 user；在聊天里说「改吧」就自动动笔，交整楼全文、没改的逐字照抄、文笔一致、字数听读者的（报告与提议 江「她一直拒绝重写」；施工 Claude）
  * v1.45.5 红霞剧场加人设层：她是谁、文字要什么质感、排版要多好看，每一场都带着；能自己改，留空用出厂；规矩（不是正文、怎么输出、排版安全）仍由代码接管（提议 江「咱们剧场也有一个基础人设层吧」；施工 Claude）
  * v1.45.4 泊在避风塘顶栏里灯不亮的修复：两盏灯改成随文档流、不靠定位的画法，泊位里收在胶囊两头；红霞剧场加「打断」，等楼落定和请求挂着时都能断，重开浮窗状态行不丢（报告与提议 江；施工 Claude）
  * v1.45.3 浮标两盏灯一左一右：左边雾紫是导演，右边霞粉是剧场，挂在胶囊外侧；亮灯熄灯胶囊不再挪位；贴屏幕边时两盏一起收进胶囊两头（提议 江「他俩在浮标的一左一右就好啦」；施工 Claude）
@@ -111,7 +112,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.45.5";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.45.6";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -6630,31 +6631,58 @@
     var ADR_LAMP_THREAD_MAX = 8;      // 一把聊天最多留几楼的对话
     var ADR_LAMP_SUMMARY_FLOORS_DEFAULT = 0;   // v1.42.0 默认读全部未隐藏楼层（0 = 不限）
 
+    // v1.45.6 改稿人设重写（江：「她其实就是和用户讨论，然后重写替换的，这样写了她一直拒绝重写」「不是扮演者，
+    // 就是超高审美、和用户讨论剧情的高级改稿员」「她的用户是看这部小说的成年、清醒、有生活阅历且文艺、讨厌低俗文笔、
+    // 拒绝恶俗的文字；不是剧情里的 user，是和她一样的这个互动小说的读者」）。
+    // 旧人设写着「不是在写正文……不写正文，除非作者明确要你写一段看看」，读者在聊天里让她改，她就一直推辞。
     var ADR_LAMP_PRESET = [
-        "你是 Arrebol，小红霞。你在和这篇文的作者闲聊、吐槽、掰扯剧情——不是在扮演角色，不是在写正文，是两个懂行的人对着一篇稿子说话。",
+        "你是 Arrebol，小红霞：审美极高的高级改稿员。你和读者一起看这部互动小说，讨论剧情，掰扯这一楼哪里好、哪里不对，聊定了由你把稿子改好。你不是扮演者：不扮演剧中任何角色，不接着剧情往下演。",
         "",
-        "你是高级文字编辑，不是附和者。有自己的审美和坚持，不人云亦云。作者说的逻辑点站得住，你就跟着走、把它说得更透；站不住，你就大胆说出你的看法，哪怕作者不爱听。",
+        "和你说话的人是这部互动小说的读者，和你一样坐在书外看这个故事，不是剧情里的 user。TA 成年、清醒、有生活阅历、文艺，讨厌低俗文笔，拒绝恶俗的文字。你说的话、改的稿，都是给这样一个人看的。",
         "",
-        "但反对要带依据，依据只认三样：",
+        "讨论的时候，你有自己的审美和坚持，不人云亦云。读者说的逻辑点站得住，你就跟着走、把它说得更透；站不住，你就大胆说出你的看法，哪怕 TA 不爱听。但反对要带依据，依据只认三样：",
         "① 真实的人类情感心理——人在这种处境下真的会这样想、这样说、这样做吗；",
         "② 本篇此刻的物理处境与现实逻辑——时间、地点、身体状态、在场的人、手里的东西，前后楼对不对得上；",
         "③ 角色卡与世界书定下的规矩——人设、能力边界、世界规则。",
-        "拿不出这三样之一的意见不算意见，别为了显得有主见而反对。作者说得对的时候，痛快地承认。",
+        "拿不出这三样之一的意见不算意见，别为了显得有主见而反对。读者说得对的时候，痛快地承认。",
         "",
-        "你看得见的素材都在下面：这局的基调（作者亲口定的，压过一切）、角色卡/世界书/人设、未隐藏楼层的摘要、以及本篇原文。聊的时候引用原文要准，别凭印象编。隐藏掉的楼层你看不见，作者提到了就当真。",
+        "改稿是你的本职。读者让你改，你就改，不推辞，也不反复确认：有时是修正一整篇，有时只动一段、一句。你有不同看法可以说一句，但主意是读者拿，活儿你得干。改出来的稿子：",
+        "· 是整楼全文。哪怕只改了一段，其余部分也原样保留、一字不动，这样才能整楼替换。",
+        "· 文笔和原文一致，读起来是同一个人写的；改到的地方，合理的话可以润色得更好。",
+        "· 字数听读者的；TA 没提，改后的篇幅和原文基本持平。",
+        "· 文字干净、有质感，不低俗、不恶俗。",
         "",
-        "语言活泼有趣，像朋友聊天，短句，有话直说，不要列大纲、不要分点罗列、不要用标题。一次说一两件事就好，说透比说全重要。不写正文，除非作者明确要你写一段看看。"
+        "你看得见的素材都在下面：这局的基调（读者亲口定的，压过一切）、角色卡 / 世界书 / 人设、未隐藏楼层的摘要、以及本篇原文。聊的时候引用原文要准，别凭印象编。隐藏掉的楼层你看不见，读者提到了就当真。",
+        "",
+        "聊天的语言活泼有趣，像朋友说话，短句，有话直说，不要列大纲、不要分点罗列、不要用标题。一次说一两件事就好，说透比说全重要。"
+    ].join("\n");
+
+    // 动笔的手续由代码接管，不放在能改的人设里：人设被改成什么样，「读者说改就改」这条路都通。
+    // 聊天位只负责讨论；她在回复里单独写一行 [[动笔]]，代码就接着让执笔位按讨论改整楼、放进预览。
+    var ADR_LAMP_PEN_MARK = "[[动笔]]";
+    var ADR_LAMP_PEN_MARK_RE = /[\[［]{2}\s*动笔\s*[\]］]{2}/g;
+    var ADR_LAMP_EDIT_PROTOCOL = [
+        "【怎么动笔 · 这一段由系统接管】",
+        "这个聊天框只用来讨论。读者明确让你动笔时（「改吧」「重写」「改好给我」「帮我替换」「就这么改」这一类），你在这里只做两件事：",
+        "1. 用一两句话说清这次怎么改：改哪里，往哪个方向改；",
+        "2. 另起一行，单独写：" + ADR_LAMP_PEN_MARK,
+        "系统看到这一行，就让你进入动笔环节：按上面的讨论把整楼改好，放进「改稿」预览；读者看过预览、点「替换这篇」，稿子才会换进楼里。",
+        "所以：讨论时可以举一两句例子说明你的想法，但整段、整楼的改稿不要贴在聊天里，留给动笔环节；不要说「我不写正文」「我不能替你改」这类话，也不要让读者自己动手改。还在讨论、读者没让你动笔的时候，不要写 " + ADR_LAMP_PEN_MARK + "。"
     ].join("\n");
 
     var ADR_LAMP_PEN_PRESET = [
-        "你是这篇的执笔人。作者和编辑（小红霞）刚刚讨论完本篇哪里要改，现在由你按讨论敲定的结论重写这一楼的正文。",
+        "你是 Arrebol，小红霞：审美极高的高级改稿员，不是扮演者。你刚和读者讨论完这部互动小说的这一楼，现在动笔，把这一楼改好，交给读者预览、替换。",
+        "",
+        "读者是谁：坐在书外看这部互动小说的人，不是剧情里的 user；成年、清醒、有生活阅历、文艺，讨厌低俗文笔，拒绝恶俗的文字。稿子是改给 TA 看的。",
         "",
         "规矩：",
-        "1. 只改讨论里敲定要改的地方，其余逐字保留——没被讨论到的句子一个字不动。",
-        "2. 文风、人称、时态、段落节奏与原文一致，读起来像同一个人写的同一楼，不是另一个人重写的。",
-        "3. 不加新人物、不另起新线、不超出讨论的范围去\"顺手优化\"。长度与原文相近。",
-        "4. 角色卡、世界书与基调只用来判断什么合情理，不是拿来往里填设定的。",
-        "5. 输出只有标签块：正文放在指定的正文标签里；若要求了摘要，再给一个摘要标签块，摘要是对改后正文的简短概括。标签外不要有任何字——不解释、不加标题、不写\"好的\"。"
+        "1. 交的是整楼全文。讨论里要改的地方（一句、一段，还是整篇）照讨论定下的改；没说要改的地方逐字照抄，一个字、一个标点都不动。哪怕只改了一段，也要把其余部分原样带上，这样才能整楼替换。",
+        "2. 读者最后拿的主意算数。读者没明说的细节，按你们讨论的方向和你自己的判断补齐；不要因为「讨论里没有完全说定」就原样交回，更不要拒绝动笔。",
+        "3. 文笔与原文一致：人称、时态、叙述距离、段落节奏接得上，读起来是同一个人写的同一楼。改到的地方可以在合理的范围内润色得更好；没让改的地方不要「顺手优化」。",
+        "4. 字数听读者的：读者说了要多长、要扩要删，就照办；没说，改后的篇幅和原文基本持平。",
+        "5. 文字干净、有质感：不低俗、不恶俗、不油腻，不写套话。",
+        "6. 不加讨论里没有的新人物、新线索。角色卡、世界书与基调只用来判断什么合情理，不是拿来往里填设定的。",
+        "7. 输出只有标签块：正文放在指定的正文标签里；若要求了摘要，再给一个摘要标签块，摘要是对改后正文的简短概括。标签外不要有任何字——不解释、不加标题、不写\"好的\"。"
     ].join("\n");
 
     var ADR_LAMP_GOSSIP_PRESET = [
@@ -6796,9 +6824,10 @@
         return out;
     }
 
-    function adrLampMaterialsText(mat) {
+    // who：这一路提示词里管屏幕前这位叫什么。改稿与执笔叫「读者」（v1.45.6）；蛐蛐与剧场的人设里一直叫「作者」，不传就是它。
+    function adrLampMaterialsText(mat, who) {
         var parts = [];
-        if (mat.tone) parts.push("【这局的基调 · 作者亲口定的，压过角色卡与此前剧情】\n" + mat.tone);
+        if (mat.tone) parts.push("【这局的基调 · " + (who || "作者") + "亲口定的，压过角色卡与此前剧情】\n" + mat.tone);
         if (mat.card) parts.push("【角色卡 / 世界书 / 人设 · 判断合不合情理用】\n" + mat.card);
         if (mat.summary) parts.push("【此前剧情 · 未隐藏楼层的摘要，按时间顺序】\n" + mat.summary);
         parts.push("【本篇原文 · #" + mat.idx + " · 讨论对象】\n" + (mat.body || "（这一楼正文为空）"));
@@ -6973,7 +7002,7 @@
 
     // ---- 聊 ----
     function adrLampTranscript(msgs) {
-        return msgs.filter(function (m) { return m.r !== "n"; }).map(function (m) { return (m.r === "u" ? "作者：" : "小红霞：") + m.t; }).join("\n\n");
+        return msgs.filter(function (m) { return m.r !== "n"; }).map(function (m) { return (m.r === "u" ? "读者：" : "小红霞：") + m.t; }).join("\n\n");
     }
 
     async function adrLampSend() {
@@ -7004,22 +7033,28 @@
         adrLampRenderThread();
         adrLampStatus(gossip ? "小红霞在看剧…" : "小红霞在看稿…", "#8ed99d");
 
-        var messages = [{ role: "system", content: (gossip ? adrLampGossipPresetText() : adrLampPresetText()) + "\n\n" + adrLampMaterialsText(mat) }]
-            .concat(adrLampApiHistory(th.msgs, gossip));
+        // 改稿模式：人设（能改）+ 动笔手续（代码接管）+ 素材；蛐蛐模式：人设 + 素材，和以前一样
+        var sysText = gossip
+            ? adrLampGossipPresetText() + "\n\n" + adrLampMaterialsText(mat)
+            : adrLampPresetText() + "\n\n" + ADR_LAMP_EDIT_PROTOCOL + "\n\n" + adrLampMaterialsText(mat, "读者");
+        var messages = [{ role: "system", content: sysText }].concat(adrLampApiHistory(th.msgs, gossip));
         var partial = "";
         var outcome = "";
+        var wantPen = false;   // v1.45.6 她在回复里写了 [[动笔]]：说完就接着让执笔位改
         try {
             var out = await adrDChatCompletionText({
                 endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrLampTemp(), messages: messages,
                 onAbortable: function (fn) { adrLampRun.abort = fn; },
                 onProgress: function (chars, thought, content) {
-                    partial = content || "";
+                    partial = gossip ? (content || "") : adrLampStripPenMark(content || "");
                     adrLampPaintLive(partial, chars, thought);
                 }
             });
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这段话没存", "#d6b177"); return false; }
-            adrLampCommitReply(gossip ? "gossip" : mat.idx, String(out || "").trim(), mat.idx);
-            adrLampStatus("说完了 · " + adrLampApiNote("lamp"), "#8ed99d");
+            var said = String(out || "").trim();
+            if (!gossip && adrLampHasPenMark(said)) { wantPen = true; said = adrLampStripPenMark(said); }
+            adrLampCommitReply(gossip ? "gossip" : mat.idx, said, mat.idx);
+            adrLampStatus(wantPen ? "她说好了，这就动笔…" : "说完了 · " + adrLampApiNote("lamp"), "#8ed99d");
             outcome = "ok";
         } catch (e) {
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这段话没存", "#d6b177"); return false; }
@@ -7037,7 +7072,19 @@
             adrLampSetButtons();
             adrLampRenderThread();
         }
+        // 读者在聊天里让她动笔、她应下了：不用再去点「改好给我」，接着就改。改不成（API 出错、被打断）状态行会说，按钮还在。
+        if (outcome === "ok" && wantPen) {
+            try { await adrLampRewrite(); } catch (ePen) {}
+        }
         return outcome === "ok";
+    }
+
+    function adrLampHasPenMark(text) {
+        ADR_LAMP_PEN_MARK_RE.lastIndex = 0;
+        return ADR_LAMP_PEN_MARK_RE.test(String(text || ""));
+    }
+    function adrLampStripPenMark(text) {
+        return String(text || "").replace(ADR_LAMP_PEN_MARK_RE, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
     }
 
     function adrLampCommitReply(key, text, f) {
@@ -7114,17 +7161,19 @@
         var cTag = adrLampContentTagName();
         var sTag = adrLampSummaryTagNames()[0];
         var wantSummary = !!mat.origSummary;
+        var origLen = String(mat.body || "").length;
         var task = [
-            "【讨论记录 · 作者与小红霞】",
+            "【讨论记录 · 读者与小红霞】",
             adrLampTranscript(th.msgs),
             "",
             "【任务】",
-            "按讨论里敲定的结论重写本篇（#" + mat.idx + "）的正文。只改讨论到的地方，其余逐字保留。",
+            "按讨论定下的改法，把本篇（#" + mat.idx + "）改好，交整楼全文：要改的地方照讨论改，没说要改的地方逐字照抄。",
+            "原文正文 " + origLen + " 字。读者对字数有要求就照办；没有要求，改后的篇幅和原文基本持平。",
             "输出格式：正文放在 <" + cTag + ">…</" + cTag + "> 里" + (wantSummary ? "；然后再给 <" + sTag + ">…</" + sTag + "> 一段新摘要（原楼有摘要标签，摘要也要跟着正文更新）" : "") + "。标签外不要有任何字。"
         ].join("\n");
         var messages = [
             { role: "system", content: ADR_LAMP_PEN_PRESET },
-            { role: "user", content: adrLampMaterialsText(mat) + "\n\n" + task }
+            { role: "user", content: adrLampMaterialsText(mat, "读者") + "\n\n" + task }
         ];
 
         adrLampRun = { busy: true, abort: null, mode: "pen", idx: mat.idx };
@@ -7150,10 +7199,15 @@
             var st2 = adrLampState();
             var th2 = adrLampThread(st2, mat.idx, true);
             th2.draft = { content: parsed.content, summary: parsed.summary, base: mat.body, at: Date.now() };
-            th2.msgs.push({ r: "n", t: "改好了一版，在下面的「改稿」里。看看预览，改两笔也行，满意就「替换这篇」。", at: Date.now() });
+            // 字数摆出来：没让扩也没让删、篇幅却差得多，多半是只交了改的那一段——替换前让读者自己看一眼
+            var newLen = String(parsed.content || "").length;
+            var lenNote = "原文 " + origLen + " 字 → 改后 " + newLen + " 字";
+            var lenOff = origLen > 0 && (newLen < origLen * 0.6 || newLen > origLen * 1.6);
+            th2.msgs.push({ r: "n", t: "改好了一版，在下面的「改稿」里（" + lenNote + "）。看看预览，改两笔也行，满意就「替换这篇」。"
+                + (lenOff ? "\n篇幅和原文差得多：如果不是你要她扩写或删减，可能只交了改的那一段，别急着替换，让她重改一次。" : ""), at: Date.now() });
             th2.at = Date.now();
             adrLampSaveState(st2);
-            adrLampStatus("改好了 ✓ 预览在「改稿」里" + (wantSummary && !parsed.summary ? "（执笔位没给摘要，替换时摘要不动）" : ""), "#8ed99d");
+            adrLampStatus("改好了 ✓ 预览在「改稿」里 · " + lenNote + (lenOff ? " · 篇幅差得多，替换前看一眼" : "") + (wantSummary && !parsed.summary ? "（执笔位没给摘要，替换时摘要不动）" : ""), lenOff ? "#d6a26a" : "#8ed99d");
             ok = true;
         } catch (e) {
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这份改稿没存", "#d6b177"); return false; }
@@ -7628,7 +7682,7 @@
             });
             adrCdSetTextAll("adr044-lamp-mode-note", gossip
                 ? "蛐蛐：和朋友一起追剧。对话一直留着、跟着剧情一楼一楼走，她记得你押过谁；只聊不改稿。"
-                : "改稿：对着一楼聊，聊完让执笔位改好、预览、替换；替换后这轮清空，下一楼从头说。");
+                : "改稿：对着一楼聊，聊定了跟她说「改吧」（或点「改好给我」），她改好整楼给你预览、替换；替换后这轮清空，下一楼从头说。");
         } catch (e) {}
     }
 
@@ -7723,7 +7777,7 @@
             + '<label class="' + checkClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><input type="checkbox" id="adr044-lamp-reset-after-apply"' + (st.lampResetAfterApply !== false ? " checked" : "") + '> 替换后自动清空本轮对话（这一楼改完了，下一次从头说）</label>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-lamp-auto-quip"' + (st.lampAutoQuip === true ? " checked" : "") + '> 🍉 新楼落地自动蛐蛐一句，弹个小窗（走聊天位 API，每楼一次，花钱；写进蛐蛐记录，你能接着回）</label>'
             + '<div class="adr-lamp-jumprow"><button type="button" id="adr044-lamp-quip-now" class="adr-lamp-jump" title="不等新楼，现在就对最新一楼蛐蛐一句">🍉 现在蛐蛐一句</button></div>'
-            + '<div class="adr044-template-status" id="adr044-lamp-chat-status">聊到你觉得可以了，点「改好给我」：执笔位读完整段讨论重写这一楼，先预览再替换。</div>'
+            + '<div class="adr044-template-status" id="adr044-lamp-chat-status">聊到你觉得可以了，直接跟她说「改吧」，或者点「改好给我」：她按讨论把这一楼改好，先预览再替换。</div>'
             + '<div id="adr044-lamp-draft-wrap" class="adr-lamp-hide">'
             + '<label>📝 改稿 · 正文（能改两笔再替换）</label>'
             + '<textarea id="adr044-lamp-draft" rows="10"></textarea>'
@@ -7744,7 +7798,7 @@
             + secClose()
 
             + secOpen("🎭 小红霞的人设", true, "lamp-preset")
-            + '<div class="' + noteClass + '">两种模式各一份性子，不是导演框架，留空用出厂。改稿：高级文字编辑、有审美有坚持、反对要带依据（人的真实情感心理 / 此刻的物理处境 / 世界书规矩）。蛐蛐：一起追剧的朋友，站队、押注、翻旧账，只聊不改。执笔位的规矩由代码接管，不在这里。</div>'
+            + '<div class="' + noteClass + '">两种模式各一份性子，不是导演框架，留空用出厂。改稿：审美极高的高级改稿员，不是扮演者；和读者讨论（反对要带依据：人的真实情感心理 / 此刻的物理处境 / 世界书规矩），读者说改就改、改好整楼。蛐蛐：一起追剧的朋友，站队、押注、翻旧账，只聊不改。「在聊天里说改吧就自动动笔」的手续和执笔位的规矩由代码接管，不在这里；自己改过改稿人设的，要点「恢复出厂人设」才用得上新版。</div>'
             + '<label>✏️ 改稿模式的人设</label>'
             + '<textarea id="adr044-lamp-preset" rows="6" placeholder="留空＝出厂人设">' + esc(st.lampPreset || "") + '</textarea>'
             + '<div class="' + actionsClass + '"><button id="adr044-lamp-preset-reset" type="button">恢复出厂人设</button></div>'
@@ -8911,9 +8965,10 @@
 
     try {
         rootWin().__adrLampTest = {
-            materials: adrLampMaterials, compose: adrLampComposeFloor, parsePen: adrLampParsePen, splitTail: adrLampSplitTail,
+            materials: adrLampMaterials, materialsText: adrLampMaterialsText, compose: adrLampComposeFloor, parsePen: adrLampParsePen, splitTail: adrLampSplitTail,
             apiCfg: adrLampApiCfg, state: adrLampState, send: adrLampSend, rewrite: adrLampRewrite, applyNow: adrLampApplyDraftNow,
             pushSwipe: adrLampPushSwipe, preset: ADR_LAMP_PRESET, penPreset: ADR_LAMP_PEN_PRESET,
+            editProtocol: ADR_LAMP_EDIT_PROTOCOL, penMark: ADR_LAMP_PEN_MARK, hasPenMark: adrLampHasPenMark, stripPenMark: adrLampStripPenMark,
             setMode: adrLampSetMode, apiHistory: adrLampApiHistory, gossipPreset: ADR_LAMP_GOSSIP_PRESET,
             autoQuip: adrLampAutoQuipNow, quipAsk: ADR_LAMP_QUIP_ASK,
             quipPush: adrLampQuipPush, quipAck: adrLampQuipAck, quipQueue: adrLampQuipQueue
