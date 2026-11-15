@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.48.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.49.0｜ripple & GPT & Claude
+ * v1.49.0 去毛玻璃和「留白」版式改成两个试验开关（共享设置里，默认都关，关着时和 v1.47.1 一样）：开了不对劲能在酒馆扩展页的抽屉里关掉；不盖毛玻璃时幕布不接点击；浮窗没画出来会自动退回并写出量到的数（起因 江「一点就卡死页面」；施工 Claude）
  * v1.48.1 撤回 v1.48.0：那一版在 iPhone 上一点浮标页面就卡死（报告 江）。代码整体退回 v1.47.1，只有版本号往前走；去毛玻璃和新版式等查清原因后分步重做（施工 Claude）
  * v1.47.1 「云岫」细处：对话气泡、蛐蛐小窗、楼里的剧场卡片、放大编辑框、滑杆顺一遍，小字的字距行距放松；修上一版带进来的夜色主题主按钮深字压深底、按钮折行、放大钮压字、吸顶页签上沿漏字（提议 江「包括 ui、文字排版、美感，仙气飘飘就好」；施工 Claude）
  * v1.47.0 浮窗换一层轻的皮「云岫」：标题与页签用宋体留字距、实边改淡边与淡出的细线、按钮收成细边胶囊、外壳加静态雾光；只改形不改色，七套配色照旧，不加模糊和动画（提议 江「改的仙气飘飘高级一点」；施工 Claude）
@@ -119,7 +120,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.48.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.49.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -132,6 +133,8 @@
         injectMode: "visible",
         showFloatingWindow: true,
         fabMotion: true,            // v1.37.0 浮标动效开关：关掉后水波与亮流全停，给怀疑手机发烫的人做实验
+        popupClearVeil: false,      // v1.49.0 试验开关：浮窗周围不盖毛玻璃。默认关——v1.48.0 直接改成这样在 iPhone 上卡死过，撤回后改成自己选
+        popupAiry: false,           // v1.49.0 试验开关：浮窗用「留白」版式。默认关，理由同上
         themePalette: "",          // dusk / sunset / pearl / celadon / wine / morandi / skyrose; empty migrates the previous light switch.
         dawnTheme: false,           // v1.14.4 开灯：浮窗朝霞浅色皮，默认关（暗河红霞）
         showAutoTriggerPopup: true,
@@ -873,6 +876,11 @@
 
         var fmo = qForm("adr044-fab-motion");
         if (fmo) save("fabMotion", !!fmo.checked);
+
+        var pcv = qForm("adr044-popup-clear-veil");
+        if (pcv) save("popupClearVeil", !!pcv.checked);
+        var pai = qForm("adr044-popup-airy");
+        if (pai) save("popupAiry", !!pai.checked);
 
         adr048ApplyFabTheme();
 
@@ -9287,6 +9295,8 @@
             + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-fab-motion"' + (st.fabMotion !== false ? " checked" : "") + '> 浮标流动动效（怀疑手机发烫可以关掉对比）</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-popup-clear-veil"' + (st.popupClearVeil === true ? " checked" : "") + '> 试验：浮窗周围不盖毛玻璃（打开后不对劲，回酒馆扩展页的小红霞抽屉里关掉）</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-popup-airy"' + (st.popupAiry === true ? " checked" : "") + '> 试验：浮窗用「留白」版式（同上，不对劲就关）</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
             + adrxDrawerStart("shared-adv", "⚙️ 进阶开关（默认已调好，一般不用动）", false)
@@ -9435,6 +9445,8 @@
             adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
             adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
             adrDSetAllById("adr044-fab-motion", "", st.fabMotion !== false);
+            adrDSetAllById("adr044-popup-clear-veil", "", st.popupClearVeil === true);
+            adrDSetAllById("adr044-popup-airy", "", st.popupAiry === true);
             adrDSetAllById("adr044-float-inject", "", st.floatInjectEnabled !== false);
             adrDSetAllById("adr044-float-depth", String(st.floatDepth != null ? st.floatDepth : 2));
             adrDSetAllById("adr044-director-log", "", st.directorLogEnabled !== false);
@@ -11040,6 +11052,25 @@
             });
         }
 
+        // v1.49.0 两个试验开关：一改就落盘（万一打开后页面不对，刷新回来还是这次选的，能去抽屉里关），并立刻套到开着的浮窗上
+        [["adr044-popup-clear-veil", "popupClearVeil"], ["adr044-popup-airy", "popupAiry"]].forEach(function (pair) {
+            try {
+                var list = rootDoc().querySelectorAll("#" + pair[0]);
+                for (var i = 0; i < list.length; i++) (function (el) {
+                    if (el.__adr044Bound) return;
+                    el.__adr044Bound = true;
+                    el.addEventListener("change", function () {
+                        adr048PopupFallback = false;   // 人亲手又打开了，就再给它一次机会
+                        save(pair[1], !!el.checked);
+                        saveNow();
+                        try { adrDSetAllById(pair[0], "", !!el.checked); } catch (eMirror) {}
+                        adr048ApplyPanelTheme();
+                        adr048VerifyPopupLater();
+                    });
+                })(list[i]);
+            } catch (eBindExp) {}
+        });
+
         var showAutoPopup = qForm("adr044-show-auto-trigger-popup");
         if (showAutoPopup && !showAutoPopup.__adr044Bound) {
             showAutoPopup.__adr044Bound = true;
@@ -11364,6 +11395,8 @@
             + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-fab-motion"' + (st.fabMotion !== false ? " checked" : "") + '> 浮标流动动效（怀疑手机发烫可以关掉对比）</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-popup-clear-veil"' + (st.popupClearVeil === true ? " checked" : "") + '> 试验：浮窗周围不盖毛玻璃（打开后不对劲，回酒馆扩展页的小红霞抽屉里关掉）</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-popup-airy"' + (st.popupAiry === true ? " checked" : "") + '> 试验：浮窗用「留白」版式（同上，不对劲就关）</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
 
@@ -11496,6 +11529,7 @@
             adr048BindPopupPanel();
             bindDirect();
             adrDRestorePanelRuntimeState();
+            adr048VerifyPopupLater();
 
             try { if (body) body.scrollTop = 0; } catch (e1) {}
             // v1.41.9：面板显示出来之后再把掌灯的对话框卷到最新一句。重建面板时它还藏着、高度为 0，那时卷等于没卷——
@@ -11542,29 +11576,52 @@
             p.setAttribute("data-arb-theme", dawn ? "dawn" : "dusk");
             p.setAttribute("data-adr-palette", palette);
 
+            // v1.49.0 两个试验开关。都关着时，下面每一行写出来的值和 v1.47.1 完全一样。
+            var mode = { clear: false, airy: false };
+            try { mode = adr048PopupMode(); } catch (eMode) {}
+            p.setAttribute("data-hx-veil", mode.clear ? "clear" : "soft");
+            p.setAttribute("data-hx-skin", mode.airy ? "airy" : "classic");
+
             if (p.getAttribute("data-open") === "1") {
                 // v1.31.0：幕布随配色——天青用冷雾，其余浅色仍是粉霞那层薄纱。
                 // v1.35.0：烟粉用一层烟灰粉的薄纱；v1.36.0：晴空用一层淡藕紫。
                 var veil = palette === "celadon" ? "rgba(205,220,228,.42)"
                     : (palette === "morandi" ? "rgba(214,192,196,.42)"
                     : (palette === "skyrose" ? "rgba(226,214,234,.40)" : "rgba(228,207,224,.40)"));
-                adr048SetImportant(p, "background", dawn ? veil : (wine ? "rgba(58,7,31,.32)" : "rgba(0,0,0,.25)"));
+                if (mode.clear) {
+                    // 不盖毛玻璃：幕布透明，而且不接点击——浮窗万一没画出来，页面也不会被一层看不见的东西盖死。
+                    // transform 是为了让幕布继续当浮窗的定位参照：原来靠 backdrop-filter 顺带当着，去掉模糊以后这层关系要自己留住。
+                    adr048SetImportant(p, "background", "transparent");
+                    adr048SetImportant(p, "pointer-events", "none");
+                    adr048SetImportant(p, "transform", "translateZ(0)");
+                } else {
+                    adr048SetImportant(p, "background", dawn ? veil : (wine ? "rgba(58,7,31,.32)" : "rgba(0,0,0,.25)"));
+                    adr048SetImportant(p, "pointer-events", "auto");
+                    try { p.style.removeProperty("transform"); } catch (eTf) {}
+                }
             }
 
             var shell = d.querySelector("#adr048-popup-shell");
             if (shell) {
                 // v1.32.0：红霞是深色组第二员，壳体走自己的令牌；夜色那套内联值原样保留。
+                // 夜色壳体原来留 2% 的透；不盖毛玻璃时背后的字会隐约印上来，那时改成实底
                 adr048SetImportant(shell, "background", (dawn || wine)
                     ? "var(--arb-surface)"
-                    : "rgba(42,52,67,.98)");
+                    : (mode.clear ? "rgb(42,52,67)" : "rgba(42,52,67,.98)"));
                 adr048SetImportant(shell, "color", (dawn || wine) ? "var(--arb-ink)" : "#f2f2f2");
-                adr048SetImportant(shell, "border", dawn
-                    ? "1px solid rgba(255,255,255,.92)"
-                    : (wine ? "1px solid rgba(226,166,186,.20)" : "1px solid rgba(228,212,246,.16)"));
-                adr048SetImportant(shell, "box-shadow", dawn
-                    ? "0 26px 70px rgba(70,64,110,.26), 0 0 0 1px rgba(64,70,110,.10)"
-                    : (wine ? "0 26px 70px rgba(30,3,15,.62), 0 0 0 1px rgba(226,166,186,.08)" : "0 26px 70px rgba(5,3,20,.58), 0 0 0 1px rgba(183,157,220,.06)"));
+                adr048SetImportant(shell, "pointer-events", "auto");
+                adr048SetImportant(shell, "border-radius", mode.airy ? "30px" : "22px");
+                adr048SetImportant(shell, "border", mode.airy
+                    ? (dawn ? "1px solid rgba(255,255,255,.74)" : (wine ? "1px solid rgba(226,166,186,.18)" : "1px solid rgba(228,212,246,.14)"))
+                    : (dawn ? "1px solid rgba(255,255,255,.92)" : (wine ? "1px solid rgba(226,166,186,.20)" : "1px solid rgba(228,212,246,.16)")));
+                // 没有幕布垫着时，投影收拢、压深一点，浮窗才从楼上面浮得起来
+                adr048SetImportant(shell, "box-shadow", mode.clear
+                    ? (dawn ? "0 34px 70px -28px rgba(52,44,88,.52), 0 10px 26px -14px rgba(52,44,88,.30), 0 0 0 1px rgba(64,70,110,.07)"
+                        : (wine ? "0 34px 70px -28px rgba(20,2,10,.78), 0 10px 26px -14px rgba(20,2,10,.50)" : "0 34px 70px -28px rgba(0,0,0,.72), 0 10px 26px -14px rgba(0,0,0,.46)"))
+                    : (dawn ? "0 26px 70px rgba(70,64,110,.26), 0 0 0 1px rgba(64,70,110,.10)"
+                        : (wine ? "0 26px 70px rgba(30,3,15,.62), 0 0 0 1px rgba(226,166,186,.08)" : "0 26px 70px rgba(5,3,20,.58), 0 0 0 1px rgba(183,157,220,.06)")));
             }
+            if (!mode.airy) { try { var tabsOff = p.querySelector(".adr-top-tabs[data-hx-stuck]"); if (tabsOff) tabsOff.removeAttribute("data-hx-stuck"); } catch (eTabs) {} }
 
             var tg = d.querySelector("#adr048-theme-toggle");
             if (tg) {
@@ -11576,7 +11633,76 @@
         } catch (e) {}
     }
 
+    // ===== v1.49.0 浮窗的两个试验开关：不盖毛玻璃 / 留白版式 =====
+    // v1.48.0 把这两样直接改成了默认，只在 Chromium 里验过，推上去以后江的 iPhone 上一点浮标页面就卡死，当天撤回（v1.48.1）。
+    // 这里没有 WebKit，复现不了，所以改成：默认都关（关着时和 v1.47.1 逐行相同），想要的人自己开；
+    // 开了以后浮窗要是没画出来，自己退回去并把量到的数写出来，不让人卡在一层看不见的幕布后面。
+    var adr048PopupFallback = false;   // 这次会话里自检没过：两个开关当作关着，直到人再去动它
+    var adr048PopupDiag = "";
+    function adr048PopupMode() {
+        var st = settings();
+        return { clear: !adr048PopupFallback && st.popupClearVeil === true, airy: !adr048PopupFallback && st.popupAiry === true };
+    }
+    // 量一下浮窗是不是真的在屏幕上。rect 可以由测试传进来；没有版面信息的环境（jsdom）不量。
+    function adr048VerifyPopup(fakeRect) {
+        try {
+            var d = rootDoc(), w = rootWin();
+            var p = d.querySelector("#adr048-popup-panel"), shell = d.querySelector("#adr048-popup-shell");
+            if (!p || !shell || p.getAttribute("data-open") !== "1") return "skip";
+            var mode = adr048PopupMode();
+            if (!mode.clear && !mode.airy) return "skip";
+            var vw = (d.documentElement && d.documentElement.clientWidth) || w.innerWidth || 0;
+            var vh = (d.documentElement && d.documentElement.clientHeight) || w.innerHeight || 0;
+            // 没有排版引擎的环境（jsdom）里什么都量出来是 0，那不叫「没画出来」：先量整页，整页都没有尺寸就不判
+            var pageRect = d.documentElement && d.documentElement.getBoundingClientRect ? d.documentElement.getBoundingClientRect() : null;
+            if (!fakeRect && (!vw || !vh || !pageRect || !(pageRect.width > 0))) return "skip";
+            var r = fakeRect || shell.getBoundingClientRect();
+            var ok = r.width >= 120 && r.height >= 120 && r.bottom > 40 && r.right > 40 && (!vh || r.top < vh - 40) && (!vw || r.left < vw - 40);
+            if (ok) return "ok";
+            adr048PopupFallback = true;
+            adr048PopupDiag = "浮窗 " + Math.round(r.width) + "×" + Math.round(r.height) + " @ " + Math.round(r.left) + "," + Math.round(r.top) + " · 屏 " + vw + "×" + vh
+                + " · 开关 " + (mode.clear ? "去毛玻璃 " : "") + (mode.airy ? "留白" : "");
+            save("popupClearVeil", false);
+            save("popupAiry", false);
+            saveNow();
+            try { adrDSetAllById("adr044-popup-clear-veil", "", false); adrDSetAllById("adr044-popup-airy", "", false); } catch (eSet) {}
+            adr048ApplyPanelTheme();
+            try { adrDToast("试验版浮窗在这台设备上没画出来，已自动退回原样并关掉开关。量到的：" + adr048PopupDiag); } catch (eToast) {}
+            try { console.warn("[Arrebol D] popup experiment fell back:", adr048PopupDiag); } catch (eLog) {}
+            return "fallback";
+        } catch (e) { return "error"; }
+    }
+    function adr048VerifyPopupLater() {
+        try { setTimeout(function () { adr048VerifyPopup(); }, 90); } catch (e) {}
+    }
+    // 留白版式里，页签停在原位时没有底，滚到吸顶以后才垫一层纸底。样式表自己分不出「吸没吸住」，
+    // 这里听一下浮窗正文的滚动：只读两个位置，状态翻转时才改一次标记，不在滚动里写样式。只在留白版式下做。
+    function adr048SyncTabsStuck(body) {
+        try {
+            if (!body) return;
+            var p = body.parentNode && body.parentNode.parentNode;
+            if (!p || p.getAttribute("data-hx-skin") !== "airy") return;
+            var tabs = body.querySelector(".adr-top-tabs");
+            if (!tabs) return;
+            var stuck = body.scrollTop > 0 && (tabs.getBoundingClientRect().top - body.getBoundingClientRect().top) <= 0.75;
+            if (stuck !== (tabs.getAttribute("data-hx-stuck") === "1")) tabs.setAttribute("data-hx-stuck", stuck ? "1" : "0");
+        } catch (e) {}
+    }
+    function adr048BindTabsStuck() {
+        try {
+            var d = rootDoc();
+            if (d.__adr048TabsStuckBound) return;
+            d.__adr048TabsStuckBound = true;
+            d.addEventListener("scroll", function (ev) {
+                var t = ev && ev.target;
+                if (t && t.id === "adr048-popup-body") adr048SyncTabsStuck(t);
+            }, { capture: true, passive: true });
+        } catch (e) {}
+    }
+    try { window.__adr048PopupTest = { mode: adr048PopupMode, verify: adr048VerifyPopup, diag: function () { return adr048PopupDiag; }, fallback: function () { return adr048PopupFallback; }, reset: function () { adr048PopupFallback = false; adr048PopupDiag = ""; } }; } catch (e) {}
+
     function adr048BindPopupPanel() {
+        try { adr048BindTabsStuck(); } catch (eStuck) {}   // 包一层：这个函数有时被单独拎出去跑（test_theme.js），那时没有上面这些
         try {
             var d = rootDoc();
 
