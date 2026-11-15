@@ -193,33 +193,6 @@ function build() {
         check(e.chatMetadata.arrebol_d.auto.emotion.base === 35, '触发设置收起时仍能对表至当前楼层');
         check(counter(root(), 'emotion').querySelector('.arb-ct-nums b').textContent === '0' && counter(drawer, 'emotion').querySelector('.arb-ct-nums b').textContent === '0', '对表后两端进度都归零');
         check(e.chatMetadata.arrebol_d.auto.plot.base === plotBefore && e.chatMetadata.arrebol_d_cd.lastDrawAt === cdBefore, '情感对表不改统筹或抽卡基准线');
-        // v1.48.0：幕布透明、壳体是实底、页签吸顶标记
-        {
-            const pnl = panel(), shell = d.querySelector('#adr048-popup-shell'), body = d.querySelector('#adr048-popup-body');
-            const prio = (el, k) => el.style.getPropertyValue(k) + '|' + el.style.getPropertyPriority(k);
-            check(/^(transparent|rgba\(0, 0, 0, 0\))\|important$/.test(prio(pnl, 'background-color')) || /^transparent\|important$/.test(prio(pnl, 'background')), '浮窗打开时幕布是透明的，不给周围的聊天染色');
-            for (const pal of ['dusk', 'wine', 'sunset', 'pearl', 'celadon', 'morandi', 'skyrose']) {
-                e.extensionSettings[KEY].themePalette = pal; w.uiTest.adr048ApplyPanelTheme();
-                const bgp = prio(pnl, 'background') + prio(pnl, 'background-color');
-                const sb = shell.style.getPropertyValue('background') || shell.style.getPropertyValue('background-color');
-                check(/transparent|rgba\(0, 0, 0, 0\)/.test(bgp) && !/rgba\((?!0, 0, 0, 0)/.test(bgp), pal + '：换配色后幕布仍然透明');
-                check(!/rgba\(/.test(sb), pal + '：壳体底色不带透明度，背后的字印不上来（' + sb + '）');
-                check(shell.style.getPropertyValue('border-radius') === '30px', pal + '：壳体圆角 30px');
-            }
-            e.extensionSettings[KEY].themePalette = 'sunset'; w.uiTest.adr048ApplyPanelTheme();
-            const tabs = body.querySelector('.adr-top-tabs');
-            check(tabs.getAttribute('data-hx-stuck') !== '1', '浮窗刚打开：页签没有吸顶标记');
-            body.scrollTop = 120; body.dispatchEvent(new w.Event('scroll'));
-            check(tabs.getAttribute('data-hx-stuck') === '1', '正文滚下去：页签标上吸顶');
-            body.scrollTop = 0; body.dispatchEvent(new w.Event('scroll'));
-            check(tabs.getAttribute('data-hx-stuck') === '0', '滚回顶：吸顶标记摘掉');
-            let writes = 0; const origSet = tabs.setAttribute.bind(tabs); tabs.setAttribute = function (k, v) { if (k === 'data-hx-stuck') writes++; return origSet(k, v); };
-            for (let i = 1; i <= 20; i++) { body.scrollTop = 100 + i; body.dispatchEvent(new w.Event('scroll')); }
-            check(writes === 1, '连续滚动 20 次只在状态翻转时写一次标记（实际 ' + writes + ' 次）');
-            tabs.setAttribute = origSet; body.scrollTop = 0; body.dispatchEvent(new w.Event('scroll'));
-            d.dispatchEvent(new w.Event('scroll'));
-            check(tabs.getAttribute('data-hx-stuck') === '0', '别处的滚动事件不动页签的标记');
-        }
         check(e.requests() === 0, '全部 UI 操作没有发送 API 请求');
         console.log('\n通过 ' + passed + ' · 失败 0');
     } finally { e.close(); }

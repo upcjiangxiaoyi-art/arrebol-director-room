@@ -1,7 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.48.0｜ripple & GPT & Claude
- * v1.48.0 「云岫 · 留白」：浮窗周围的毛玻璃清掉（幕布不染色、不模糊，夜色壳体改实底）；浮窗重排——字标用高反差衬线、中文用细字重，总开关和页签不再套胶囊，收起的分节是目录式的一行，状态条是一道细霞线，台头一道水纹、小红珠几圈涟漪（提议 江「周围一圈毛玻璃清掉」「更有设计感一点，允许动 ui」；施工 Claude）
+ * Arrebol D 暗河红霞导演系统 v1.48.1｜ripple & GPT & Claude
+ * v1.48.1 撤回 v1.48.0：那一版在 iPhone 上一点浮标页面就卡死（报告 江）。代码整体退回 v1.47.1，只有版本号往前走；去毛玻璃和新版式等查清原因后分步重做（施工 Claude）
  * v1.47.1 「云岫」细处：对话气泡、蛐蛐小窗、楼里的剧场卡片、放大编辑框、滑杆顺一遍，小字的字距行距放松；修上一版带进来的夜色主题主按钮深字压深底、按钮折行、放大钮压字、吸顶页签上沿漏字（提议 江「包括 ui、文字排版、美感，仙气飘飘就好」；施工 Claude）
  * v1.47.0 浮窗换一层轻的皮「云岫」：标题与页签用宋体留字距、实边改淡边与淡出的细线、按钮收成细边胶囊、外壳加静态雾光；只改形不改色，七套配色照旧，不加模糊和动画（提议 江「改的仙气飘飘高级一点」；施工 Claude）
  * v1.46.1 改稿连带摘要与状态栏：正文改了，这一楼的摘要和状态栏也让她一起改、一起进预览、一起替换；状态栏按标签名认，可自己填（报告 江「霞改了原文，那摘要和状态栏也得改和替换」；施工 Claude）
@@ -119,7 +119,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.48.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.48.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -11457,9 +11457,7 @@
             adr048SetImportant(p, "width", "100vw");
             adr048SetImportant(p, "height", "100vh");
             adr048SetImportant(p, "z-index", "2147483646");
-            // v1.48.0：幕布不再遮盖聊天——不染色、不模糊，浮窗周围的楼照常看得见（江：「周围一圈毛玻璃清掉，正常就行」）。
-            // 幕布本身还在（点浮窗外面关闭靠它），只是透明。
-            adr048SetImportant(p, "background", "transparent");
+            adr048SetImportant(p, "background", "rgba(0,0,0,.25)");
 
             adr048SetImportant(shell, "display", "flex");
             adr048SetImportant(shell, "flex-direction", "column");
@@ -11477,11 +11475,11 @@
             adr048SetImportant(shell, "max-height", "calc(100vh - 128px)");
             adr048SetImportant(shell, "z-index", "2147483647");
             adr048SetImportant(shell, "overflow", "hidden");
-            adr048SetImportant(shell, "background", "rgb(42,52,67)"); // v1.48.0：幕布不再模糊，壳体留 2% 的透会让背后的字隐约印上来，改成实的
+            adr048SetImportant(shell, "background", "rgba(42,52,67,.98)");
             adr048SetImportant(shell, "color", "#f2f2f2");
             adr048SetImportant(shell, "border", "1px solid rgba(228,212,246,.16)");
-            adr048SetImportant(shell, "border-radius", "30px");
-            adr048SetImportant(shell, "box-shadow", "0 34px 70px -28px rgba(0,0,0,.72), 0 10px 26px -14px rgba(0,0,0,.46)");
+            adr048SetImportant(shell, "border-radius", "22px");
+            adr048SetImportant(shell, "box-shadow", "0 26px 70px rgba(5,3,20,.58), 0 0 0 1px rgba(183,157,220,.06)");
 
             if (body) {
                 adr048SetImportant(body, "display", "block");
@@ -11545,9 +11543,12 @@
             p.setAttribute("data-adr-palette", palette);
 
             if (p.getAttribute("data-open") === "1") {
-                // v1.48.0：幕布透明。v1.31.0–1.36.0 这里按配色给幕布染一层薄纱，再加样式表里的全屏模糊，
-                // 浮窗周围的聊天就被一圈毛玻璃盖住；现在两样都去掉，浮窗靠自己的投影浮在楼上面。
-                adr048SetImportant(p, "background", "transparent");
+                // v1.31.0：幕布随配色——天青用冷雾，其余浅色仍是粉霞那层薄纱。
+                // v1.35.0：烟粉用一层烟灰粉的薄纱；v1.36.0：晴空用一层淡藕紫。
+                var veil = palette === "celadon" ? "rgba(205,220,228,.42)"
+                    : (palette === "morandi" ? "rgba(214,192,196,.42)"
+                    : (palette === "skyrose" ? "rgba(226,214,234,.40)" : "rgba(228,207,224,.40)"));
+                adr048SetImportant(p, "background", dawn ? veil : (wine ? "rgba(58,7,31,.32)" : "rgba(0,0,0,.25)"));
             }
 
             var shell = d.querySelector("#adr048-popup-shell");
@@ -11555,15 +11556,14 @@
                 // v1.32.0：红霞是深色组第二员，壳体走自己的令牌；夜色那套内联值原样保留。
                 adr048SetImportant(shell, "background", (dawn || wine)
                     ? "var(--arb-surface)"
-                    : "rgb(42,52,67)");
+                    : "rgba(42,52,67,.98)");
                 adr048SetImportant(shell, "color", (dawn || wine) ? "var(--arb-ink)" : "#f2f2f2");
-                // v1.48.0：边收成一道细线；没有幕布垫着了，投影收拢、压深一点，浮窗才从楼上面浮得起来。
                 adr048SetImportant(shell, "border", dawn
-                    ? "1px solid rgba(255,255,255,.74)"
-                    : (wine ? "1px solid rgba(226,166,186,.18)" : "1px solid rgba(228,212,246,.14)"));
+                    ? "1px solid rgba(255,255,255,.92)"
+                    : (wine ? "1px solid rgba(226,166,186,.20)" : "1px solid rgba(228,212,246,.16)"));
                 adr048SetImportant(shell, "box-shadow", dawn
-                    ? "0 34px 70px -28px rgba(52,44,88,.52), 0 10px 26px -14px rgba(52,44,88,.30), 0 0 0 1px rgba(64,70,110,.07)"
-                    : (wine ? "0 34px 70px -28px rgba(20,2,10,.78), 0 10px 26px -14px rgba(20,2,10,.50)" : "0 34px 70px -28px rgba(0,0,0,.72), 0 10px 26px -14px rgba(0,0,0,.46)"));
+                    ? "0 26px 70px rgba(70,64,110,.26), 0 0 0 1px rgba(64,70,110,.10)"
+                    : (wine ? "0 26px 70px rgba(30,3,15,.62), 0 0 0 1px rgba(226,166,186,.08)" : "0 26px 70px rgba(5,3,20,.58), 0 0 0 1px rgba(183,157,220,.06)"));
             }
 
             var tg = d.querySelector("#adr048-theme-toggle");
@@ -11576,32 +11576,7 @@
         } catch (e) {}
     }
 
-    // v1.48.0：页签停在原位时是透明的一行字，滚到吸顶以后才垫一层纸底（不然下面的字会从字缝里透上来）。
-    // 样式表自己分不出「吸没吸住」，这里听一下浮窗正文的滚动：只读两个位置，状态翻转时才改一次 class，不在滚动里写样式。
-    function adr048SyncTabsStuck(body) {
-        try {
-            if (!body) return;
-            var tabs = body.querySelector(".adr-top-tabs");
-            if (!tabs) return;
-            var stuck = body.scrollTop > 0 && (tabs.getBoundingClientRect().top - body.getBoundingClientRect().top) <= 0.75;
-            if (stuck !== (tabs.getAttribute("data-hx-stuck") === "1")) tabs.setAttribute("data-hx-stuck", stuck ? "1" : "0");
-        } catch (e) {}
-    }
-    function adr048BindTabsStuck() {
-        try {
-            var d = rootDoc();
-            if (d.__adr048TabsStuckBound) return;
-            d.__adr048TabsStuckBound = true;
-            d.addEventListener("scroll", function (ev) {
-                var t = ev && ev.target;
-                if (t && t.id === "adr048-popup-body") adr048SyncTabsStuck(t);
-            }, { capture: true, passive: true });
-        } catch (e) {}
-    }
-    try { window.__adr048TabsStuckTest = { sync: adr048SyncTabsStuck }; } catch (e) {}
-
     function adr048BindPopupPanel() {
-        try { adr048BindTabsStuck(); } catch (eStuck) {}   // 包一层：这个函数有时被单独拎出去跑（test_theme.js），那时没有上面那两个
         try {
             var d = rootDoc();
 
