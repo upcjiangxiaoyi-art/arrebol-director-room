@@ -7662,3 +7662,223 @@ html #adr048-fab[data-lamp="out"].adr048-analyzing { overflow: visible !importan
     margin: 0 -11px 0 4px;
     box-shadow: 0 0 6px rgba(246, 150, 185, .95);
 }
+
+/* ============================================================
+   v1.47.0 「云岫」· 浮窗换一层轻的皮（江：「都改的仙气飘飘高级一点」）
+   只改形，不改色：七套配色的颜色变量原样用，这一层管的是边、角、字、留白。
+   · 标题、页签、分节标题用宋体并拉开字距；正文和输入框还是黑体，读着不累。
+   · 盒子套盒子的实边改成淡边；台头、页签、展开的分节底下是两头淡出的细线。
+   · 按钮收成细边胶囊；输入框聚焦时一圈柔光。
+   · 外壳上下各一团静态雾光。全是静态渐变：不加模糊、不加动画，手机不多烧一点。
+   · color-mix 只在支持的浏览器里用，老系统走上面的 rgba 兜底。
+   只管浮窗（手机上用的就是它）；酒馆扩展页里的内嵌抽屉不动。
+   ============================================================ */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] {
+    --hx-serif: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    --hx-hair: rgba(90, 100, 125, .16);
+    --hx-hair-soft: rgba(90, 100, 125, .09);
+    --hx-veil: rgba(255, 255, 255, .46);
+    --hx-veil-strong: rgba(255, 255, 255, .72);
+    --hx-glow: rgba(200, 150, 190, .26);
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-arb-theme] {
+    --hx-hair: rgba(255, 255, 255, .13);
+    --hx-hair-soft: rgba(255, 255, 255, .07);
+    --hx-veil: rgba(255, 255, 255, .045);
+    --hx-veil-strong: rgba(255, 255, 255, .10);
+    --hx-glow: rgba(210, 170, 230, .22);
+}
+@supports (color: color-mix(in srgb, red 10%, transparent)) {
+    html #adr048-popup-panel[data-arb-theme][data-arb-theme] { --hx-glow: color-mix(in srgb, var(--adr-deck-accent) 26%, transparent); }
+    html #adr048-popup-panel[data-arb-theme="dawn"][data-arb-theme] {
+        --hx-hair: color-mix(in srgb, var(--adr-deck-ink) 15%, transparent);
+        --hx-hair-soft: color-mix(in srgb, var(--adr-deck-ink) 8%, transparent);
+    }
+}
+
+/* 外壳：更圆、边更轻，上下各一团静态雾光 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-shell#adr048-popup-shell {
+    border-radius: 28px !important;
+    border: 1px solid var(--hx-veil-strong) !important;
+    box-shadow: 0 30px 70px -28px rgba(30, 22, 50, .55), 0 2px 0 rgba(255, 255, 255, .35) inset !important;
+    background-image:
+        radial-gradient(120% 46% at 12% -6%, var(--hx-veil-strong), transparent 62%),
+        radial-gradient(90% 40% at 96% 104%, var(--hx-glow), transparent 66%),
+        var(--adr-deck-card) !important;
+}
+
+/* 台头：不要那块实底，改成一条两头淡出的细线 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head {
+    background: transparent !important;
+    border-bottom: 0 !important;
+    box-shadow: none !important;
+    padding: 18px 16px 14px !important;
+    position: relative !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head::after {
+    content: ""; position: absolute; left: 16px; right: 16px; bottom: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--hx-hair) 18%, var(--hx-hair) 82%, transparent);
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head .adr048-title-d,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head .adr048-title {
+    font-family: var(--hx-serif) !important;
+    letter-spacing: .6px !important;
+    font-weight: 600 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head .adr048-title-cn {
+    font-family: var(--hx-serif) !important;
+    letter-spacing: 3px !important;
+    opacity: .82;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head #adr048-popup-sub { letter-spacing: .6px !important; opacity: .78; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-head#adr048-popup-head button {
+    background: var(--hx-veil) !important;
+    border: 1px solid var(--hx-hair) !important;
+    box-shadow: none !important;
+}
+
+/* 身子：留白多一点 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body {
+    background: transparent !important;
+    padding: 14px 14px 20px !important;
+}
+
+/* 总开关、顶上一行：收成轻一点的胶囊 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body #adr044-master-toggle,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane > .adr-lamp-topline {
+    background: var(--hx-veil) !important;
+    border: 1px solid var(--hx-hair-soft) !important;
+    border-radius: 999px !important;
+    box-shadow: none !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane > .adr-lamp-topline { padding: 7px 14px !important; }
+/* 顶上会有两三行的进度卡：圆角卡片，不做胶囊 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-pane > div:not(.adr-lamp-topline) {
+    border-radius: 18px !important;
+    border-color: var(--hx-hair-soft) !important;
+    box-shadow: none !important;
+}
+
+/* 页签：去掉厚底托，字用宋体拉开；选中的是一片薄云加一道小灯 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs {
+    /* 页签是吸顶的（position: sticky，别处定的，这里不碰）：滚下去以后下面的字不能透上来，所以给一层近乎不透明的薄底，
+       停在原位时它和外壳的底色几乎一样，看不出是个盒子 */
+    background: rgba(255, 255, 255, .97) !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 18px -16px rgba(40, 30, 70, .45) !important;
+    padding: 2px 4px 6px !important;
+    gap: 2px !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs {
+    background: var(--adr-deck-bg) !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs::after {
+    content: ""; position: absolute; left: 8px; right: 8px; bottom: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--hx-hair) 20%, var(--hx-hair) 80%, transparent);
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs.adr-top-tabs button {
+    font-family: var(--hx-serif) !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    letter-spacing: 2px !important;
+    padding: 8px 0 9px 2px !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 14px !important;
+    box-shadow: none !important;
+    color: var(--adr-deck-muted) !important;
+    -webkit-text-fill-color: var(--adr-deck-muted) !important;
+    position: relative !important;
+    overflow: visible !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs.adr-top-tabs button.active {
+    color: var(--adr-deck-ink) !important;
+    -webkit-text-fill-color: var(--adr-deck-ink) !important;
+    font-weight: 600 !important;
+    background: linear-gradient(180deg, transparent 10%, var(--hx-veil) 100%) !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs.adr-top-tabs button.active::after {
+    content: "" !important; position: absolute; left: 50%; bottom: -6px; width: 22px; height: 2px; margin-left: -11px; border-radius: 2px;
+    background: var(--adr-deck-accent);
+    box-shadow: 0 0 8px var(--hx-glow);
+}
+
+/* 抽屉：边更淡、角更圆，标题用宋体，展开后标题下是一条淡出的线 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer {
+    background: var(--hx-veil) !important;
+    border: 1px solid var(--hx-hair-soft) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 10px 26px -22px rgba(40, 30, 70, .5) !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer > summary {
+    font-family: var(--hx-serif) !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    letter-spacing: 1.8px !important;
+    padding: 11px 14px !important;
+    border-bottom: 0 !important;
+    background: transparent !important;
+    color: var(--adr-deck-ink) !important;
+    -webkit-text-fill-color: var(--adr-deck-ink) !important;
+    position: relative !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer[open] > summary::after {
+    content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 1px;
+    background: linear-gradient(90deg, var(--hx-hair), transparent 85%);
+}
+
+/* 按钮：细边胶囊 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body button:not(.adrx-expand):not([id^="adr044-tab-"]):not(#adr044-master-toggle):not([id^="adr044-lamp-mode-"]) {
+    border-radius: 999px !important;
+    border: 1px solid var(--hx-hair) !important;
+    background: linear-gradient(180deg, var(--hx-veil-strong), var(--hx-veil)) !important;
+    box-shadow: none !important;
+    letter-spacing: 1px !important;
+    font-weight: 500 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body button:not(.adrx-expand):not([id^="adr044-tab-"]):disabled { opacity: .45 !important; }
+
+/* 输入框：边淡、角圆，聚焦时一圈柔光 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="text"],
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="password"],
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="number"],
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body select,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body textarea {
+    border-radius: 14px !important;
+    border: 1px solid var(--hx-hair) !important;
+    background-color: var(--hx-veil) !important;
+    box-shadow: none !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input:focus,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body select:focus,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body textarea:focus {
+    border-color: var(--adr-deck-accent) !important;
+    box-shadow: 0 0 0 3px var(--hx-glow) !important;
+    outline: none !important;
+}
+
+/* 说明文字：行距松一点 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr048-note,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr044-template-status { line-height: 1.8 !important; letter-spacing: .3px !important; }
+
+/* 掌灯：改稿 / 蛐蛐 两枚——一条细边轨道，选中的那枚是一片薄云 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-modes.adr-lamp-modes {
+    background: transparent !important; border: 1px solid var(--hx-hair-soft) !important; border-radius: 999px !important; padding: 3px !important; box-shadow: none !important; gap: 2px !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-modes.adr-lamp-modes.adr-lamp-modes button {
+    border: 0 !important; border-radius: 999px !important; background: transparent !important; box-shadow: none !important;
+    font-family: var(--hx-serif) !important; letter-spacing: 2px !important; font-weight: 500 !important;
+    color: var(--adr-deck-muted) !important; -webkit-text-fill-color: var(--adr-deck-muted) !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-modes.adr-lamp-modes.adr-lamp-modes button.active {
+    background: var(--hx-veil-strong) !important; box-shadow: 0 6px 16px -10px rgba(40, 30, 70, .55) !important; font-weight: 600 !important;
+    color: var(--adr-deck-ink) !important; -webkit-text-fill-color: var(--adr-deck-ink) !important;
+}
+/* 会折成两行的信息条不做胶囊 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body #adr044-lamp-mat-title,
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-mat {
+    border-radius: 14px !important; border: 1px solid var(--hx-hair-soft) !important; background: var(--hx-veil) !important; box-shadow: none !important;
+}
+/* 对话气泡：边淡一点 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-thread { border-radius: 18px !important; border: 1px solid var(--hx-hair-soft) !important; background: var(--hx-veil) !important; box-shadow: none !important; }
