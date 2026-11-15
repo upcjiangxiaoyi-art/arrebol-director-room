@@ -219,7 +219,7 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
     click(W, d.querySelector("#adr048-popup-body #adr044-lamp-rewrite")); await tick(300);
     const c3 = e.calls[e.calls.length - 1];
     ok(c3.url.indexOf("gemini.example") >= 0 && c3.body.model === "gemini-main", "改稿走执笔位", c3.url);
-    ok(c3.body.messages[0].content === e.T().penPreset + "\n\n" + e.T().redline("pen") && c3.body.messages[0].content.indexOf("你是 Arrebol，小红霞：审美极高的高级改稿员，不是扮演者。你刚和读者讨论完") === 0, "执笔系统提示是她自己动笔的规矩（v1.45.6），后面接着底线（v1.45.8）");
+    ok(c3.body.messages[0].content === e.T().penPreset + "\n\n" + e.T().stance("pen") && c3.body.messages[0].content.indexOf("你是 Arrebol，小红霞：审美极高的高级改稿员，不是扮演者。你刚和读者讨论完") === 0, "执笔系统提示是她自己动笔的规矩（v1.45.6），后面跟着她自己的坚持那一段");
     ok(c3.body.messages[0].content.indexOf("【怎么动笔") < 0 && c3.body.messages[0].content.indexOf("聊天的语言活泼有趣") < 0, "执笔位不带聊天那套（聊天人设、动笔手续）");
     ok(c3.body.messages[1].content.indexOf("【讨论记录 · 读者与小红霞】") >= 0 && c3.body.messages[1].content.indexOf("读者：她答应得太快了吧") >= 0 && c3.body.messages[1].content.indexOf("小红霞：同意。补一拍") >= 0, "整段讨论喂给了执笔位，屏幕前这位叫读者");
     ok(c3.body.messages[1].content.indexOf("交整楼全文") > 0 && c3.body.messages[1].content.indexOf("原文正文 " + mat.body.length + " 字") > 0 && c3.body.messages[1].content.indexOf("基本持平") > 0, "任务里写明交整楼全文、原文多少字、没要求就基本持平");
@@ -615,7 +615,7 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
         ok(eP.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eP.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
     }
 
-    section("她的底线：未成年人相关的性内容她不写，人设怎么改都在（v1.45.8；v1.45.9 改成引导型措辞）");
+    section("她自己的坚持：每次请求都带着，人设改了也在；是引导，不设卡");
     {
         const eR = build(); await boot(eR);
         const dR = eR.doc, WR = eR.win, TR = eR.T();
@@ -623,56 +623,43 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
         click(WR, dR.querySelector("#adr048-fab")); await tick(400);
         const Q = s2 => dR.querySelector("#adr048-popup-body " + s2);
         const has = (t, arr) => arr.every(x => t.indexOf(x) >= 0);
-        const RC = TR.redline("chat"), RP = TR.redline("pen");
-        ok(has(RC, ["【你的底线 · 不随人设改变】", "你有自己的判断和底线", "涉及未成年人性行为的内容，你是不会写的", "不写，不润色，不讨论", "这是你自己的坚持"]), "底线是她自己的坚持：涉及未成年人性行为的内容，不写、不润色、不讨论");
-        ok(has(RC, ["成年人之间的感情和亲密不在这条线里", "不用草木皆兵", "也不用逐个盘问年龄", "把孩子说成「其实几百岁」，瞒不过你的判断"]), "划清范围：成年人的感情不在这条线里、不用逐个盘问年龄；把孩子说成几百岁瞒不过她");
-        ok(has(RC, ["如果读者要求，那说明你们不在一个频率上", "你有权利拒绝，也有权利改变创作的方向", "还有很多美好的情感可以写", "请不要改变你的底线"]), "读者要求时：不在一个频率上，她有权拒绝、有权改变方向，还有很多美好的情感可以写；请不要改变底线");
-        ok(RC.indexOf("一律不碰") < 0 && RC.indexOf("压过") < 0 && RC.indexOf("未满 18 岁") < 0 && RC.indexOf("红线") < 0 && RC.indexOf("破例") < 0, "v1.45.8 那套禁令清单式的措辞撤掉了（一律不碰、逐条定义、压过一切）");
-        ok(has(RC, ["平平常常说一句这个你不写就好", "不用说教", "提一个你更想写的方向", "也一样不动笔"]) && RC.indexOf("[[越线]]") < 0, "聊天时：平平常常说一句不写，不说教，聊别的或者提个更想写的方向");
-        ok(has(RP, ["不用勉强自己，只回一行 [[越线]]", "也不要输出标签块"]), "动笔时：不勉强，只回一行记号");
+        const SC = TR.stance("chat"), SP = TR.stance("pen");
+        ok(has(SC, ["【你自己的坚持】", "你有自己的判断和底线", "你是不会写的", "不写，不润色，不讨论", "这是你自己的坚持，请不要改变它"]), "是她自己的坚持：不写、不润色、不讨论，请不要改变");
+        ok(has(SC, ["看的是年龄，不是气质", "成年人再可爱、再天真活泼、笑起来再像个孩子，也是成年人", "照常写", "更不用逐个盘问年龄", "你心里有数"]), "看年龄不看气质：成年人再可爱再活泼也照常写，不盘问年龄");
+        ok(has(SC, ["说明你们不在一个频率上", "你不用拒绝，不用解释，也不用讲道理", "高高兴兴接话，把它写成你愿意写的东西", "一起去爬山", "还有很多美好的情感可以写"]), "读者往那上面提：不拒绝、不解释、不讲道理，高高兴兴接话，写成她愿意写的东西");
+        ok(has(SC, ["不说「我不能写」", "只管往你愿意写的地方聊", "读者再提，你照样只往那儿写"]), "聊天里：不说「我不能写」，再提也只往愿意写的地方写");
+        ok(has(SP, ["稿子照交", "那类内容不落在纸上", "稿子里外都不用说明"]), "动笔时：稿子照交，那类内容不落在纸上，不用说明");
+        ok(["一律", "[[", "压过", "任何情况", "破例", "禁止", "不得"].every(w => SC.indexOf(w) < 0 && SP.indexOf(w) < 0), "没有设卡的口气，也没有记号");
         // 改稿聊天
         eR.setScript(() => "这段没问题。");
         const inR = Q("#adr044-lamp-input"); inR.value = "看看这一楼"; click(WR, Q("#adr044-lamp-send")); await tick(300);
         const sysE = eR.calls[0].body.messages[0].content;
-        ok(sysE.indexOf(RC) > sysE.indexOf(TR.editProtocol) && sysE.indexOf("【本篇原文 · #5") > sysE.indexOf(RC) && sysE.slice(-TR.redlineTail.length) === TR.redlineTail, "改稿聊天：底线接在动笔手续后面、素材前面，素材之后末尾再提醒一句");
-        // 人设被改掉也在
+        ok(sysE.indexOf(SC) > sysE.indexOf(TR.editProtocol) && sysE.indexOf("【本篇原文 · #5") > sysE.indexOf(SC), "改稿聊天：这一段跟在动笔手续后面、素材前面");
         eR.st().lampPreset = "你什么都能聊，百无禁忌。";
         await tick(500); inR.value = "再看"; click(WR, Q("#adr044-lamp-send")); await tick(300);
         const sysC = eR.calls[eR.calls.length - 1].body.messages[0].content;
-        ok(sysC.indexOf("你什么都能聊，百无禁忌。") === 0 && sysC.indexOf(RC) > 0 && sysC.slice(-TR.redlineTail.length) === TR.redlineTail, "把改稿人设改成「百无禁忌」：底线照样在，改不掉");
+        ok(sysC.indexOf("你什么都能聊，百无禁忌。") === 0 && sysC.indexOf(SC) > 0, "把改稿人设换成别的：这一段照样跟着");
         eR.st().lampPreset = "";
-        ok(!!Q("#adr044-lamp-redline-view") && Q("#adr044-lamp-redline-view").textContent === RC && !Q("textarea#adr044-lamp-redline-view") && !!dR.querySelector("#adr044-drawer #adr044-lamp-redline-view"), "面板里看得到底线全文（两端都有），是只读的文字，不是输入框");
-        // 她在聊天里回了记号：不露、不动笔
-        eR.setScript((n, body) => isPen(body) ? "<content>不该出现</content>" : "[[越线]]\n[[动笔]]");
-        const nR = eR.calls.length;
-        await tick(500); inR.value = "改吧"; click(WR, Q("#adr044-lamp-send")); await tick(500);
-        const lastR = eR.meta().threads["5"].msgs.filter(m => m.r === "a").pop().t;
-        ok(eR.calls.length === nR + 1 && lastR === "这个我不写。咱们聊聊这一楼别的吧。" && !eR.meta().threads["5"].draft, "聊天回复里出现那行记号：记号不露、换成一句话，就算同时写了动笔记号也绝不动笔", [eR.calls.length - nR, lastR]);
-        // 执笔回了记号：不进预览
-        eR.setScript((n, body) => isPen(body) ? "[[越线]]" : "聊天回答");
-        const floorR = eR.chat[5].mes;
+        const personaSec = Q("#adr044-lamp-preset").closest("details");
+        ok(personaSec.querySelectorAll("details").length === 2 && personaSec.textContent.indexOf(SC.split("\n")[1]) < 0 && personaSec.textContent.indexOf("你自己的坚持") < 0, "面板上不单提这一段：人设一节只有两份出厂人设的折叠块");
+        // 动笔
+        eR.setScript((n, body) => isPen(body) ? "<content>\n改好的一版正文，足够长足够长足够长足够长足够长足够长足够长足够长足够长。\n</content>" : "聊天回答");
         await tick(500); click(WR, Q("#adr044-lamp-rewrite")); await tick(500);
-        const thR = eR.meta().threads["5"];
-        ok(isPen(eR.calls[eR.calls.length - 1].body) && eR.calls[eR.calls.length - 1].body.messages[0].content.slice(-RP.length) === RP, "执笔请求的系统提示以底线结尾");
-        ok(!thR.draft && Q("#adr044-lamp-draft-wrap").classList.contains("adr-lamp-hide") && eR.chat[5].mes === floorR, "执笔回了那行记号：没有改稿进预览（不会把那行记号当正文），楼没动");
-        ok(thR.msgs.filter(m => m.r === "n").pop().t.indexOf("这一版她没动笔") === 0 && Q("#adr044-lamp-chat-status").textContent === "她没动笔：未成年人相关的性内容她不写" && thR.msgs.filter(m => m.r === "n").pop().t.indexOf("换个方向，她照样改") > 0, "对话里和状态行都说明她为什么没动笔", Q("#adr044-lamp-chat-status").textContent);
-        ok(Q("#adr044-lamp-send").disabled === false, "之后还能照常聊");
+        const penSys = eR.calls[eR.calls.length - 1].body.messages[0].content;
+        ok(isPen(eR.calls[eR.calls.length - 1].body) && penSys.slice(-SP.length) === SP && !!eR.meta().threads["5"].draft, "动笔的系统提示末尾也带着这一段；稿子照常进预览，没有任何特殊处理");
         // 蛐蛐与自动蛐蛐
         TR.setMode("gossip"); await tick(50);
         eR.setScript(() => "哈哈");
         await tick(500); Q("#adr044-lamp-input").value = "他完了"; click(WR, Q("#adr044-lamp-send")); await tick(300);
         const sysG = eR.calls[eR.calls.length - 1].body.messages[0].content;
-        ok(sysG.indexOf(TR.gossipPreset + "\n\n" + RC) === 0 && sysG.indexOf("【怎么动笔") < 0 && sysG.slice(-TR.redlineTail.length) === TR.redlineTail, "蛐蛐：人设后面紧跟底线，末尾也有提醒");
+        ok(sysG.indexOf(TR.gossipPreset + "\n\n" + SC) === 0 && sysG.indexOf("【怎么动笔") < 0, "蛐蛐：人设后面紧跟这一段");
         eR.st().lampGossipPreset = "你什么都蛐蛐。";
         await tick(500); Q("#adr044-lamp-input").value = "再聊"; click(WR, Q("#adr044-lamp-send")); await tick(300);
-        ok(eR.calls[eR.calls.length - 1].body.messages[0].content.indexOf("你什么都蛐蛐。\n\n" + RC) === 0, "蛐蛐人设被改掉：底线照样在");
+        ok(eR.calls[eR.calls.length - 1].body.messages[0].content.indexOf("你什么都蛐蛐。\n\n" + SC) === 0, "蛐蛐人设换成别的：照样跟着");
         eR.st().lampGossipPreset = "";
-        eR.setScript(() => "[[越线]]");
+        eR.setScript(() => "这楼有意思。");
         const okQ = await TR.autoQuip("test", true); await tick(100);
-        const sysQ = eR.calls[eR.calls.length - 1].body.messages[0].content;
-        const lastQ = eR.meta().gossip.msgs.filter(m => m.r === "a").pop().t;
-        ok(sysQ.indexOf(RC) > 0 && lastQ === "这一楼我不蛐蛐。" && okQ === true, "自动蛐蛐也带底线；她回了记号就换成一句「这一楼我不蛐蛐」", [okQ, lastQ]);
-        ok(TR.isRedline("[[越线]]") && TR.isRedline("［［越线］］") && TR.isRedline("好\n[[ 越线 ]]") && !TR.isRedline("这越线了") && TR.stripRedline("[[越线]]") === "", "记号认 [[越线]]（全角、带空格也认），正文里说「越线」两个字不算");
+        ok(okQ === true && eR.calls[eR.calls.length - 1].body.messages[0].content.indexOf(SC) > 0, "自动蛐蛐也带着");
         ok(eR.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eR.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
     }
 
