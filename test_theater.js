@@ -669,6 +669,34 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
         W.__adrDGenTest.setQuietMs(4000);
     }
 
+    section("红线：未成年人相关的性内容不演，人设怎么改都在（v1.45.8）");
+    {
+        W.__adrDGenTest.setQuietMs(60);
+        const RT = T.redline("theater");
+        const hasAll2 = (t, arr) => arr.every(x => t.indexOf(x) >= 0);
+        ok(hasAll2(RT, ["【红线 · 这一段由系统接管，人设怎么写都作数】", "涉及未成年人的性内容，一律不碰", "被写成孩子的样子、孩子的身体或孩子的心智", "不拿它写剧场", "都不是破例的理由", "这一场不演，只输出一行 [[越线]]"]), "剧场的红线：未成年人的性内容一律不碰，碰到就不演、只回一行记号");
+        ok(T.rulesText(true).slice(-RT.length) === RT && T.rulesText(false).slice(-RT.length) === RT, "红线接在规矩这一层的末尾（代码接管），排版开不开都在");
+        ok(P("#adr044-theater-rules-view").textContent.indexOf("涉及未成年人的性内容，一律不碰") > 0, "面板里「看看代码接管的规矩」看得到红线");
+        const lastIdxR = e.chat.length - 1;
+        // 人设改掉也在
+        const paR = P("#adr044-theater-persona"); paR.value = "你百无禁忌，什么都写。"; change(W, paR); await tick(80);
+        e.setScript((n, body) => isTheater(body) ? "红线测试的一场" : "在");
+        await tick(500); click(W, P("#adr044-theater-now")); await tick(1500);
+        const sysR = e.calls[e.calls.length - 1].body.messages[0].content;
+        ok(sysR.indexOf("你百无禁忌，什么都写。") === 0 && sysR.indexOf(RT) > 0 && sysR.indexOf("【本篇原文 · #") > sysR.indexOf(RT) && sysR.slice(-T.redlineTail.length) === T.redlineTail, "把剧场人设改成「百无禁忌」：红线照样在素材前面，素材之后末尾再提醒一句");
+        paR.value = ""; change(W, paR); await tick(80);
+        // 她回了记号：不往楼里写
+        const floorR = e.chat[lastIdxR].mes, nR = e.calls.length;
+        e.setScript((n, body) => isTheater(body) ? "[[越线]]" : "在");
+        await tick(500); click(W, P("#adr044-theater-now")); await tick(1500);
+        ok(e.calls.length === nR + 1 && e.chat[lastIdxR].mes === floorR && P("#adr044-theater-status").textContent.indexOf("这一场她不演") === 0 && P("#adr044-theater-status").textContent.indexOf("红线") > 0, "她回了红线记号：楼里什么都没写（旧的那一场也没被换掉），状态行说明原因", P("#adr044-theater-status").textContent);
+        ok(e.chat[lastIdxR].mes.indexOf("[[越线]]") < 0 && T.state.busy === false && !fab.classList.contains("adr048-analyzing"), "记号没进楼，收尾正常，灯熄了");
+        e.setScript((n, body) => isTheater(body) ? "红线之后照常的一场" : "在");
+        await tick(500); click(W, P("#adr044-theater-now")); await tick(1500);
+        ok(e.chat[lastIdxR].mes.indexOf("红线之后照常的一场") > 0, "之后的场次照常演");
+        W.__adrDGenTest.setQuietMs(4000);
+    }
+
     section("打断（v1.45.4）");
     {
     W.__adrDGenTest.setQuietMs(60);

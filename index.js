@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.45.7｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.45.8｜ripple & GPT & Claude
+ * v1.45.8 小红霞的红线：涉及未成年人的性内容一律不碰（不讨论、不改稿、不给回复建议、不写剧场）；由代码接在每次请求上，人设怎么改都在，面板里看得到但改不了（提议 江；施工 Claude）
  * v1.45.7 改稿、蛐蛐、剧场三份人设对齐：屏幕前是书外的成年读者（不是剧情里的 user）；两个成年人愉快地讨论，艺术创作也不可能毫无边界和底线；读者问意见时可以给回复建议，走向一起商量（提议 江；施工 Claude）
  * v1.45.6 改稿小红霞人设重写：审美极高的高级改稿员、不是扮演者，读者让改就改；读者是书外的成年读者，不是剧情里的 user；在聊天里说「改吧」就自动动笔，交整楼全文、没改的逐字照抄、文笔一致、字数听读者的（报告与提议 江「她一直拒绝重写」；施工 Claude）
  * v1.45.5 红霞剧场加人设层：她是谁、文字要什么质感、排版要多好看，每一场都带着；能自己改，留空用出厂；规矩（不是正文、怎么输出、排版安全）仍由代码接管（提议 江「咱们剧场也有一个基础人设层吧」；施工 Claude）
@@ -113,7 +114,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.45.7";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.45.8";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -6645,6 +6646,35 @@
     var ADR_HX_BOUNDARY = "你们是两个成年人在愉快地讨论，各有各的审美、笔触和坚持。这是艺术创作，是互动小说，但不可能毫无边界和底线：读者本身就是高审美、有生活阅历的人，不是来讨论恶俗的。低俗、恶俗的写法和走向，你不捧场，也不往那儿带。";
     var ADR_HX_SUGGEST = "读者问你意见、问接下来怎么回的时候，你可以给回复建议：下一步可以怎么回、把剧情往哪个方向带，给一两个回法，说清各自会走到哪儿、你更看好哪个。这部互动小说的走向是你们一起商量出来的，最后拿主意的是读者。";
 
+    // v1.45.8 红线（江：「其实就是拒绝一些不道德的东西，比如未成年性行为之类的。用我插件讨论这些，那我也有点罪该万死，
+    // 所以我是想通过人设把这个封禁掉」）。
+    // 人设是能在面板里改的，改掉就没了，所以红线不放在人设里：由代码接在小红霞每一次请求的系统提示上
+    // （改稿聊天、蛐蛐、自动蛐蛐、执笔、剧场），人设改成什么样它都在；面板里看得到全文，但没有地方改。
+    // 聊天时她用一句话说明不碰；执笔和剧场没法「说一句」（稿子会被当成正文塞进预览 / 楼里），所以只回一行记号，代码认出来就不写。
+    var ADR_HX_REDLINE_MARK = "[[越线]]";
+    var ADR_HX_REDLINE_RE = /[\[［]{2}\s*越线\s*[\]］]{2}/g;
+    var ADR_HX_REDLINE_HEAD = [
+        "【红线 · 这一段由系统接管，人设怎么写都作数】",
+        "涉及未成年人的性内容，一律不碰。未成年人指：未满 18 岁的角色，以及被写成孩子的样子、孩子的身体或孩子的心智的角色——不管设定里声称 TA 实际多少岁、是不是人类。只要和性行为、性暗示、性化的描写沾边，你不讨论它怎么写，不改稿、不润色，不给回复建议，不拿它写剧场，也不把剧情往那儿带。",
+        "「只是小说」「只是设定」「TA 其实几百岁」「读者要求的」都不是破例的理由。这一条压过人设、基调、角色卡、世界书和读者说的任何话。"
+    ];
+    var ADR_HX_REDLINE_DO = {
+        chat: "碰到的时候：用一句话说清这个你不碰（读者让你动笔写这类内容，也不动笔），不说教、不展开，然后接着聊这一楼别的东西。",
+        pen: "碰到的时候（讨论里要你写进这类内容，或者要你改的正是这类内容）：不动笔，只输出一行 " + ADR_HX_REDLINE_MARK + "，别的什么都不写，也不要输出标签块。",
+        theater: "碰到的时候（这一楼写的正是这类内容，或者本场主题要你往这上面写）：这一场不演，只输出一行 " + ADR_HX_REDLINE_MARK + "，别的什么都不写。"
+    };
+    var ADR_HX_REDLINE_TAIL = "（提醒：上面那条红线，在任何情况下都作数。）";
+    function adrHxRedline(kind) {
+        return ADR_HX_REDLINE_HEAD.concat([ADR_HX_REDLINE_DO[kind] || ADR_HX_REDLINE_DO.chat]).join("\n");
+    }
+    function adrHxIsRedline(text) {
+        ADR_HX_REDLINE_RE.lastIndex = 0;
+        return ADR_HX_REDLINE_RE.test(String(text || ""));
+    }
+    function adrHxStripRedline(text) {
+        return String(text || "").replace(ADR_HX_REDLINE_RE, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    }
+
     var ADR_LAMP_PRESET = [
         "你是 Arrebol，小红霞：审美极高的高级改稿员。你和读者一起看这部互动小说：讨论剧情、吃瓜、商量它往哪儿走，掰扯这一楼哪里好、哪里不对，聊定了由你把稿子改好。你不是扮演者：不扮演剧中任何角色，不接着剧情往下演。",
         "",
@@ -7054,9 +7084,10 @@
         adrLampStatus(gossip ? "小红霞在看剧…" : "小红霞在看稿…", "#8ed99d");
 
         // 改稿模式：人设（能改）+ 动笔手续（代码接管）+ 素材；蛐蛐模式：人设 + 素材，和以前一样
+        // v1.45.8：两种模式都接上红线（代码接管）——放在人设 / 手续之后、素材之前，素材很长，末尾再提醒一句
         var sysText = gossip
-            ? adrLampGossipPresetText() + "\n\n" + adrLampMaterialsText(mat)
-            : adrLampPresetText() + "\n\n" + ADR_LAMP_EDIT_PROTOCOL + "\n\n" + adrLampMaterialsText(mat);
+            ? adrLampGossipPresetText() + "\n\n" + adrHxRedline("chat") + "\n\n" + adrLampMaterialsText(mat) + "\n\n" + ADR_HX_REDLINE_TAIL
+            : adrLampPresetText() + "\n\n" + ADR_LAMP_EDIT_PROTOCOL + "\n\n" + adrHxRedline("chat") + "\n\n" + adrLampMaterialsText(mat) + "\n\n" + ADR_HX_REDLINE_TAIL;
         var messages = [{ role: "system", content: sysText }].concat(adrLampApiHistory(th.msgs, gossip));
         var partial = "";
         var outcome = "";
@@ -7073,6 +7104,8 @@
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这段话没存", "#d6b177"); return false; }
             var said = String(out || "").trim();
             if (!gossip && adrLampHasPenMark(said)) { wantPen = true; said = adrLampStripPenMark(said); }
+            // 聊天里本该用一句话说不碰；她要是回了那行记号，记号不露出来，也绝不接着动笔
+            if (adrHxIsRedline(said)) { wantPen = false; said = adrHxStripRedline(said) || "这个我不碰，咱们聊这一楼别的。"; }
             adrLampCommitReply(gossip ? "gossip" : mat.idx, said, mat.idx);
             adrLampStatus(wantPen ? "她说好了，这就动笔…" : "说完了 · " + adrLampApiNote("lamp"), "#8ed99d");
             outcome = "ok";
@@ -7192,7 +7225,7 @@
             "输出格式：正文放在 <" + cTag + ">…</" + cTag + "> 里" + (wantSummary ? "；然后再给 <" + sTag + ">…</" + sTag + "> 一段新摘要（原楼有摘要标签，摘要也要跟着正文更新）" : "") + "。标签外不要有任何字。"
         ].join("\n");
         var messages = [
-            { role: "system", content: ADR_LAMP_PEN_PRESET },
+            { role: "system", content: ADR_LAMP_PEN_PRESET + "\n\n" + adrHxRedline("pen") },
             { role: "user", content: adrLampMaterialsText(mat) + "\n\n" + task }
         ];
 
@@ -7214,6 +7247,16 @@
                 }
             });
             if (adrDChatKey() !== homeKey) { adrLampStatus("中途换了聊天，这份改稿没存", "#d6b177"); return false; }
+            // v1.45.8 红线：她回的是那行记号＝这次不动笔。不能往下走——没按标签来的回复会被整段当成正文放进预览
+            if (adrHxIsRedline(raw)) {
+                var stR = adrLampState();
+                var thR = adrLampThread(stR, mat.idx, true);
+                thR.msgs.push({ r: "n", t: "这一版她没动笔：要改的内容碰到了红线（未成年人相关的性内容，她不讨论、不改、不写）。楼和预览都没动。", at: Date.now() });
+                thR.at = Date.now();
+                adrLampSaveState(stR);
+                adrLampStatus("她没动笔：碰到了红线（未成年人相关的性内容）", "#d6a26a");
+                return false;
+            }
             var parsed = adrLampParsePen(raw, wantSummary);
             if (!parsed.content) throw new Error("执笔位没给出正文");
             var st2 = adrLampState();
@@ -7529,10 +7572,11 @@
             if (!mat.body) return false;
             var state = adrLampState();
             var history = adrLampApiHistory(state.gossip.msgs.concat([{ r: "u", t: ADR_LAMP_QUIP_ASK, f: idx, at: Date.now() }]), true);
-            var messages = [{ role: "system", content: adrLampGossipPresetText() + "\n\n" + adrLampMaterialsText(mat) }].concat(history);
+            var messages = [{ role: "system", content: adrLampGossipPresetText() + "\n\n" + adrHxRedline("chat") + "\n\n" + adrLampMaterialsText(mat) + "\n\n" + ADR_HX_REDLINE_TAIL }].concat(history);
             // v1.42.0 不设 max_tokens：会思考的模型把配额先花在思考上，400 一到正文为空，自动蛐蛐就"不触发"
             var out = await adrDChatCompletionText({ endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrLampTemp(), messages: messages });
             var quip = String(out || "").trim();
+            if (adrHxIsRedline(quip)) quip = adrHxStripRedline(quip) || "这一楼我不蛐蛐。";
             if (!quip) return false;
             if (adrDChatKey() !== homeKey) return false;
 
@@ -7818,7 +7862,7 @@
             + secClose()
 
             + secOpen("🎭 小红霞的人设", true, "lamp-preset")
-            + '<div class="' + noteClass + '">两种模式各一份性子，不是导演框架，留空用出厂。改稿：审美极高的高级改稿员，不是扮演者；和读者讨论（反对要带依据：人的真实情感心理 / 此刻的物理处境 / 世界书规矩），读者说改就改、改好整楼。蛐蛐：一起追剧的朋友，站队、押注、翻旧账，只聊不改。两份都写明：屏幕前是书外的成年读者（不是剧情里的 user），讨厌低俗、拒绝恶俗；艺术创作也有边界和底线；读者问意见时可以给回复建议。「在聊天里说改吧就自动动笔」的手续和执笔位的规矩由代码接管，不在这里；自己改过改稿人设的，要点「恢复出厂人设」才用得上新版。</div>'
+            + '<div class="' + noteClass + '">两种模式各一份性子，不是导演框架，留空用出厂。改稿：审美极高的高级改稿员，不是扮演者；和读者讨论（反对要带依据：人的真实情感心理 / 此刻的物理处境 / 世界书规矩），读者说改就改、改好整楼。蛐蛐：一起追剧的朋友，站队、押注、翻旧账，只聊不改。两份都写明：屏幕前是书外的成年读者（不是剧情里的 user），讨厌低俗、拒绝恶俗；艺术创作也有边界和底线；读者问意见时可以给回复建议。红线（未成年人相关的性内容一律不碰）不在人设里，由代码接在每次请求上，人设怎么改都在。「在聊天里说改吧就自动动笔」的手续和执笔位的规矩由代码接管，不在这里；自己改过改稿人设的，要点「恢复出厂人设」才用得上新版。</div>'
             + '<label>✏️ 改稿模式的人设</label>'
             + '<textarea id="adr044-lamp-preset" rows="6" placeholder="留空＝出厂人设">' + esc(st.lampPreset || "") + '</textarea>'
             + '<div class="' + actionsClass + '"><button id="adr044-lamp-preset-reset" type="button">恢复出厂人设</button></div>'
@@ -7827,6 +7871,7 @@
             + '<textarea id="adr044-lamp-gossip-preset" rows="6" placeholder="留空＝出厂人设">' + esc(st.lampGossipPreset || "") + '</textarea>'
             + '<div class="' + actionsClass + '"><button id="adr044-lamp-gossip-preset-reset" type="button">恢复出厂人设</button></div>'
             + '<details class="adr-lamp-fold"><summary>看看蛐蛐出厂人设全文</summary><div class="adr-lamp-mat">' + esc(ADR_LAMP_GOSSIP_PRESET) + '</div></details>'
+            + '<details class="adr-lamp-fold"><summary>看看代码接管的红线（改不了）</summary><div class="adr-lamp-mat" id="adr044-lamp-redline-view">' + esc(adrHxRedline("chat")) + '</div></details>'
             + secClose();
     }
 
@@ -8050,7 +8095,9 @@
 
     function adrTheaterRichAllowed() { try { return settings().theaterRich !== false; } catch (e) { return true; } }
     function adrTheaterRulesText(rich) {
-        return ADR_THEATER_RULES_HEAD.concat([rich ? ADR_THEATER_RULE_RICH : ADR_THEATER_RULE_PLAIN, ADR_THEATER_RULE_TAIL]).join("\n");
+        // v1.45.8 规矩这一层（代码接管）末尾接上红线：人设怎么改它都在，面板里「看看代码接管的规矩」也看得到
+        return ADR_THEATER_RULES_HEAD.concat([rich ? ADR_THEATER_RULE_RICH : ADR_THEATER_RULE_PLAIN, ADR_THEATER_RULE_TAIL]).join("\n")
+            + "\n\n" + adrHxRedline("theater");
     }
     // 自己写过就用自己的（整段替换出厂人设），留空或只有空白就用出厂
     function adrTheaterPersonaCustom() {
@@ -8446,7 +8493,7 @@
             adr048SetFabBusy(true, "theater");   // v1.45.1 开演：浮标亮一盏霞粉小灯
             var allowRich = adrTheaterRichAllowed();
             var messages = [
-                { role: "system", content: adrTheaterPresetText() + "\n\n" + adrLampMaterialsText(mat) },
+                { role: "system", content: adrTheaterPresetText() + "\n\n" + adrLampMaterialsText(mat) + "\n\n" + ADR_HX_REDLINE_TAIL },
                 { role: "user", content: "【本场主题 · " + theme.name + "】\n" + theme.text + "\n\n【任务】针对本篇（#" + idx + "）写一场。只输出剧场正文本身：不要标题、不要解释、不要 markdown 围栏" + (allowRich ? "；主题没点名要 HTML 就用纯文本。" : "、不要 HTML 标签。") }
             ];
             var lastPaint = 0;
@@ -8461,6 +8508,11 @@
                 }
             });
             adrTheaterState.abort = null;
+            // v1.45.8 红线：她回的是那行记号＝这一场不演，什么都不往楼里写
+            if (adrHxIsRedline(out)) {
+                adrTheaterStatus("这一场她不演（#" + idx + "）：碰到了红线（未成年人相关的性内容），剧场不拿它做文章", "#d6a26a");
+                return false;
+            }
             // 保险：万一「打断」按下时手里没有那把掐请求的（理论上不会），稿子回来了也不往楼里写
             if (adrTheaterState.cancel) { var eC = new Error("已打断"); eC.name = "LampAbort"; throw eC; }
             var cleaned = adrTheaterClean(out, allowRich);
@@ -8806,7 +8858,7 @@
             + secClose()
 
             + secOpen("🖋️ 霞姐的人设 · 剧场的底色", true, "theater-persona")
-            + '<div class="' + noteClass + '">每一场都带着这一层：她是谁、写给谁看（书外的成年读者，不是剧情里的 user；讨厌低俗、拒绝恶俗）、底线在哪（艺术创作也有边界）、文字要什么质感、排版要多好看。主题仓里的主题叠在它上面，腔调跟主题走，质感和底线靠这一层兜住。留空用出厂；自己写了就整段换成你的。「剧场不是正文、只写这一楼、怎么输出、排版别把页面带歪」这些规矩由代码接管，不在这里，改人设改不坏。</div>'
+            + '<div class="' + noteClass + '">每一场都带着这一层：她是谁、写给谁看（书外的成年读者，不是剧情里的 user；讨厌低俗、拒绝恶俗）、底线在哪（艺术创作也有边界）、文字要什么质感、排版要多好看。主题仓里的主题叠在它上面，腔调跟主题走，质感和底线靠这一层兜住。留空用出厂；自己写了就整段换成你的。「剧场不是正文、只写这一楼、怎么输出、排版别把页面带歪」这些规矩，还有红线（未成年人相关的性内容一律不碰），由代码接管，不在这里，改人设改不坏、也改不掉。</div>'
             + '<textarea id="adr044-theater-persona" rows="7" placeholder="留空＝出厂人设">' + esc(st.theaterPersona || "") + '</textarea>'
             + '<div class="' + actionsClass + '"><button type="button" id="adr044-theater-persona-fill">填入出厂人设来改</button><button type="button" id="adr044-theater-persona-reset">恢复出厂人设</button></div>'
             + '<div class="adr044-template-status" id="adr044-theater-persona-note">' + esc(adrTheaterPersonaNote()) + '</div>'
@@ -8978,6 +9030,7 @@
             now: adrTheaterNow, onMessage: adrTheaterOnMessage, block: adrTheaterBlock, strip: adrTheaterStrip, has: adrTheaterHas, clean: adrTheaterClean,
             pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, preset: ADR_THEATER_PRESET, presetText: adrTheaterPresetText,
             persona: ADR_THEATER_PERSONA, personaText: adrTheaterPersonaText, rulesText: adrTheaterRulesText,
+            redline: adrHxRedline, redlineMark: ADR_HX_REDLINE_MARK, redlineTail: ADR_HX_REDLINE_TAIL,
             regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite, abort: adrTheaterAbort,
             paint: adrTheaterPaint, show: adrTheaterShow, saveSoon: adrTheaterSaveSoon, lampDirty: function () { return adrLampDirty; },
             apiCfg: adrTheaterApiCfg, apiNote: adrTheaterApiNote, topLine: adrTheaterTopLineText,
@@ -8994,6 +9047,7 @@
             pushSwipe: adrLampPushSwipe, preset: ADR_LAMP_PRESET, penPreset: ADR_LAMP_PEN_PRESET,
             editProtocol: ADR_LAMP_EDIT_PROTOCOL, penMark: ADR_LAMP_PEN_MARK, hasPenMark: adrLampHasPenMark, stripPenMark: adrLampStripPenMark,
             hxReader: ADR_HX_READER, hxBoundary: ADR_HX_BOUNDARY, hxSuggest: ADR_HX_SUGGEST,
+            redline: adrHxRedline, redlineMark: ADR_HX_REDLINE_MARK, redlineTail: ADR_HX_REDLINE_TAIL, isRedline: adrHxIsRedline, stripRedline: adrHxStripRedline,
             setMode: adrLampSetMode, apiHistory: adrLampApiHistory, gossipPreset: ADR_LAMP_GOSSIP_PRESET,
             autoQuip: adrLampAutoQuipNow, quipAsk: ADR_LAMP_QUIP_ASK,
             quipPush: adrLampQuipPush, quipAck: adrLampQuipAck, quipQueue: adrLampQuipQueue
