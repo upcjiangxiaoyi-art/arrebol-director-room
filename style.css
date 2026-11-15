@@ -7761,9 +7761,9 @@ html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr0
 
 /* 页签：去掉厚底托，字用宋体拉开；选中的是一片薄云加一道小灯 */
 html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs {
-    /* 页签是吸顶的（position: sticky，别处定的，这里不碰）：滚下去以后下面的字不能透上来，所以给一层近乎不透明的薄底，
+    /* 页签是吸顶的（position: sticky，别处定的，这里不碰）：滚下去以后下面的字不能透上来，所以给一层不透明的薄底（v1.47.1：原来留了 3% 的透，滚过去的字还是隐约看得见，改成实的），
        停在原位时它和外壳的底色几乎一样，看不出是个盒子 */
-    background: rgba(255, 255, 255, .97) !important;
+    background: #fdfcfd !important;
     border: 0 !important;
     border-radius: 16px !important;
     box-shadow: 0 10px 18px -16px rgba(40, 30, 70, .45) !important;
@@ -7882,3 +7882,215 @@ html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr0
 }
 /* 对话气泡：边淡一点 */
 html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-thread { border-radius: 18px !important; border: 1px solid var(--hx-hair-soft) !important; background: var(--hx-veil) !important; box-shadow: none !important; }
+
+/* ============================================================
+   v1.47.1 「云岫」· 细处（江：「包括 ui、文字排版、美感，仙气飘飘就好」）
+   上一版换的是浮窗的骨架，这一版顺着把里面的小件过一遍：对话气泡、蛐蛐小窗、楼里的剧场卡片、放大编辑框，
+   以及小字的字距和行距。还是只改形：不加模糊、不加动画。
+   ============================================================ */
+
+/* —— 文字排版：小标签拉一点字距，说明和正文的行距放松 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body label { letter-spacing: .3px !important; line-height: 1.65 !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body textarea { line-height: 1.75 !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body details.adr-lamp-fold > summary { letter-spacing: 1px !important; opacity: .86; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-mat { line-height: 1.85 !important; }
+
+/* —— 掌灯的对话：两边的气泡都不要硬边。她说的是一片薄云，你说的是一抹带主题色的雾 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-thread { padding: 14px 12px !important; gap: 10px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-msg {
+    border: 1px solid var(--hx-hair-soft) !important;
+    border-radius: 18px !important;
+    background: var(--hx-veil-strong) !important;
+    box-shadow: 0 8px 18px -16px rgba(40, 30, 70, .5) !important;
+    padding: 9px 13px 10px !important;
+    line-height: 1.8 !important;
+    letter-spacing: .2px !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-msg.a { border-bottom-left-radius: 6px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-msg.u {
+    border-color: transparent !important;
+    border-bottom-right-radius: 6px !important;
+    background: linear-gradient(135deg, var(--hx-glow), var(--hx-veil)) !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-msg.n {
+    border: 0 !important; background: transparent !important; box-shadow: none !important;
+    font-size: 11px !important; letter-spacing: .6px !important; opacity: .7; line-height: 1.7 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-who {
+    font-family: var(--hx-serif) !important; font-size: 10.5px !important; letter-spacing: 2px !important; opacity: .62; margin-bottom: 3px !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-lamp-divider {
+    border: 0 !important; background: transparent !important; letter-spacing: 1.5px !important; font-size: 10.5px !important; opacity: .6;
+}
+
+/* —— 蛐蛐小窗（导演的提示也用这个壳）：像一张递过来的笺 —— */
+#adr044-auto-trigger-popup#adr044-auto-trigger-popup {
+    border-radius: 22px !important;
+    padding: 16px 20px 16px !important;
+    border: 1px solid rgba(236, 220, 246, .16) !important;
+    box-shadow: 0 24px 60px -24px rgba(5, 3, 20, .8), 0 0 0 1px rgba(255, 255, 255, .03) inset !important;
+}
+#adr044-auto-trigger-popup#adr044-auto-trigger-popup .adr044-auto-trigger-popup-title {
+    font-family: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    letter-spacing: 2.4px !important;
+    margin-bottom: 8px !important;
+}
+#adr044-auto-trigger-popup#adr044-auto-trigger-popup .adr044-auto-trigger-popup-text {
+    font-size: 12.5px !important;
+    font-weight: 400 !important;
+    line-height: 1.85 !important;
+    letter-spacing: .3px !important;
+}
+#adr044-auto-trigger-popup#adr044-auto-trigger-popup .adr044-lamp-quip-ack {
+    width: auto !important;
+    min-width: 96px !important;
+    min-height: 32px !important;
+    margin: 12px 0 0 auto !important;
+    padding: 0 18px !important;
+    border: 1px solid rgba(236, 220, 246, .26) !important;
+    background: rgba(255, 255, 255, .06) !important;
+    font-family: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    letter-spacing: 3px !important;
+}
+
+/* —— 楼里的剧场卡片：虚线灰盒子换成一片淡霞；颜色用半透明，深浅酒馆主题上都成立 —— */
+.mes_text details.arrebol-d-theater,
+.mes_text details.custom-arrebol-d-theater {
+    margin: 16px 0 4px;
+    padding: 10px 16px 13px;
+    border-radius: 18px;
+    border: 1px solid rgba(214, 170, 196, .26);
+    background: linear-gradient(135deg, rgba(232, 176, 200, .10), rgba(150, 160, 220, .07) 70%, rgba(255, 255, 255, .02));
+    font-size: .92em;
+    line-height: 1.85;
+    letter-spacing: .2px;
+}
+.mes_text details.arrebol-d-theater > summary,
+.mes_text details.custom-arrebol-d-theater > summary {
+    font-family: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    font-weight: 600;
+    font-size: .95em;
+    letter-spacing: 2px;
+    opacity: .82;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    list-style-position: inside;
+    background: linear-gradient(90deg, rgba(214, 170, 196, .45), rgba(214, 170, 196, 0) 80%) left bottom / 100% 1px no-repeat;
+}
+.mes_text details.arrebol-d-theater:not([open]) > summary,
+.mes_text details.custom-arrebol-d-theater:not([open]) > summary { margin-bottom: 0; padding-bottom: 0; background: none; }
+
+/* —— 放大编辑框：标题用宋体，纸面的边淡一点，两枚按钮收成胶囊 —— */
+html #adrx-editor#adrx-editor .adrx-editor-title {
+    font-family: "Songti SC", "STSongti-SC-Regular", "Noto Serif CJK SC", "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif !important;
+    font-weight: 600 !important;
+    letter-spacing: 1.6px !important;
+}
+html #adrx-editor#adrx-editor .adrx-editor-count { letter-spacing: 1px !important; opacity: .7; }
+html #adrx-editor#adrx-editor .adrx-editor-ta {
+    border-radius: 22px !important;
+    line-height: 1.9 !important;
+    letter-spacing: .3px !important;
+    box-shadow: 0 18px 40px -30px rgba(40, 30, 70, .6) !important;
+}
+html #adrx-editor#adrx-editor .adrx-editor-foot button {
+    border-radius: 999px !important;
+    letter-spacing: 3px !important;
+    font-weight: 500 !important;
+}
+
+/* —— 按钮行：字距拉开以后长一点的字（「试抽一张（仅预览）」「替换这篇（原版留前一页）」）会折成两行。
+      一行放得下就不折：谁的字长谁多占一点；整行都放不下时才换行 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr048-actions { flex-wrap: wrap !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr048-actions > button {
+    min-width: -webkit-fit-content !important;
+    min-width: fit-content !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    line-height: 1.35 !important;
+}
+
+/* —— 吸顶的页签：原来停在滚动区内边距的下沿，上面漏出一条正在滚过去的字。让它贴到滚动区的顶 —— */
+/* 滚动区的内边距是 index.js 写在行内的 10px（带 !important，样式表盖不动），这里跟着它取 -10px */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body .adr-top-tabs.adr-top-tabs.adr-top-tabs { top: -10px !important; }
+
+/* —— 滑杆：一道细线上一颗小珠 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    height: 26px !important;
+    margin: 4px 0 2px !important;
+    background: transparent !important;
+    cursor: pointer;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px;
+    border-radius: 2px;
+    /* 珠子是这条线的子元素，线上不能用 opacity（会连珠子一起变淡），颜色直接写半透明的 */
+    background: linear-gradient(90deg, transparent, rgba(128, 126, 150, .42) 6%, rgba(128, 126, 150, .42) 94%, transparent);
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -9px;
+    border-radius: 50%;
+    border: 1px solid var(--adr-deck-accent);
+    background: radial-gradient(circle at 36% 30%, #fff 0%, #fff 34%, var(--adr-deck-accent) 150%);
+    box-shadow: 0 0 0 5px var(--hx-glow);
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"]::-moz-range-track {
+    height: 2px; border-radius: 2px; background: var(--hx-hair);
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid var(--adr-deck-accent);
+    background: radial-gradient(circle at 36% 30%, #fff 0%, #fff 34%, var(--adr-deck-accent) 150%);
+    box-shadow: 0 0 0 5px var(--hx-glow);
+}
+
+/* —— 文字框右上角的放大钮：原来压着第一行的字。框里给它让出位置，钮自己也收轻一点 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adrx-ta > textarea { padding-right: 40px !important; }
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adrx-ta > .adrx-expand {
+    top: 8px !important;
+    right: 8px !important;
+    width: 26px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    border-radius: 50% !important;
+    border: 1px solid var(--hx-hair) !important;
+    background: var(--hx-veil-strong) !important;
+    box-shadow: none !important;
+    opacity: .7 !important;
+}
+
+/* —— 主按钮（「分析」「把这份稿挂上」「试抽一张」）：上一版的胶囊规则把它们的霞色底一起盖成了普通按钮，
+      字色却还是配霞色底的深色，夜色主题下深字压深底，几乎看不见。把霞色底还给它们 —— */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body button#adr044-plot-generate:not(.adrx-expand):not(#adr044-master-toggle):not([id^="adr044-tab-"]):not([id^="adr044-lamp-mode-"]),
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body button#adr044-emotion-generate:not(.adrx-expand):not(#adr044-master-toggle):not([id^="adr044-tab-"]):not([id^="adr044-lamp-mode-"]),
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body button#adr044-plot-inject:not(.adrx-expand):not(#adr044-master-toggle):not([id^="adr044-tab-"]):not([id^="adr044-lamp-mode-"]),
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body button#adr044-emotion-inject:not(.adrx-expand):not(#adr044-master-toggle):not([id^="adr044-tab-"]):not([id^="adr044-lamp-mode-"]),
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body button#adr044-cd-preview-draw:not(.adrx-expand):not(#adr044-master-toggle):not([id^="adr044-tab-"]):not([id^="adr044-lamp-mode-"]) {
+    border-color: transparent !important;
+    background: var(--arb-primary) !important;
+    color: var(--arb-primary-ink) !important;
+    -webkit-text-fill-color: var(--arb-primary-ink) !important;
+    font-weight: 600 !important;
+    box-shadow: 0 10px 20px -14px var(--arb-glow) !important;
+}
+/* 夜色下滑杆的珠子要亮一点，不然是一颗灰的 */
+html #adr048-popup-panel[data-arb-theme="dusk"][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"]::-webkit-slider-thumb {
+    border-color: rgba(255, 255, 255, .55);
+    background: radial-gradient(circle at 36% 30%, #fff 0%, #f1eafb 45%, #cbbde6 100%);
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"]::-moz-range-thumb {
+    border-color: rgba(255, 255, 255, .55);
+    background: radial-gradient(circle at 36% 30%, #fff 0%, #f1eafb 45%, #cbbde6 100%);
+}
+/* 单行输入框同样给放大钮让位 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adrx-ta > input[type="text"] { padding-right: 42px !important; }
