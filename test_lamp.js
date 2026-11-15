@@ -396,7 +396,7 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
     e.setScript(() => "他这楼装得可真像那么回事，信放桌上那一下我都替她尴尬。");
     inp2.value = "你看他这楼"; await e.T().send(); await tick(50);
     let cg = e.calls[e.calls.length - 1];
-    ok(cg.body.messages[0].content.indexOf("你是 Arrebol，小红霞。你和作者在追同一部剧") === 0, "蛐蛐模式用追剧人设");
+    ok(cg.body.messages[0].content.indexOf("你是 Arrebol，小红霞。你和读者在追同一部剧") === 0, "蛐蛐模式用追剧人设");
     ok(cg.body.messages[0].content.indexOf("你是高级文字编辑") < 0, "不带改稿人设");
     ok(cg.body.messages[0].content.indexOf("【本篇原文 · #5") >= 0 && cg.body.messages[0].content.indexOf("【此前剧情") >= 0, "素材照给");
     ok(cg.body.messages.length === 2 && cg.body.messages[1].content === "（剧情现在在 #5）\n你看他这楼", "第一句前面标了剧情在哪一楼");
@@ -466,7 +466,7 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
     (e.handlers["message_received"] || []).forEach(f => { try { f(); } catch (x) {} }); await tick(1800);
     ok(e.calls.length === callsBefore + 1, "勾上后新楼落地发了一次请求", (e.calls.length - callsBefore) + " 次");
     const cq = e.calls[e.calls.length - 1];
-    ok(cq.body.messages[0].content.indexOf("你是 Arrebol，小红霞。你和作者在追同一部剧") === 0, "自动蛐蛐用蛐蛐人设");
+    ok(cq.body.messages[0].content.indexOf("你是 Arrebol，小红霞。你和读者在追同一部剧") === 0, "自动蛐蛐用蛐蛐人设");
     ok(cq.body.messages[0].content.indexOf("【本篇原文 · #" + idxQ) >= 0 && cq.body.messages[0].content.indexOf("他没说去哪") >= 0, "素材是刚落地那一楼");
     const lastQ = cq.body.messages[cq.body.messages.length - 1];
     ok(lastQ.role === "user" && lastQ.content.indexOf("（剧情走到 #" + idxQ + " 了）") === 0 && lastQ.content.indexOf("【自动蛐蛐】") > 0 && lastQ.content.indexOf("60 字以内") > 0, "末句是合成的自动蛐蛐句，前标剧情走到哪一楼");
@@ -540,7 +540,15 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
         ok(has(TP.preset, ["改稿是你的本职", "读者让你改，你就改，不推辞", "修正一整篇", "只动一段"]) && TP.preset.indexOf("不写正文") < 0 && TP.preset.indexOf("不是在写正文") < 0, "改稿是本职、说改就改；旧人设里「不写正文」那两句没了");
         ok(has(TP.preset, ["是整楼全文", "原样保留、一字不动", "文笔和原文一致", "润色", "字数听读者的", "基本持平", "不低俗、不恶俗"]), "改稿的四条：整楼全文、文笔一致可润色、字数听读者的、文字干净");
         ok(has(TP.preset, ["反对要带依据", "真实的人类情感心理", "物理处境与现实逻辑", "角色卡与世界书定下的规矩", "痛快地承认"]), "讨论的那套没丢：有坚持、反对带三样依据、对了就认");
-        ok(TP.preset.indexOf("作者") < 0 && TP.penPreset.indexOf("作者") < 0, "改稿这一路不再把屏幕前这位叫作者");
+        ok(TP.preset.indexOf("作者") < 0 && TP.penPreset.indexOf("作者") < 0 && TP.gossipPreset.indexOf("作者") < 0, "改稿、执笔、蛐蛐三份里都不再把屏幕前这位叫作者（v1.45.7）");
+        // v1.45.7 三处人设共用的三段：读者是谁、成年人的讨论与底线、问意见给回复建议
+        ok(has(TP.hxReader, ["这部互动小说的读者", "不是剧情里的 user", "成年、清醒、有生活阅历、文艺", "讨厌低俗文笔", "拒绝恶俗的文字"]), "共用段·读者是谁");
+        ok(has(TP.hxBoundary, ["两个成年人在愉快地讨论", "各有各的审美、笔触和坚持", "这是艺术创作，是互动小说", "不可能毫无边界和底线", "高审美、有生活阅历", "不是来讨论恶俗的", "不捧场"]), "共用段·成年人的讨论与底线：艺术创作也不可能毫无边界");
+        ok(has(TP.hxSuggest, ["读者问你意见", "回复建议", "下一步可以怎么回", "往哪个方向带", "一起商量出来的", "最后拿主意的是读者"]), "共用段·读者问意见时给回复建议，走向一起商量、读者拿主意");
+        ok(has(TP.preset, [TP.hxReader, TP.hxBoundary, TP.hxSuggest, "讨论剧情、吃瓜、商量它往哪儿走"]), "改稿人设带着这三段，还写了一起讨论、吃瓜、商量走向");
+        ok(has(TP.gossipPreset, [TP.hxReader, TP.hxBoundary, TP.hxSuggest, "你和读者在追同一部剧，就是这部互动小说", "也不是扮演者", "一起商量这部互动小说往哪儿走"]), "蛐蛐人设也带着这三段：读者、底线、回复建议");
+        ok(has(TP.gossipPreset, ["蛐蛐主角", "翻旧账", "押中了可以得意，押错了认", "不替这部小说写正文（回复建议里举一两句读者可以发出去的话不算）", "除非读者问「这里是不是该改」"]), "蛐蛐原来那套没丢：蛐蛐、翻旧账、押注；回复建议里举一两句不算写正文");
+        ok(TP.penPreset.indexOf("不可能毫无边界和底线：低俗、恶俗的写法不上稿") > 0, "执笔规矩里也写了底线");
         // 执笔规矩
         ok(has(TP.penPreset, ["交的是整楼全文", "逐字照抄", "哪怕只改了一段", "更不要拒绝动笔", "文笔与原文一致", "合理的范围内润色", "字数听读者的", "基本持平", "不低俗、不恶俗", "标签外不要有任何字"]), "执笔规矩：整楼全文、没改的逐字照抄、不拒绝、文笔一致可润色、字数、干净、只出标签块");
         ok(has(TP.penPreset, ["不是剧情里的 user", "成年、清醒、有生活阅历、文艺"]), "执笔时也知道稿子是改给谁看的");
@@ -551,7 +559,7 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
         ok(sysP.indexOf(TP.preset) === 0 && sysP.indexOf(TP.editProtocol) > TP.preset.length && sysP.indexOf("【本篇原文 · #5") > sysP.indexOf(TP.editProtocol), "聊天的系统提示三层：人设 → 动笔手续（代码接管）→ 素材");
         ok(has(TP.editProtocol, ["【怎么动笔 · 这一段由系统接管】", "[[动笔]]", "可以举一两句例子", "整楼的改稿不要贴在聊天里", "不要说「我不写正文」", "读者没让你动笔的时候，不要写"]), "动笔手续写明：应下、单独一行写记号、不推辞、没让动笔不写");
         ok(eP.calls.length === 1 && !eP.meta().threads["5"].draft, "还在讨论（回复里没有记号）：不改稿");
-        ok(TP.materialsText({ tone: "甜", idx: 5, body: "x" }, "读者").indexOf("【这局的基调 · 读者亲口定的") === 0 && TP.materialsText({ tone: "甜", idx: 5, body: "x" }).indexOf("【这局的基调 · 作者亲口定的") === 0, "基调那行：改稿这一路写读者，蛐蛐和剧场照旧");
+        ok(TP.materialsText({ tone: "甜", idx: 5, body: "x" }).indexOf("【这局的基调 · 读者亲口定的，压过角色卡与此前剧情】") === 0, "基调那行：四路（改稿、执笔、蛐蛐、剧场）统一写读者亲口定的（v1.45.7）");
         // 记号的认法
         ok(TP.hasPenMark("好。\n[[动笔]]") && TP.hasPenMark("［［动笔］］") && TP.hasPenMark("[[ 动笔 ]]") && !TP.hasPenMark("我这就动笔") && !TP.hasPenMark("[动笔]"), "记号认 [[动笔]]（全角括号、带空格也认），正文里说「动笔」两个字不算");
         ok(TP.stripPenMark("行，往后挪一拍。\n[[动笔]]\n") === "行，往后挪一拍。" && TP.stripPenMark("[[动笔]]") === "", "记号摘得干净");
@@ -603,7 +611,7 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
         const nG = eP.calls.length;
         await tick(500); Q("#adr044-lamp-input").value = "他是不是完了"; click(WP, Q("#adr044-lamp-send")); await tick(400);
         const sysG = eP.calls[eP.calls.length - 1].body.messages[0].content;
-        ok(eP.calls.length === nG + 1 && sysG.indexOf("【怎么动笔") < 0 && sysG.indexOf("你是 Arrebol，小红霞。你和作者在追同一部剧") === 0, "蛐蛐模式：不带动笔手续，回复里出现记号也不改稿");
+        ok(eP.calls.length === nG + 1 && sysG.indexOf("【怎么动笔") < 0 && sysG.indexOf("你是 Arrebol，小红霞。你和读者在追同一部剧") === 0, "蛐蛐模式：不带动笔手续，回复里出现记号也不改稿");
         ok(eP.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eP.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
     }
 

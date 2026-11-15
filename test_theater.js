@@ -620,6 +620,12 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
         ok(note() === "现在用的是出厂人设。" && e.st().theaterPersona === "", "说明行写明现在用的是出厂人设", note());
         ok(T.persona.indexOf("文字的缔造者") > 0 && T.persona.indexOf("高级作家") > 0 && T.persona.indexOf("质感") > 0 && T.persona.indexOf("美编") > 0, "出厂人设四样都有：文字的缔造者、高级作家、文字质感、排版要好看");
         ok(T.persona.indexOf("要文艺") > 0 && T.persona.indexOf("要活泼") > 0 && T.persona.indexOf("腔调跟着主题换") > 0, "腔调跟主题走：文艺、活泼都点到");
+        // v1.45.7 剧场也写明：给谁看、底线在哪
+        const hasAll = (t, arr) => arr.every(x => t.indexOf(x) >= 0);
+        ok(hasAll(T.persona, ["看剧场的人是这部互动小说的读者", "不是剧情里的 user", "成年、清醒、有生活阅历、文艺", "讨厌低俗文笔", "拒绝恶俗的文字", "每一场都是写给这样一个人看的"]), "剧场人设写明给谁看：书外的成年读者，不是剧情里的 user");
+        ok(hasAll(T.persona, ["这是艺术创作，是互动小说", "不可能毫无边界和底线", "高审美、有生活阅历", "不是来看恶俗的", "低俗的梗、恶俗的桥段、油腻的腔调，再好笑也不写", "审美、笔触和坚持"]), "剧场人设写明底线：玩笑可以开，艺术创作也不可能毫无边界");
+        ok(T.persona.indexOf("作者") < 0 && T.rulesText(true).indexOf("作者") < 0 && T.rulesText(false).indexOf("作者") < 0, "剧场的人设和规矩里都不再把屏幕前这位叫作者");
+        ok(hasAll(T.rulesText(false), ["贴在这部互动小说每一楼的正文后面", "是给读者看的场外内容", "不损读者"]), "规矩里也改口：给读者看、不损读者");
         ok(P("#adr044-theater-rules-view").textContent.indexOf("【红霞剧场 · 规矩】") === 0 && P("#adr044-theater-rules-view").textContent.indexOf("⑦ 只输出剧场正文本身") > 0, "面板里看得到代码接管的规矩全文");
         // 自己写
         e.setScript((n, body) => isTheater(body) ? "人设层测试的一场" : "在");
