@@ -121,10 +121,11 @@ function build() {
         // v1.32.0: five palettes cycle sunset → pearl → celadon → wine → dusk → sunset; wine is the second dark palette.
         // v1.35.0: six palettes — morandi (light) sits between wine and dusk.
         // v1.36.0: seven palettes — skyrose (light) follows morandi.
+        // v1.51.0: nine palettes — ink (light, monochrome) and pine (dark) follow skyrose; both have their own FAB artwork.
         const panel = () => d.querySelector('#adr048-popup-panel');
         const fabEl = () => d.querySelector('#adr048-fab');
         check(panel().dataset.adrPalette === 'sunset' && panel().dataset.arbTheme === 'dawn', '旧版开灯设置对应粉霞水光');
-        for (const [pal, theme] of [['pearl', 'dawn'], ['celadon', 'dawn'], ['wine', 'dusk'], ['morandi', 'dawn'], ['skyrose', 'dawn'], ['dusk', 'dusk'], ['sunset', 'dawn']]) {
+        for (const [pal, theme] of [['pearl', 'dawn'], ['celadon', 'dawn'], ['wine', 'dusk'], ['morandi', 'dawn'], ['skyrose', 'dawn'], ['ink', 'dawn'], ['pine', 'dusk'], ['dusk', 'dusk'], ['sunset', 'dawn']]) {
             click(d.querySelector('#adr048-theme-toggle')); await delay(50);
             check(panel().dataset.adrPalette === pal && panel().dataset.arbTheme === theme, '切到 ' + pal + '：面板配色与明暗属性正确');
             check(fabEl().dataset.adrPalette === pal && fabEl().dataset.arbTheme === theme, '切到 ' + pal + '：浮标同步');
@@ -132,7 +133,7 @@ function build() {
             check(e.extensionSettings[KEY].themePalette === pal, '切到 ' + pal + '：设置已保存');
         }
         check(d.querySelector('#adr048-theme-toggle').title.indexOf('粉霞水光') >= 0 && d.querySelector('#adr048-theme-toggle').title.indexOf('雾珠月汐') >= 0, '主题按钮提示写明当前与下一套');
-        for (let i = 0; i < 6; i++) click(d.querySelector('#adr048-theme-toggle'));
+        for (let i = 0; i < 8; i++) click(d.querySelector('#adr048-theme-toggle'));
         await delay(50);
         check(panel().dataset.arbTheme === 'dusk' && panel().dataset.adrPalette === 'dusk', '主题切换仍可用');
         const settings = e.extensionSettings[KEY];
@@ -154,6 +155,19 @@ function build() {
         click(d.querySelector('#adr048-theme-toggle'));
         check(fab.dataset.arbTheme === 'dawn' && fab.dataset.adrPalette === 'skyrose', '晴空属浅色组：浮标同步日色底');
         check(d.querySelector('#adr048-theme-toggle').textContent === '🌤️' && d.querySelector('#adr048-theme-toggle').title.indexOf('晴空粉霞') >= 0, '晴空图标与提示');
+        click(d.querySelector('#adr048-theme-toggle'));
+        check(fab.dataset.arbTheme === 'dawn' && fab.dataset.adrPalette === 'ink', '墨白属浅色组：浮标同步日色底');
+        check(d.querySelector('#adr048-theme-toggle').textContent === '◐' && d.querySelector('#adr048-theme-toggle').title.indexOf('素笺墨白') >= 0 && d.querySelector('#adr048-theme-toggle').title.indexOf('松烟月色') >= 0, '墨白图标与提示，下一套是松烟');
+        click(d.querySelector('#adr048-theme-toggle'));
+        check(fab.dataset.arbTheme === 'dusk' && fab.dataset.adrPalette === 'pine', '松烟属深色组：浮标同步夜色底');
+        check(d.querySelector('#adr048-theme-toggle').textContent === '🌲' && d.querySelector('#adr048-theme-toggle').title.indexOf('松烟月色') >= 0, '松烟图标与提示');
+        check(panel().dataset.adrPalette === 'pine' && /var\(--arb-surface\)/.test(d.querySelector('#adr048-popup-shell').style.getPropertyValue('background')), '松烟的壳体走自己的底色令牌，不用夜色那套行内值');
+        {
+            const artInk = svg.querySelector('.arb-fab-art-ink'), artPine = svg.querySelector('.arb-fab-art-pine');
+            check(!!artInk && !!artPine && artInk.getAttribute('display') === 'none' && artPine.getAttribute('display') === 'none', '浮标里带着两套新图案，平时都藏着，由样式表按配色亮出来');
+            check(!!artInk.querySelector('.arb-fab-ink-dot') && !!artInk.querySelector('.arb-fab-ink-ring') && !!artPine.querySelector('.arb-fab-moon-arc') && artPine.querySelectorAll('path').length === 3, '墨白是一枚墨点一枚空圈，松烟是两道山脊一弯月');
+            check(fab.firstElementChild === svg && !!svg.querySelector('.arb-fab-river-1') && !!svg.querySelector('.arb-fab-word'), '换到新配色也不重建浮标，原来那条河和三个字都还在');
+        }
         click(d.querySelector('#adr048-theme-toggle'));
         check(fab.dataset.arbTheme === 'dusk' && fab.dataset.adrPalette === 'dusk', '月亮按钮立即同步浮标夜色');
         check(!root().querySelector('#adr044-fab-theme-mode'), '不再显示容易混淆的时钟设置');
@@ -206,7 +220,7 @@ function build() {
             check(box(root(), 'adr044-popup-clear-veil') && box(drawer, 'adr044-popup-clear-veil') && box(root(), 'adr044-popup-clear-veil').checked && box(drawer, 'adr044-popup-clear-veil').checked && S().popupClearVeil === true, '「不盖毛玻璃」在浮窗和内嵌抽屉里都有，默认勾着');
             check(pnl().getAttribute('data-hx-veil') === 'clear' && airy() && sty(pnl(), 'pointer-events') === 'none' && /translateZ/.test(sty(pnl(), 'transform')), '默认打开的浮窗：留白版式，幕布透明、不接点击、留着定位参照');
             check(!/rgba\((?!0, ?0, ?0, ?0\))/.test(sty(pnl(), 'background-color') + sty(pnl(), 'background')), '幕布不染色');
-            for (const pal of ['dusk', 'wine', 'sunset', 'pearl', 'celadon', 'morandi', 'skyrose']) {
+            for (const pal of ['dusk', 'wine', 'pine', 'sunset', 'pearl', 'celadon', 'morandi', 'skyrose', 'ink']) {
                 S().themePalette = pal; w.uiTest.adr048ApplyPanelTheme();
                 const sb = sty(shell(), 'background') || sty(shell(), 'background-color');
                 check(!/rgba\(/.test(sb) && airy(), pal + '：留白版式，壳体是实底（' + sb + '）');

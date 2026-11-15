@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.50.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.51.0｜ripple & GPT & Claude
+ * v1.51.0 第八、九套配色：「素笺墨白」（纯黑白，浅色）与「松烟月色」（松烟墨绿打底、月色淡金点睛，深色）；两套的浮标各有自己的图案——墨白是一枚墨点一枚空圈，松烟是两道山脊一弯月（提议 江「再加一套黑白美化……你再自己选一个配色……浮标图案可以和别的不一样」；施工 Claude）
  * v1.50.1 留白版式的开关撤掉：留白就是浮窗的样子，不再退回旧版式；「不盖毛玻璃」那枚还在；共享设置里一排开关左边对齐（提议 江「留白开关去掉吧，默认留白，不应退回旧版本」；施工 Claude）
  * v1.50.0 掌灯里的那位可以自己起名字、写人格（留空＝小红霞），面板称呼与提示词跟着换，改稿守则不受影响；「现在蛐蛐一句」挪到左边防误触；不盖毛玻璃与留白版式真机验过，改成默认开，开关留着当退路（提议 江「一个名字一个人格，想是啥人格是啥人格」「吃瓜按钮移到左边」「保留留白格式，去掉毛玻璃」；施工 Claude）
  * v1.49.0 去毛玻璃和「留白」版式改成两个试验开关（共享设置里，默认都关，关着时和 v1.47.1 一样）：开了不对劲能在酒馆扩展页的抽屉里关掉；不盖毛玻璃时幕布不接点击；浮窗没画出来会自动退回并写出量到的数（起因 江「一点就卡死页面」；施工 Claude）
@@ -122,7 +123,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.50.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.51.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -138,7 +139,7 @@
         popupClearVeil: true,       // 浮窗周围不盖毛玻璃。v1.49.0 是默认关的试验开关；江在 iPhone 上两枚都验过没事，v1.50.0 起默认开，开关留着当退路
         popupSkinV150: false,       // 一次性迁移记号：v1.49.0 存下来的「关」是那一版的默认值，不是谁选的；升上来时打开一次，之后听人的
         // 留白版式 v1.49.0–1.50.0 也有一枚开关（popupAiry）；v1.50.1 起它就是浮窗的样子，不再能退回旧版式，开关和这个设置都撤了
-        themePalette: "",          // dusk / sunset / pearl / celadon / wine / morandi / skyrose; empty migrates the previous light switch.
+        themePalette: "",          // dusk / sunset / pearl / celadon / wine / morandi / skyrose / ink / pine; empty migrates the previous light switch.
         dawnTheme: false,           // v1.14.4 开灯：浮窗朝霞浅色皮，默认关（暗河红霞）
         showAutoTriggerPopup: true,
         streamEnabled: true,        // v1.27.1 导演请求流式接收；中转站不支持流式时可关
@@ -11663,6 +11664,8 @@
             var palette = adr048Palette();
             var dawn = !adr048IsDarkPalette(palette);
             var wine = palette === "wine";
+            var pine = palette === "pine", inkPal = palette === "ink";
+            var ownDark = wine || pine;   // 自带整套令牌的深色配色：壳体的底和字走变量，不用夜色那套行内值
             p.setAttribute("data-arb-theme", dawn ? "dawn" : "dusk");
             p.setAttribute("data-adr-palette", palette);
 
@@ -11677,7 +11680,8 @@
                 // v1.35.0：烟粉用一层烟灰粉的薄纱；v1.36.0：晴空用一层淡藕紫。
                 var veil = palette === "celadon" ? "rgba(205,220,228,.42)"
                     : (palette === "morandi" ? "rgba(214,192,196,.42)"
-                    : (palette === "skyrose" ? "rgba(226,214,234,.40)" : "rgba(228,207,224,.40)"));
+                    : (palette === "skyrose" ? "rgba(226,214,234,.40)"
+                    : (inkPal ? "rgba(238,238,236,.46)" : "rgba(228,207,224,.40)")));
                 if (mode.clear) {
                     // 不盖毛玻璃：幕布透明，而且不接点击——浮窗万一没画出来，页面也不会被一层看不见的东西盖死。
                     // transform 是为了让幕布继续当浮窗的定位参照：原来靠 backdrop-filter 顺带当着，去掉模糊以后这层关系要自己留住。
@@ -11685,7 +11689,7 @@
                     adr048SetImportant(p, "pointer-events", "none");
                     adr048SetImportant(p, "transform", "translateZ(0)");
                 } else {
-                    adr048SetImportant(p, "background", dawn ? veil : (wine ? "rgba(58,7,31,.32)" : "rgba(0,0,0,.25)"));
+                    adr048SetImportant(p, "background", dawn ? veil : (wine ? "rgba(58,7,31,.32)" : (pine ? "rgba(6,16,13,.36)" : "rgba(0,0,0,.25)")));
                     adr048SetImportant(p, "pointer-events", "auto");
                     try { p.style.removeProperty("transform"); } catch (eTf) {}
                 }
@@ -11695,19 +11699,19 @@
             if (shell) {
                 // v1.32.0：红霞是深色组第二员，壳体走自己的令牌；夜色那套内联值原样保留。
                 // 夜色壳体原来留 2% 的透；不盖毛玻璃时背后的字会隐约印上来，那时改成实底
-                adr048SetImportant(shell, "background", (dawn || wine)
+                adr048SetImportant(shell, "background", (dawn || ownDark)
                     ? "var(--arb-surface)"
                     : (mode.clear ? "rgb(42,52,67)" : "rgba(42,52,67,.98)"));
-                adr048SetImportant(shell, "color", (dawn || wine) ? "var(--arb-ink)" : "#f2f2f2");
+                adr048SetImportant(shell, "color", (dawn || ownDark) ? "var(--arb-ink)" : "#f2f2f2");
                 adr048SetImportant(shell, "pointer-events", "auto");
                 adr048SetImportant(shell, "border-radius", mode.airy ? "30px" : "22px");
                 adr048SetImportant(shell, "border", mode.airy
-                    ? (dawn ? "1px solid rgba(255,255,255,.74)" : (wine ? "1px solid rgba(226,166,186,.18)" : "1px solid rgba(228,212,246,.14)"))
+                    ? (dawn ? (inkPal ? "1px solid rgba(17,17,17,.16)" : "1px solid rgba(255,255,255,.74)") : (wine ? "1px solid rgba(226,166,186,.18)" : (pine ? "1px solid rgba(217,201,160,.20)" : "1px solid rgba(228,212,246,.14)")))
                     : (dawn ? "1px solid rgba(255,255,255,.92)" : (wine ? "1px solid rgba(226,166,186,.20)" : "1px solid rgba(228,212,246,.16)")));
                 // 没有幕布垫着时，投影收拢、压深一点，浮窗才从楼上面浮得起来
                 adr048SetImportant(shell, "box-shadow", mode.clear
-                    ? (dawn ? "0 34px 70px -28px rgba(52,44,88,.52), 0 10px 26px -14px rgba(52,44,88,.30), 0 0 0 1px rgba(64,70,110,.07)"
-                        : (wine ? "0 34px 70px -28px rgba(20,2,10,.78), 0 10px 26px -14px rgba(20,2,10,.50)" : "0 34px 70px -28px rgba(0,0,0,.72), 0 10px 26px -14px rgba(0,0,0,.46)"))
+                    ? (dawn ? (inkPal ? "0 34px 70px -28px rgba(0,0,0,.36), 0 10px 26px -14px rgba(0,0,0,.20)" : "0 34px 70px -28px rgba(52,44,88,.52), 0 10px 26px -14px rgba(52,44,88,.30), 0 0 0 1px rgba(64,70,110,.07)")
+                        : (wine ? "0 34px 70px -28px rgba(20,2,10,.78), 0 10px 26px -14px rgba(20,2,10,.50)" : (pine ? "0 34px 70px -28px rgba(0,8,6,.82), 0 10px 26px -14px rgba(0,8,6,.54)" : "0 34px 70px -28px rgba(0,0,0,.72), 0 10px 26px -14px rgba(0,0,0,.46)")))
                     : (dawn ? "0 26px 70px rgba(70,64,110,.26), 0 0 0 1px rgba(64,70,110,.10)"
                         : (wine ? "0 26px 70px rgba(30,3,15,.62), 0 0 0 1px rgba(226,166,186,.08)" : "0 26px 70px rgba(5,3,20,.58), 0 0 0 1px rgba(183,157,220,.06)")));
             }
@@ -11952,10 +11956,12 @@
     // v1.32.0：第五套「暗河红霞」（wine），深色组第二员。顺序：夜色 → 粉霞 → 雾珠 → 天青 → 红霞 → 回到夜色。
     // v1.35.0：第六套「莫兰迪烟粉」（morandi），浅色。顺序：夜色 → 粉霞 → 雾珠 → 天青 → 红霞 → 烟粉 → 回到夜色。
     // v1.36.0：第七套「晴空粉霞」（skyrose），浅色。顺序：夜色 → 粉霞 → 雾珠 → 天青 → 红霞 → 烟粉 → 晴空 → 回到夜色。
-    var ADR_PALETTES = ["dusk", "sunset", "pearl", "celadon", "wine", "morandi", "skyrose"];
-    var ADR_DARK_PALETTES = ["dusk", "wine"];
-    var ADR_PALETTE_LABEL = { dusk: "暗河夜色", sunset: "粉霞水光", pearl: "雾珠月汐", celadon: "天青如梦", wine: "暗河红霞", morandi: "莫兰迪烟粉", skyrose: "晴空粉霞" };
-    var ADR_PALETTE_ICON = { dusk: "🌙", sunset: "🌸", pearl: "🫧", celadon: "🕊️", wine: "🌹", morandi: "🎀", skyrose: "🌤️" };
+    // v1.51.0：第八套「素笺墨白」（ink），浅色，纯黑白；第九套「松烟月色」（pine），深色组第三员，松烟墨绿打底、月色淡金点睛。
+    // 顺序：夜色 → 粉霞 → 雾珠 → 天青 → 红霞 → 烟粉 → 晴空 → 墨白 → 松烟 → 回到夜色。这两套的浮标各有自己的图案。
+    var ADR_PALETTES = ["dusk", "sunset", "pearl", "celadon", "wine", "morandi", "skyrose", "ink", "pine"];
+    var ADR_DARK_PALETTES = ["dusk", "wine", "pine"];
+    var ADR_PALETTE_LABEL = { dusk: "暗河夜色", sunset: "粉霞水光", pearl: "雾珠月汐", celadon: "天青如梦", wine: "暗河红霞", morandi: "莫兰迪烟粉", skyrose: "晴空粉霞", ink: "素笺墨白", pine: "松烟月色" };
+    var ADR_PALETTE_ICON = { dusk: "🌙", sunset: "🌸", pearl: "🫧", celadon: "🕊️", wine: "🌹", morandi: "🎀", skyrose: "🌤️", ink: "◐", pine: "🌲" };
 
     function adr048IsDarkPalette(palette) { return ADR_DARK_PALETTES.indexOf(palette) >= 0; }
 
@@ -12027,6 +12033,17 @@
                 + '<path class="arb-fab-river arb-fab-river-2" d="M-40 36 q 10 -3.5 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0" fill="none" stroke="url(#pkARB-river)" stroke-width="1" stroke-linecap="round" opacity=".45"/>'
                 + '<path class="arb-fab-river arb-fab-river-1" d="M-40 31 q 10 -4.5 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0" fill="none" stroke="url(#pkARB-river)" stroke-width="1.3" stroke-linecap="round" opacity=".85"/>'
                 + '<path class="arb-fab-current" d="M-40 31 q 10 -4.5 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0 t 20 0" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="9 111" opacity=".95"/>'
+                + '</g>'
+                // v1.51.0 两套新配色的浮标各有自己的图案，平时藏着（display="none"），style.css 按配色把它亮出来、把河收起来。
+                // 松烟月色：远近两道山脊，一弯淡金的月。素笺墨白：左一枚实心墨点，右一枚空心圈。
+                + '<g class="arb-fab-art arb-fab-art-pine" display="none" clip-path="url(#pkARB-clip)">'
+                + '<path class="arb-fab-ridge-far" d="M0 44 L0 33 Q 12 27 24 31 T 50 29 T 78 32 T 104 27 T 120 30 L120 44 Z" fill="#3f7a68" opacity=".55"/>'
+                + '<path class="arb-fab-ridge-near" d="M0 44 L0 39 Q 16 34 34 38 T 70 36 T 100 39 T 120 36 L120 44 Z" fill="#0a1714" opacity=".92"/>'
+                + '<path class="arb-fab-moon-arc" d="M21 9.5 A 7.5 7.5 0 0 0 21 24.5 A 9.6 9.6 0 0 1 21 9.5 Z" fill="#e8d9a8"/>'
+                + '</g>'
+                + '<g class="arb-fab-art arb-fab-art-ink" display="none">'
+                + '<circle class="arb-fab-ink-dot" cx="18" cy="22" r="4.4" fill="#111"/>'
+                + '<circle class="arb-fab-ink-ring" cx="102" cy="22" r="3.9" fill="none" stroke="#111" stroke-width="1.2"/>'
                 + '</g>'
                 + '<text class="arb-fab-word" x="60" y="22" text-anchor="middle" font-size="13.5" font-weight="600" fill="#f5f4ff" letter-spacing="3.2" font-family="-apple-system,sans-serif">ARB</text>'
                 + '</svg>';

@@ -8399,3 +8399,370 @@ html #adr048-popup-panel[data-arb-theme][data-hx-skin="airy"] #adr048-popup-body
 /* v1.50.1 一排开关没对齐：紧挨着的第二枚起，旧规则把左边距清成了 0（那是给横排用的），于是比第一枚往左缩了 10px，
    光晕还被卡片边切掉一点。竖排时每一枚都留同样的左边距 */
 html #adr048-popup-panel[data-arb-theme][data-hx-skin="airy"] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer > label.adr048-check + label.adr048-check { margin-left: 10px !important; }
+
+/* ============================================================
+   v1.51.0 第八、九套配色（江：「再给我加一套黑白美化，适合那种极简的用户；然后你再自己选一个配色做一套」「这两个的浮标图案可以和别的不一样」）
+   · 素笺墨白（ink，浅色）：只有黑、白和几级灰。纸白的底，墨黑的字，主按钮是实心墨；面板里的表情符号也收成灰度。
+   · 松烟月色（pine，深色）：取松烟墨的意思。深松打底（#0E1F1B）、松针青起伏（#7FA694）、月色淡金点睛（#D9C9A0）、雾白落字（#EEF3EA）；
+     内嵌抽屉给一版月白带青的浅色。
+   浮窗、放大编辑器、内嵌抽屉、浮标四处同源。浮标各有自己的图案（在 index.js 的 SVG 里，平时藏着）：
+   松烟是两道山脊一弯月，墨白是一枚墨点、一枚空圈。这两枚浮标是静的，没有流动的河。
+   ============================================================ */
+
+/* —— 松烟月色 —— */
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"],
+html #adrx-editor[data-arb-theme="dusk"][data-adr-palette="pine"] {
+    --arb-surface:
+        radial-gradient(ellipse at 6% -4%, rgba(217, 201, 160, .16) 0, transparent 36%),
+        radial-gradient(circle at 100% 4%, rgba(127, 166, 148, .20) 0, transparent 34%),
+        radial-gradient(circle at 82% 108%, rgba(31, 74, 64, .55) 0, transparent 42%),
+        linear-gradient(168deg, #17302a 0%, #0e1f1b 55%, #0a1714 100%);
+    --arb-head: rgba(12, 26, 22, .94);
+    --arb-backdrop:
+        radial-gradient(circle at 14% 9%, rgba(217, 201, 160, .08), transparent 31%),
+        radial-gradient(circle at 87% 15%, rgba(127, 166, 148, .07), transparent 29%),
+        linear-gradient(135deg, rgba(14, 31, 27, .16), rgba(10, 23, 20, .12));
+    --arb-pearl: #eef3ea;
+    --arb-ink: #eef3ea;
+    --arb-ink-rgb: 255, 240, 245;
+    --arb-muted: rgba(238, 243, 234, .74);
+    --arb-faint: rgba(214, 224, 206, .52);
+    --arb-line: rgba(217, 201, 160, .14);
+    --arb-line-strong: rgba(217, 201, 160, .26);
+    --arb-rose: #d9c9a0;
+    --arb-lilac: #a9b98f;
+    --arb-sky: #7fa694;
+    --arb-gold: #e8d9a8;
+    --arb-card: rgba(238, 243, 234, .05);
+    --arb-card-strong: rgba(238, 243, 234, .085);
+    --arb-field: rgba(238, 243, 234, .06);
+    --arb-field-focus: rgba(238, 243, 234, .10);
+    --arb-shadow: rgba(4, 12, 10, .45);
+    --arb-tab: rgba(238, 243, 234, .05);
+    --arb-tab-active: rgba(238, 243, 234, .11);
+    --arb-primary: linear-gradient(115deg, #d9c9a0, #a9b98f 55%, #7fa694);
+    --arb-primary-hover: linear-gradient(115deg, #e6dab8, #bccaa3 55%, #94b8a6);
+    --arb-primary-ink: #10231e;
+    --arb-accent-line: linear-gradient(100deg, #d9c9a0, #a9b98f 52%, #7fa694);
+    --arb-glow: rgba(217, 201, 160, .30);
+    --arb-ring: rgba(217, 201, 160, .22);
+    --adr-deck-bg: #17302a;
+    --adr-deck-ink: #eef3ea;
+    --adr-deck-muted: rgba(238, 243, 234, .74);
+    --adr-deck-line: rgba(217, 201, 160, .16);
+    --adr-deck-accent: #d9c9a0;
+    --adr-deck-card: linear-gradient(125deg, rgba(217, 201, 160,.14), rgba(127, 166, 148,.08) 55%, rgba(31, 74, 64,.20));
+    --adr-pearl-glow: rgba(127, 166, 148, .18);
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-shell::before {
+    border-color: rgba(238, 243, 234, .20) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-head::after {
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(217, 201, 160, .55) 27%,
+        rgba(127, 166, 148, .50) 55%,
+        rgba(31, 74, 64, .55) 79%,
+        transparent 100%) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(217, 201, 160, .34), rgba(127, 166, 148, .30)) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body select option {
+    background: #0e1f1b !important;
+    color: #eef3ea !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body input:focus,
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body select:focus,
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body textarea:focus {
+    border-color: rgba(217, 201, 160, .56) !important;
+    box-shadow: 0 0 0 3px rgba(127, 166, 148, .16) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body button:hover {
+    border-color: rgba(217, 201, 160, .44) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body #adr044-plot-generate,
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body #adr044-emotion-generate,
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body #adr044-plot-inject,
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body #adr044-emotion-inject {
+    border-color: rgba(217, 201, 160, .40) !important;
+    background: linear-gradient(135deg, rgba(217, 201, 160, .30), rgba(127, 166, 148, .26) 55%, rgba(31, 74, 64, .30)) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body #adr044-master-toggle::before {
+    background: radial-gradient(circle at 5px 50%, #d9c9a0 0 3px, rgba(217, 201, 160, .20) 3.5px 6px, transparent 6.5px);
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body .adr044-cd-chip.on {
+    border-color: rgba(217, 201, 160, .42) !important;
+    background: linear-gradient(135deg, rgba(217, 201, 160, .18), rgba(31, 74, 64, .22)) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-head .adr048-head-txt::before {
+    background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .95) 0 14%, transparent 34%),
+        linear-gradient(145deg, #d9c9a0, #7fa694 52%, #1f4a40);
+    box-shadow: 0 0 0 3px var(--arb-ring), 0 4px 12px rgba(31, 74, 64, .40);
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body .adr-top-progress .adr044-auto-counter::before {
+    background: linear-gradient(90deg, transparent, rgba(217, 201, 160,.85), rgba(127, 166, 148,.75), transparent);
+}
+html #adr044-drawer[data-adr-palette="pine"] {
+    --adrx-ink: #1f3a33;
+    --adrx-muted: #4f6a5e;
+    --adrx-faint: #6b8479;
+    --adrx-line-strong: rgba(31, 74, 64, .30);
+    --adrx-rose: #7fa694;
+    --adrx-lilac: #86a896;
+    --adrx-sky: #d9c9a0;
+    --adrx-card: rgba(255,255,255,.62);
+    --adrx-field: rgba(255,255,255,.70);
+    --adrx-shadow: rgba(31, 74, 64,.10);
+    --adrx-primary: linear-gradient(115deg, #d9c9a0, #9ab8a7 55%, #7fa694);
+    --adrx-primary-hover: linear-gradient(115deg, #e6dab8, #a9c2b3 55%, #94b8a6);
+    --adrx-primary-ink: #0e1f1b;
+    --adrx-glow: rgba(217, 201, 160,.34);
+    --adrx-ring: rgba(127, 166, 148,.22);
+    --adr-deck-bg: #dfe8dc;
+    --adr-deck-ink: #1f3a33;
+    --adr-deck-muted: #4f6a5e;
+    --adr-deck-line: rgba(31, 74, 64,.14);
+    --adr-deck-accent: #7fa694;
+    --adr-deck-card: linear-gradient(125deg, rgba(255,255,255,.93), rgba(238, 243, 234,.86) 50%, rgba(223, 232, 220,.88));
+    --adr-pearl-glow: rgba(217, 201, 160,.26);
+}
+html #adr044-drawer[data-adr-palette="pine"] > .inline-drawer {
+    background:
+        radial-gradient(ellipse at 4% 0%, rgba(217, 201, 160,.55), transparent 48%),
+        radial-gradient(ellipse at 100% 100%, rgba(127, 166, 148,.32), transparent 48%),
+        linear-gradient(175deg, #f7f9f3, #eef3ea 55%, #e3ebe0) !important;
+}
+html #adr044-drawer[data-adr-palette="pine"] .adr-top-progress .adr044-auto-counter::before {
+    background: linear-gradient(90deg, transparent, rgba(217, 201, 160,.90), rgba(127, 166, 148,.80), transparent);
+}
+
+/* —— 素笺墨白 —— */
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"],
+html #adrx-editor[data-arb-theme="dawn"][data-adr-palette="ink"] {
+    --arb-surface: linear-gradient(180deg, #ffffff 0%, #fcfcfb 46%, #f4f4f2 100%);
+    --arb-backdrop: linear-gradient(170deg, rgba(255, 255, 255, .14), rgba(240, 240, 238, .10));
+    --arb-head: rgba(250, 250, 250, .86);
+    --arb-pearl: #ffffff;
+    --arb-ink: #111111;
+    --arb-ink-rgb: 43, 51, 82;
+    --arb-muted: #5c5c5c;
+    --arb-faint: #8a8a8a;
+    --arb-line: rgba(17, 17, 17, .16);
+    --arb-line-strong: rgba(17, 17, 17, .30);
+    --arb-rose: #111111;
+    --arb-lilac: #5c5c5c;
+    --arb-sky: #3a3a3a;
+    --arb-gold: #111111;
+    --arb-card: rgba(255, 255, 255, .62);
+    --arb-card-strong: rgba(255, 255, 255, .84);
+    --arb-field: rgba(255, 255, 255, .74);
+    --arb-field-focus: rgba(255, 255, 255, .97);
+    --arb-shadow: rgba(17, 17, 17, .10);
+    --arb-tab: rgba(255, 255, 255, .42);
+    --arb-tab-active: linear-gradient(135deg, #ffffff, #f6f6f4);
+    --arb-primary: linear-gradient(115deg, #2a2a2a, #111111 52%, #000000);
+    --arb-primary-hover: linear-gradient(115deg, #444444, #333333 52%, #1c1c1c);
+    --arb-primary-ink: #ffffff;
+    --arb-accent-line: linear-gradient(100deg, #111111, #9a9a9a 52%, #111111);
+    --arb-glow: rgba(17, 17, 17, .26);
+    --arb-ring: rgba(17, 17, 17, .22);
+    --adr-deck-bg: #f4f4f2;
+    --adr-deck-ink: #111111;
+    --adr-deck-muted: #5c5c5c;
+    --adr-deck-line: rgba(17, 17, 17, .18);
+    --adr-deck-accent: #111111;
+    --adr-deck-card: linear-gradient(125deg, rgba(255,255,255,.96), rgba(250,250,249,.90) 50%, rgba(244,244,242,.92));
+    --adr-pearl-glow: rgba(17, 17, 17, .18);
+}
+html #adr044-drawer[data-adr-palette="ink"] {
+    --adrx-ink: #111111;
+    --adrx-muted: #5c5c5c;
+    --adrx-faint: #8a8a8a;
+    --adrx-line-strong: rgba(17, 17, 17, .30);
+    --adrx-rose: #111111;
+    --adrx-lilac: #5c5c5c;
+    --adrx-sky: #3a3a3a;
+    --adrx-card: rgba(255,255,255,.62);
+    --adrx-field: rgba(255,255,255,.74);
+    --adrx-shadow: rgba(17, 17, 17,.10);
+    --adrx-primary: linear-gradient(115deg, #2a2a2a, #111111 52%, #000000);
+    --adrx-primary-hover: linear-gradient(115deg, #444444, #333333 52%, #1c1c1c);
+    --adrx-primary-ink: #ffffff;
+    --adrx-glow: rgba(17, 17, 17,.26);
+    --adrx-ring: rgba(17, 17, 17,.22);
+    --adr-deck-bg: #f4f4f2;
+    --adr-deck-ink: #111111;
+    --adr-deck-muted: #5c5c5c;
+    --adr-deck-line: rgba(17, 17, 17,.18);
+    --adr-deck-accent: #111111;
+    --adr-deck-card: linear-gradient(125deg, rgba(255,255,255,.96), rgba(250,250,249,.90) 50%, rgba(244,244,242,.92));
+    --adr-pearl-glow: rgba(17, 17, 17,.18);
+}
+html #adr044-drawer[data-adr-palette="ink"] > .inline-drawer {
+    background: linear-gradient(175deg, #ffffff, #fbfbfa 52%, #f4f4f2) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-head::after {
+    background: linear-gradient(90deg, rgba(17, 17, 17, 0) 0%, #111111 20%, #111111 80%, rgba(17, 17, 17, 0) 100%) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-head .adr048-title { color: #111111 !important; }
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-head .adr048-title-d { color: #111111 !important; }
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-head .adr048-title-cn { color: rgba(17, 17, 17, .96) !important; }
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-sub { color: rgba(17, 17, 17, .50) !important; }
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-close,
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-theme-toggle {
+    border: 1px solid rgba(17, 17, 17, .32) !important;
+    background: rgba(255, 255, 255, .64) !important;
+    color: rgba(17, 17, 17, .84) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body .adr-top-progress .adr044-auto-counter::before,
+html #adr044-drawer[data-adr-palette="ink"] .adr-top-progress .adr044-auto-counter::before {
+    background: linear-gradient(90deg, transparent, rgba(17, 17, 17,.90), rgba(17, 17, 17,.85), transparent);
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body #adr044-master-toggle::before {
+    background:
+        radial-gradient(circle at 6px 50%, #111111 0 3.2px, transparent 3.8px),
+        radial-gradient(circle at 6px 50%, rgba(17, 17, 17, .28) 0 6.5px, transparent 7px);
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-head .adr048-head-txt::before {
+    background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, .95) 0 14%, transparent 34%),
+        linear-gradient(145deg, #8a8a8a, #3a3a3a 45%, #000000);
+    box-shadow: 0 0 0 3px rgba(17, 17, 17, .14), 0 4px 12px rgba(17, 17, 17, .20);
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-shell .adr048-section > .adr048-check input[type="checkbox"]:checked,
+html #adr044-drawer[data-adr-palette="ink"] .adr044-check input[type="checkbox"]:checked {
+    background:
+        radial-gradient(circle at calc(100% - 11px) 50%, #ffffff 0 7px, transparent 7.6px),
+        linear-gradient(90deg, #111111, #222222 55%, #444444) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body .adrx-drawer .adr048-check input[type="checkbox"]:checked,
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body .adrx-drawer .adr044-check input[type="checkbox"]:checked,
+html #adr044-drawer[data-adr-palette="ink"] .adrx-drawer .adr044-check input[type="checkbox"]:checked {
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='%23ffffff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px 12px no-repeat,
+        linear-gradient(135deg, #111111, #222222 60%, #444444) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"], .adr-fold-card) > .adr048-check input[type="checkbox"]:checked,
+html #adr044-drawer[data-adr-palette="ink"] .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"], .adr-fold-card) > .adr044-check input[type="checkbox"]:checked {
+    background: radial-gradient(circle at calc(100% - 11px) 50%, #fff 0 7px, transparent 7.6px), linear-gradient(90deg, #111111, #222222 55%, #444444) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body .arb-ct-bar i,
+html #adr044-drawer[data-adr-palette="ink"] .arb-ct-bar i {
+    background: linear-gradient(90deg, #111111, #222222 55%, #444444) !important;
+}
+
+/* —— 两套新配色在「留白」版式里的几处：涟漪的颜色、光晕 —— */
+html #adr048-popup-panel[data-arb-theme][data-hx-skin="airy"][data-adr-palette="ink"] {
+    --hx-ring-1: rgba(17, 17, 17, .10); --hx-ring-2: rgba(17, 17, 17, .075); --hx-ring-3: rgba(17, 17, 17, .05); --hx-ring-4: rgba(17, 17, 17, .03);
+    --hx-glow: rgba(17, 17, 17, .12);
+    --hx-hair: rgba(17, 17, 17, .14);
+    --hx-hair-soft: rgba(17, 17, 17, .075);
+    --hx-veil: rgba(255, 255, 255, .55);
+    --hx-veil-strong: rgba(255, 255, 255, .9);
+}
+html #adr048-popup-panel[data-arb-theme][data-hx-skin="airy"][data-adr-palette="pine"] {
+    --hx-ring-1: rgba(217, 201, 160, .16); --hx-ring-2: rgba(217, 201, 160, .11); --hx-ring-3: rgba(217, 201, 160, .07); --hx-ring-4: rgba(217, 201, 160, .04);
+    --hx-glow: rgba(217, 201, 160, .20);
+    --hx-hair: rgba(217, 201, 160, .16);
+    --hx-hair-soft: rgba(217, 201, 160, .085);
+}
+/* 墨白：面板里的表情符号也收成灰度（标题、状态条、按钮、带表情的开关），不然一屏黑白里蹦出几个彩色的。
+   只加在这些小件上，不给整块滚动区套滤镜 */
+html #adr048-popup-panel[data-adr-palette="ink"] #adr048-popup-body details > summary,
+html #adr048-popup-panel[data-adr-palette="ink"] #adr048-popup-body .adr-lamp-topline,
+html #adr048-popup-panel[data-adr-palette="ink"] #adr048-popup-body button,
+html #adr048-popup-panel[data-adr-palette="ink"] #adr048-popup-body label.adr048-check,
+html #adr048-popup-panel[data-adr-palette="ink"] #adr048-popup-body .adr-lamp-msg.n,
+html #adr048-popup-panel[data-adr-palette="ink"] #adr048-popup-head button { filter: grayscale(1); -webkit-filter: grayscale(1); }
+/* 墨白的主按钮是实心墨，不要彩色光晕 */
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] { --arb-glow: rgba(0, 0, 0, .16); --arb-ring: rgba(0, 0, 0, .14); --adr-pearl-glow: rgba(0, 0, 0, .10); }
+
+/* —— 浮标 · 松烟月色：深松的底，远近两道山脊，一弯淡金的月；河收起来 —— */
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-stop-a { stop-color: #0c1b17; }
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-stop-b { stop-color: #15302a; }
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-stop-c { stop-color: #1f4a40; }
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-stop-d { stop-color: #2f6152; }
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-shell { stroke: #d9c9a0; stroke-opacity: .5; }
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-sheen { opacity: .35; }
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-river,
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-current { display: none !important; animation: none !important; }
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-art-pine { display: inline !important; }
+html #adr048-fab[data-adr-palette="pine"] .arb-fab-word { fill: #e8d9a8; font-weight: 500; letter-spacing: 4.4px; }
+
+/* —— 浮标 · 素笺墨白：白底细墨边，左一枚实心墨点、右一枚空心圈，中间三个字；没有高光也没有河 —— */
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-stop-a,
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-stop-b { stop-color: #ffffff; }
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-stop-c { stop-color: #fbfbfa; }
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-stop-d { stop-color: #f1f1ef; }
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-shell { stroke: #111111; stroke-opacity: .88; stroke-width: 1.4; }
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-sheen,
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-river,
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-current { display: none !important; animation: none !important; }
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-art-ink { display: inline !important; }
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-word { fill: #111111; font-weight: 500; letter-spacing: 5px; }
+/* 墨白的两盏灯也是黑白的：导演是一枚实心墨点，剧场是一枚空心圈 */
+html #adr048-fab[data-adr-palette="ink"].adr048-lamp-d::before {
+    background: #111111;
+    box-shadow: 0 0 0 1px #ffffff, 0 0 4px 1px rgba(0, 0, 0, .35);
+}
+html #adr048-fab[data-adr-palette="ink"].adr048-lamp-t::after {
+    background: #ffffff;
+    box-shadow: 0 0 0 1.3px #111111, 0 0 4px 1px rgba(0, 0, 0, .25);
+}
+/* 松烟的两盏灯：导演是月色淡金，剧场是松针青 */
+html #adr048-fab[data-adr-palette="pine"].adr048-lamp-d::before {
+    background: radial-gradient(circle at 38% 34%, #fffaf0 0%, #e8d9a8 50%, #bfa66a 100%);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .9), 0 0 5px 1.5px rgba(232, 217, 168, .9);
+}
+html #adr048-fab[data-adr-palette="pine"].adr048-lamp-t::after {
+    background: radial-gradient(circle at 38% 34%, #f0fff8 0%, #9fd0b8 50%, #5f9c84 100%);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .9), 0 0 5px 1.5px rgba(159, 208, 184, .9);
+}
+/* 墨白的浮标没有河，三个字落在正中；落影用中性的灰，不带紫 */
+html #adr048-fab[data-adr-palette="ink"] .arb-fab-word { transform: translateY(4.6px); }
+html #adr048-fab[data-adr-palette="ink"][data-anchor="own-lazy-fixed"] { filter: drop-shadow(0 5px 12px rgba(0, 0, 0, .22)) !important; }
+html #adr048-fab[data-adr-palette="ink"][data-anchor="own-lazy-fixed"]:hover { filter: drop-shadow(0 7px 16px rgba(0, 0, 0, .28)) !important; }
+html #adr048-fab[data-adr-palette="pine"][data-anchor="own-lazy-fixed"] { filter: drop-shadow(0 6px 14px rgba(4, 16, 12, .42)) !important; }
+html #adr048-fab[data-adr-palette="pine"][data-anchor="own-lazy-fixed"]:hover { filter: drop-shadow(0 8px 18px rgba(4, 16, 12, .50)) !important; }
+
+/* 松烟：开着的开关、勾选的方框和计数条。深色那一层默认是粉紫的，这里换成月色淡金 → 松针青；方框里的勾用深松色，压在淡金上才看得清 */
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-shell .adr048-section > .adr048-check input[type="checkbox"]:checked,
+html #adr044-drawer[data-adr-palette="pine"] .adr044-check input[type="checkbox"]:checked {
+    background:
+        radial-gradient(circle at calc(100% - 11px) 50%, #ffffff 0 7px, transparent 7.6px),
+        linear-gradient(90deg, #e8d9a8, #b9c79c 55%, #7fa694) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body .adrx-drawer .adr048-check input[type="checkbox"]:checked,
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body .adrx-drawer .adr044-check input[type="checkbox"]:checked,
+html #adr044-drawer[data-adr-palette="pine"] .adrx-drawer .adr044-check input[type="checkbox"]:checked {
+    background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='%2310231e' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 12px 12px no-repeat,
+        linear-gradient(135deg, #e8d9a8, #b9c79c 60%, #7fa694) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"], .adr-fold-card) > .adr048-check input[type="checkbox"]:checked,
+html #adr044-drawer[data-adr-palette="pine"] .adrx-drawer:is([data-drawer-id="shared-main"], [data-drawer-id^="trigger-"], .adr-fold-card) > .adr044-check input[type="checkbox"]:checked {
+    background: radial-gradient(circle at calc(100% - 11px) 50%, #fff 0 7px, transparent 7.6px), linear-gradient(90deg, #e8d9a8, #b9c79c 55%, #7fa694) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-adr-palette="pine"] #adr048-popup-body .arb-ct-bar i,
+html #adr044-drawer[data-adr-palette="pine"] .arb-ct-bar i {
+    background: linear-gradient(90deg, #e8d9a8, #b9c79c 55%, #7fa694) !important;
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-hx-skin="airy"][data-adr-palette="pine"] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"]::-webkit-slider-thumb {
+    border-color: rgba(232, 217, 168, .75);
+    background: radial-gradient(circle at 36% 30%, #fffdf4 0%, #efe3bd 45%, #c9b57c 100%);
+}
+html #adr048-popup-panel[data-arb-theme="dusk"][data-hx-skin="airy"][data-adr-palette="pine"] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="range"]::-moz-range-thumb {
+    border-color: rgba(232, 217, 168, .75);
+    background: radial-gradient(circle at 36% 30%, #fffdf4 0%, #efe3bd 45%, #c9b57c 100%);
+}
+/* 墨白里剩下的几处带色的小件（计数条的底、提示签、小风铃状态卡、没开的开关），都收成灰 */
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body#adr048-popup-body#adr048-popup-body .arb-ct-bar { background-color: rgba(17, 17, 17, .09) !important; }
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body#adr048-popup-body#adr048-popup-body .arb-ct-tag { border-color: rgba(17, 17, 17, .30) !important; }
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr044-cd-status-line,
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adr044-cd-life-card { background-color: rgba(17, 17, 17, .035) !important; border-color: rgba(17, 17, 17, .12) !important; }
+html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-popup-body#adr048-popup-body#adr048-popup-body input[type="checkbox"]:not(:checked) { background-color: rgba(17, 17, 17, .13) !important; }
+/* 墨白的内嵌抽屉（酒馆扩展页里那一份）：里面还有几处写死的粉（标题珠、总开关的小点、小风铃状态卡），
+   整个抽屉收成灰度。那是一页不常开的设置，不像浮窗要跟着聊天滚，套一层滤镜不碍事 */
+html #adr044-drawer[data-adr-palette="ink"] > .inline-drawer { filter: grayscale(1); -webkit-filter: grayscale(1); }
