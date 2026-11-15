@@ -663,6 +663,81 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
         ok(eR.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eR.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
     }
 
+    section("API 预设：聊天位 / 执笔位，三位共用一份，导演那边存的也能直接选（v1.46.0）");
+    {
+        const eA = build({ settings: { apiProfilesStore: {
+            plot: [{ name: "DS", endpoint: "https://ds.example/v1", apiKey: "k-ds", model: "ds-chat" }],
+            emotion: [{ name: "Claude", endpoint: "https://c.example/v1", apiKey: "k-claude", model: "claude-x" }, { name: "ds", endpoint: "https://dup.example/v1", apiKey: "k-dup", model: "dup" }],
+            cd: [] } } });
+        await boot(eA);
+        const dA = eA.doc, WA = eA.win, HA = WA.__adrHxApiTest;
+        click(WA, dA.querySelector("#adr044-drawer #adr044-tab-lamp")); await tick(50);
+        click(WA, dA.querySelector("#adr048-fab")); await tick(400);
+        const Q = s2 => dA.querySelector("#adr048-popup-body " + s2), D = s2 => dA.querySelector("#adr044-drawer " + s2);
+        const optsOf = el => Array.from(el.options).map(o => o.textContent);
+        const pick = async (slot, value) => { const el = Q("#adr044-api-profile-select-" + slot); el.value = value; change(WA, el); await tick(80); };
+        const stat = slot => Q("#adr044-api-profile-status-" + slot).textContent;
+        ["lamp", "pen"].forEach(slot => {
+            ok(!!Q("#adr044-api-profile-select-" + slot) && !!Q("#adr044-api-profile-name-" + slot) && !!Q("#adr044-api-profile-save-" + slot) && !!Q("#adr044-api-profile-delete-" + slot) && !!D("#adr044-api-profile-select-" + slot), "两端都有「API 预设 · " + (slot === "lamp" ? "聊天位" : "执笔位") + "」那一行：下拉、名字框、保存、删除");
+        });
+        ok(optsOf(Q("#adr044-api-profile-select-lamp")).join("|") === "选择已有预设|DS（统筹的）|Claude（情感导演的）" && Q("#adr044-api-profile-select-lamp optgroup").label === "导演 / 抽卡那边存的", "下拉里列着导演那边已经存好的预设，同名的只列一次（先认统筹的）", optsOf(Q("#adr044-api-profile-select-lamp")).join("|"));
+        ok(Q("#adr044-api-profile-select-lamp").value === "" && Q("#adr044-lamp-self").classList.contains("adr-lamp-hide") && eA.st().lampBorrow !== "self", "一开始聊天位在借统筹的：没选预设，自填框藏着");
+        // 选一个导演存的：不用敲 key
+        await pick("lamp", "::plot::DS");
+        ok(eA.st().lampBorrow === "self" && eA.st().lampApiEndpoint === "https://ds.example/v1" && eA.st().lampApiKey === "k-ds" && eA.st().lampModel === "ds-chat", "选了统筹存的 DS：聊天位改成自己填，地址、钥匙、模型写进设置");
+        ok(Q("#adr044-lamp-borrow").value === "self" && !Q("#adr044-lamp-self").classList.contains("adr-lamp-hide") && Q("#adr044-lamp-endpoint").value === "https://ds.example/v1" && Q("#adr044-lamp-key").value === "k-ds" && Q("#adr044-lamp-model").value === "ds-chat" && Q("#adr044-api-profile-name-lamp").value === "DS", "面板跟着变：借谁的下拉、自填框露出来、三个输入框和名字框都填好");
+        ok(D("#adr044-lamp-endpoint").value === "https://ds.example/v1" && D("#adr044-lamp-borrow").value === "self" && D("#adr044-api-profile-select-lamp").value === "::plot::DS", "抽屉那份同步");
+        ok(stat("lamp").indexOf("已切换：DS（统筹那边存的）") === 0 && stat("lamp").indexOf("聊天位改成了自己填") > 0 && Q("#adr044-lamp-api-note").textContent.indexOf("ds-chat") >= 0, "状态行说切到了谁、说明行写着现在的模型", stat("lamp"));
+        eA.setScript(() => "在");
+        Q("#adr044-lamp-input").value = "在吗"; click(WA, Q("#adr044-lamp-send")); await tick(300);
+        ok(eA.calls[0].url.indexOf("https://ds.example/v1") === 0 && eA.calls[0].headers.Authorization === "Bearer k-ds" && eA.calls[0].body.model === "ds-chat", "发出去的请求走的就是这个预设", eA.calls[0].url);
+        // 存成自己的预设
+        await tick(500); click(WA, Q("#adr044-api-profile-save-lamp")); await tick(100);
+        ok(HA.profiles().length === 1 && HA.profiles()[0].name === "DS" && stat("lamp").indexOf("已新增预设：DS") === 0, "名字框里是 DS、直接点保存：存进小红霞这份预设单", stat("lamp"));
+        ok(optsOf(Q("#adr044-api-profile-select-lamp")).join("|") === "选择已有预设|DS|Claude（情感导演的）" && Q("#adr044-api-profile-select-lamp").value === "DS", "自己这份里有了同名的，导演那边的 DS 就不再重复列", optsOf(Q("#adr044-api-profile-select-lamp")).join("|"));
+        Q("#adr044-lamp-model").value = "ds-reasoner"; Q("#adr044-api-profile-name-lamp").value = "我的DS";
+        await tick(500); click(WA, Q("#adr044-api-profile-save-lamp")); await tick(100);
+        ok(HA.profiles().map(x => x.name + "#" + x.model).join() === "DS#ds-chat,我的DS#ds-reasoner" && eA.st().lampModel === "ds-reasoner" && Q("#adr044-api-profile-select-lamp").value === "我的DS", "改了模型、换个名字保存：新增一条，原来那条不动", HA.profiles().map(x => x.name + "#" + x.model).join());
+        ok(optsOf(Q("#adr044-api-profile-select-pen")).indexOf("我的DS") >= 0 && optsOf(D("#adr044-api-profile-select-pen")).indexOf("我的DS") >= 0 && Q("#adr044-api-profile-select-pen").value === "", "执笔位的下拉里马上也有（共用一份），执笔位自己没被动");
+        await pick("pen", "我的DS");
+        ok(eA.st().penBorrow === "self" && eA.st().penApiKey === "k-ds" && eA.st().penModel === "ds-reasoner" && !Q("#adr044-pen-self").classList.contains("adr-lamp-hide") && HA.current("pen") === "我的DS", "执笔位选「我的DS」：也切过去了");
+        await pick("lamp", "::emotion::Claude");
+        ok(eA.st().lampApiEndpoint === "https://c.example/v1" && eA.st().lampApiKey === "k-claude" && eA.st().penApiEndpoint === "https://ds.example/v1", "聊天位换成 Claude：一选就换，执笔位不受影响");
+        await pick("lamp", "我的DS");
+        ok(eA.st().lampApiKey === "k-ds" && eA.st().lampModel === "ds-reasoner", "再换回来：钥匙和模型都回来了");
+        // 更新同名
+        Q("#adr044-lamp-model").value = "ds-v3";
+        await tick(500); click(WA, Q("#adr044-api-profile-save-lamp")); await tick(100);
+        ok(HA.profiles().length === 2 && HA.find("我的DS").item.model === "ds-v3" && stat("lamp").indexOf("已更新预设：我的DS") === 0, "同名再保存是更新，不多出一条", stat("lamp"));
+        // 各种不让存
+        Q("#adr044-api-profile-name-lamp").value = "";
+        await tick(500); click(WA, Q("#adr044-api-profile-save-lamp")); await tick(100);
+        ok(HA.profiles().length === 2 && stat("lamp").indexOf("请先在预设名里写个名字") === 0, "没写名字：不存，说明原因");
+        Q("#adr044-api-profile-name-lamp").value = "::坏名字";
+        await tick(500); click(WA, Q("#adr044-api-profile-save-lamp")); await tick(100);
+        ok(HA.profiles().length === 2 && stat("lamp").indexOf("预设名别用 :: 开头") === 0, "名字以 :: 开头：不存");
+        // 改回借别人的：预设那一行回到没选
+        const lb = Q("#adr044-lamp-borrow"); lb.value = "plot"; change(WA, lb); await tick(80);
+        ok(Q("#adr044-api-profile-select-lamp").value === "" && HA.current("lamp") === "" && HA.selected("lamp") === "我的DS", "聊天位改回借统筹的：预设下拉回到「选择已有预设」，但记着上次选的是谁");
+        Q("#adr044-api-profile-name-lamp").value = "借着的时候存";
+        await tick(500); click(WA, Q("#adr044-api-profile-save-lamp")); await tick(100);
+        ok(HA.profiles().length === 2 && stat("lamp").indexOf("先把聊天位选成「自己填」") === 0, "没在自己填的时候点保存：不存，提示先选自己填", stat("lamp"));
+        // 重开浮窗
+        click(WA, dA.querySelector("#adr048-popup-close")); await tick(400); click(WA, dA.querySelector("#adr048-fab")); await tick(600);
+        ok(Q("#adr044-api-profile-select-pen").value === "我的DS" && Q("#adr044-api-profile-name-pen").value === "我的DS" && Q("#adr044-api-profile-select-lamp").value === "", "关浮窗再开：执笔位还显示着选的是谁");
+        // 删除
+        Q("#adr044-api-profile-name-pen").value = "Claude";
+        await tick(500); click(WA, Q("#adr044-api-profile-delete-pen")); await tick(100);
+        ok(HA.profiles().length === 2 && stat("pen").indexOf("「Claude」是导演那边存的") === 0, "导演那边存的不能在这里删：说明去哪删", stat("pen"));
+        Q("#adr044-api-profile-name-pen").value = "我的DS";
+        await tick(500); click(WA, Q("#adr044-api-profile-delete-pen")); await tick(100);
+        ok(HA.profiles().length === 2 && Q("#adr044-api-profile-delete-pen").textContent === "确定删除？" && stat("pen").indexOf("再点一次确认删除「我的DS」") === 0, "删除先问一句", stat("pen"));
+        await tick(500); click(WA, Q("#adr044-api-profile-delete-pen")); await tick(100);
+        ok(HA.profiles().map(x => x.name).join() === "DS" && eA.st().penApiKey === "k-ds" && eA.st().penBorrow === "self" && HA.selected("pen") === "" && HA.selected("lamp") === "" && Q("#adr044-api-profile-select-pen").value === "", "再点一次删掉：预设单里没了，各位现在填着的不动，选中记录清掉", HA.profiles().map(x => x.name).join());
+        ok(eA.st().apiProfilesStore.plot.length === 1 && eA.st().apiProfilesStore.emotion.length === 2 && eA.st().apiProfilesStore.hx.length === 1, "导演那边的预设单一条没动");
+        ok(eA.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eA.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
+    }
+
     section("不碰导演那套");
     ok(e.calls.every(c => c.body.messages[0].content.indexOf("【情感方向】") < 0 && c.body.messages[0].content.indexOf("【派人】") < 0), "掌灯的请求里没有导演预设");
     ok(e.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "全程没有 console.error", e.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));

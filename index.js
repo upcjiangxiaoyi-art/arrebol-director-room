@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.45.10｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.46.0｜ripple & GPT & Claude
+ * v1.46.0 掌灯聊天位、执笔位与剧场位加 API 预设：下拉一选就切、不用每次敲 key；三个位共用一份预设单，导演和抽卡那边存好的也能直接选（提议 江「换 api 预设直接换」；施工 Claude）
  * v1.45.8–1.45.10 小红霞三份人设的措辞微调（提议 江；施工 Claude）
  * v1.45.7 改稿、蛐蛐、剧场三份人设对齐：屏幕前是书外的成年读者（不是剧情里的 user）；两个成年人愉快地讨论，艺术创作也不可能毫无边界和底线；读者问意见时可以给回复建议，走向一起商量（提议 江；施工 Claude）
  * v1.45.6 改稿小红霞人设重写：审美极高的高级改稿员、不是扮演者，读者让改就改；读者是书外的成年读者，不是剧情里的 user；在聊天里说「改吧」就自动动笔，交整楼全文、没改的逐字照抄、文笔一致、字数听读者的（报告与提议 江「她一直拒绝重写」；施工 Claude）
@@ -114,7 +115,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.45.10";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.46.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -7704,6 +7705,7 @@
             adrLampToggleSelfBlocks();
             adrLampApplyModeUI();
             adrCdSetTextAll("adr044-lamp-api-note", adrLampApiNote("lamp") + "　｜　" + adrLampApiNote("pen"));
+            adrHxApiRefresh("lamp"); adrHxApiRefresh("pen");
         } catch (e) {}
     }
 
@@ -7828,8 +7830,10 @@
             + secOpen("🔌 API · 聊天位与执笔位", true, "lamp-api")
             + '<div class="' + noteClass + '">聊天位是和你掰扯的那个，执笔位是真正下笔改稿的那个。想让改出来的文风和前后楼一致，执笔位填主聊天用的模型。</div>'
             + '<label>聊天位</label><select id="adr044-lamp-borrow">' + borrowOpts(st.lampBorrow || "plot", false) + '</select>'
+            + adrHxApiRowHTML("lamp")
             + apiFields("lamp", "聊天位")
             + '<label>执笔位</label><select id="adr044-pen-borrow">' + borrowOpts(st.penBorrow || "lamp", true) + '</select>'
+            + adrHxApiRowHTML("pen")
             + apiFields("pen", "执笔位")
             + '<label>温度（0–2，默认 0.8；聊天与改稿同用）</label><input type="number" id="adr044-lamp-temp" min="0" max="2" step="0.1" value="' + esc(String(adrLampTemp())) + '">'
             + '<div class="adr044-template-status" id="adr044-lamp-api-note"></div>'
@@ -7895,6 +7899,7 @@
 
     // ---- 绑定 ----
     function adrLampHandleButtonId(id, btn) {
+        if (adrHxApiHandleButtonId(id, btn)) return true;   // v1.46.0 聊天位 / 执笔位 / 剧场位的 API 预设「保存」「删除」
         if (id === "adr044-tab-lamp") { switchTab("lamp"); return true; }
         if (id === "adr044-lamp-send") { adrLampSend(); return true; }
         if (id === "adr044-lamp-stop") { adrLampAbort(); return true; }
@@ -7970,6 +7975,14 @@
             each("adr044-pen-borrow", function (el) {
                 guard(el);
                 el.addEventListener("change", function () { save("penBorrow", String(el.value || "lamp")); saveNow(); adrLampRefreshPanelFields(); });
+            });
+            // v1.46.0 API 预设：下拉一选就切
+            ["lamp", "pen"].forEach(function (slot) {
+                each("adr044-api-profile-select-" + slot, function (el) {
+                    guard(el);
+                    el.addEventListener("change", function () { el.__adrCdPickerOpenAt = 0; el.__adrCdTouchedAt = 0; adrHxApiOnSelect(slot, el); });
+                });
+                each("adr044-api-profile-name-" + slot, function (el) { guard(el); });
             });
             ["lamp", "pen"].forEach(function (p) {
                 saveStr("adr044-" + p + "-endpoint", p + "ApiEndpoint");
@@ -8554,6 +8567,7 @@
             Array.prototype.slice.call(d.querySelectorAll("#adr044-stage-self")).forEach(function (el) { el.classList.toggle("adr-lamp-hide", adrTheaterBorrow() !== "self"); });
             adrCdSetTextAll("adr044-theater-api-note", adrTheaterApiNote());
             adrTheaterSetButtons();
+            adrHxApiRefresh("stage");
             adrCdSetValueSafe("adr044-theater-persona", st.theaterPersona || "");
             adrCdSetTextAll("adr044-theater-rules-view", adrTheaterRulesText(adrTheaterRichAllowed()));
             if (fillText !== false) {
@@ -8843,6 +8857,7 @@
             + '<label>剧场位</label><select id="adr044-stage-borrow">'
             + opt(borrow, "lamp", "和掌灯聊天位一样") + opt(borrow, "plot", "借统筹的") + opt(borrow, "emotion", "借情感导演的") + opt(borrow, "expand", "借展开的") + opt(borrow, "cd", "借小眼睛的") + opt(borrow, "self", "自己填")
             + '</select>'
+            + adrHxApiRowHTML("stage")
             + '<div id="adr044-stage-self"' + (borrow === "self" ? "" : ' class="adr-lamp-hide"') + '>'
             + '<label>剧场位 API 地址</label><input type="text" id="adr044-stage-endpoint" value="' + esc(st.stageApiEndpoint || "") + '" placeholder="https://api.example.com/v1">'
             + '<label>剧场位 API 密钥</label><input type="password" id="adr044-stage-key" value="' + esc(st.stageApiKey || "") + '" placeholder="sk-...">'
@@ -8879,6 +8894,7 @@
         if (id === "adr044-theater-delete") { adrTheaterDeleteFromFields(btn); return true; }
         if (id === "adr044-theater-now") { adrTheaterNow("manual", true).catch(function () {}); return true; }
         if (id === "adr044-theater-stop") { adrTheaterAbort(); return true; }
+        if (adrHxApiHandleButtonId(id, btn)) return true;
         if (id === "adr044-theater-persona-fill") { adrTheaterPersonaFill(btn); return true; }
         if (id === "adr044-theater-persona-reset") { adrTheaterPersonaReset(btn); return true; }
         if (id === "adr044-theater-remove") { adrTheaterRemoveLatest(); return true; }
@@ -8957,6 +8973,13 @@
             each("adr044-theater-import-file", function (el) {
                 el.addEventListener("change", function () { adrTheaterHandleImportFile(el); });
             });
+            // v1.46.0 API 预设：下拉一选就切
+            each("adr044-api-profile-select-stage", function (el) {
+                tap(el);
+                // 选完就放行刷新（不再给 1.5 秒免疫）：紧接着改「借谁的」时，这一行要能马上回到没选
+                el.addEventListener("change", function () { el.__adrCdPickerOpenAt = 0; el.__adrCdTouchedAt = 0; adrHxApiOnSelect("stage", el); });
+            });
+            each("adr044-api-profile-name-stage", function (el) { typing(el); });
             // v1.45.0 剧场位
             each("adr044-stage-borrow", function (el) {
                 tap(el);
@@ -9736,6 +9759,266 @@
     }
 
 
+    // ================= v1.46.0 小红霞这边的 API 预设：聊天位 / 执笔位 / 剧场位 =================
+    // 江：「能不能把这个改成多预设，和导演一样，换 api 预设直接换，不用每次都输入 key」。
+    // · 三个位共用一份预设单（apiProfilesStore.hx）：在哪一位存的，另外两位都能选。
+    // · 下拉里还列着导演 / 抽卡那边已经存好的预设（只读，选了就把地址、钥匙、模型填过来）——以前存过的不用再敲一遍 key。
+    // · 选一个预设 = 这一位改成「自己填」，并把三样填好；每一位各记各的「现在选的是哪个」。
+    // 导演那套函数按 emotion / plot / cd 认类型（别的一律当 emotion），所以这里不走它们，只借底层的存取。
+    var ADR_HX_API_SLOT = {
+        lamp: { label: "聊天位", page: "lamp", borrowKey: "lampBorrow", fallback: "plot" },
+        pen: { label: "执笔位", page: "lamp", borrowKey: "penBorrow", fallback: "lamp" },
+        stage: { label: "剧场位", page: "theater", borrowKey: "theaterBorrow", fallback: "lamp" }
+    };
+    var ADR_HX_API_SRC = [["plot", "统筹"], ["emotion", "情感导演"], ["cd", "抽卡"]];
+    var ADR_HX_API_FOREIGN = "::";   // 下拉里导演那边的预设，值写成 ::plot::名字，和自己这份的名字分开
+    var ADR_HX_API_HINT = "下拉一选就切过去（这一位自动改成「自己填」）。聊天位、执笔位、剧场位共用一份预设单，导演那边存的也能直接选；写个名字点「保存」，把现在填的存成预设。";
+
+    function adrHxApiProfiles() {
+        try { return adrDNormalizeApiProfiles(adrDLoadApiProfileStore().hx || []); } catch (e) { return []; }
+    }
+
+    function adrHxApiSaveProfiles(arr) {
+        try {
+            var rw = rootWin();
+            var store = adrDLoadApiProfileStore();
+            store.hx = adrDNormalizeApiProfiles(arr);
+            rw.__adrDApiProfilesCache = adrDNormalizeApiProfileStore(store);
+            settings().apiProfilesStore = rw.__adrDApiProfilesCache;
+            saveNow();
+            try { rw.localStorage.setItem(ADR_D_API_PROFILE_KEY, JSON.stringify(rw.__adrDApiProfilesCache)); } catch (eLs) {}
+            return true;
+        } catch (e) {
+            try { console.warn("[Arrebol D] save hx api profiles failed", e); } catch (e2) {}
+            return false;
+        }
+    }
+
+    // 导演 / 抽卡那边存的：按名字去重（自己这份里有同名的就不再列），带上是谁家的
+    function adrHxApiForeign() {
+        var out = [], seen = {};
+        adrHxApiProfiles().forEach(function (it) { seen[String(it.name).toLowerCase()] = true; });
+        ADR_HX_API_SRC.forEach(function (src) {
+            var list = [];
+            try { list = adrDLoadApiProfiles(src[0]); } catch (e) {}
+            list.forEach(function (it) {
+                var k = String(it.name || "").toLowerCase();
+                if (!k || seen[k]) return;
+                seen[k] = true;
+                out.push({ value: ADR_HX_API_FOREIGN + src[0] + ADR_HX_API_FOREIGN + it.name, name: it.name, from: src[1], item: it });
+            });
+        });
+        return out;
+    }
+
+    function adrHxApiFind(value) {
+        var v = String(value || "");
+        if (!v) return null;
+        if (v.indexOf(ADR_HX_API_FOREIGN) === 0) {
+            var hit = null;
+            adrHxApiForeign().forEach(function (f) { if (f.value === v) hit = f; });
+            return hit ? { item: hit.item, foreign: true, from: hit.from, name: hit.name } : null;
+        }
+        var key = v.trim().toLowerCase(), found = null;
+        adrHxApiProfiles().forEach(function (it) { if (String(it.name).toLowerCase() === key) found = it; });
+        return found ? { item: found, foreign: false, from: "", name: found.name } : null;
+    }
+
+    function adrHxApiIsSelf(slot) {
+        try { return String(settings()[ADR_HX_API_SLOT[slot].borrowKey] || ADR_HX_API_SLOT[slot].fallback) === "self"; } catch (e) { return false; }
+    }
+
+    function adrHxApiSelected(slot) {
+        try { return String(adrDLoadSelectedApiProfiles()[slot] || ""); } catch (e) { return ""; }
+    }
+
+    function adrHxApiSetSelected(slot, value) {
+        try {
+            var obj = adrDLoadSelectedApiProfiles();
+            obj[slot] = String(value || "");
+            settings().selectedApiProfiles = obj;
+            saveNow();
+            try { rootWin().localStorage.setItem(ADR_D_SELECTED_API_PROFILE_KEY, JSON.stringify(obj)); } catch (eLs) {}
+        } catch (e) {}
+    }
+
+    // 这一位现在「正用着」哪个预设：只有在自己填、而且那个预设还在的时候才算
+    function adrHxApiCurrent(slot) {
+        if (!adrHxApiIsSelf(slot)) return "";
+        var v = adrHxApiSelected(slot);
+        return adrHxApiFind(v) ? v : "";
+    }
+
+    function adrHxApiOptionsHTML(slot) {
+        var cur = adrHxApiCurrent(slot);
+        var html = '<option value="">选择已有预设</option>';
+        adrHxApiProfiles().forEach(function (it) {
+            html += '<option value="' + esc(it.name) + '"' + (it.name === cur ? " selected" : "") + '>' + esc(it.name) + '</option>';
+        });
+        var foreign = adrHxApiForeign();
+        if (foreign.length) {
+            html += '<optgroup label="导演 / 抽卡那边存的">';
+            foreign.forEach(function (f) {
+                html += '<option value="' + esc(f.value) + '"' + (f.value === cur ? " selected" : "") + '>' + esc(f.name + "（" + f.from + "的）") + '</option>';
+            });
+            html += '</optgroup>';
+        }
+        return html;
+    }
+
+    function adrHxApiOptSig(slot) {
+        var names = adrHxApiProfiles().map(function (it) { return it.name; }).concat(adrHxApiForeign().map(function (f) { return f.value; }));
+        return adrCdOptSig("hxapi-" + slot, names, adrHxApiCurrent(slot));
+    }
+
+    function adrHxApiNameOf(value) {
+        var hit = adrHxApiFind(value);
+        return hit ? hit.name : "";
+    }
+
+    function adrHxApiRowHTML(slot) {
+        var cur = adrHxApiCurrent(slot);
+        return '<label>API 预设 · ' + ADR_HX_API_SLOT[slot].label + '</label>'
+            + '<div class="adr044-template-compact adr044-api-profile-compact">'
+            + '<select id="adr044-api-profile-select-' + slot + '" data-optsig="' + esc(adrHxApiOptSig(slot)) + '">' + adrHxApiOptionsHTML(slot) + '</select>'
+            + '<input type="text" id="adr044-api-profile-name-' + slot + '" value="' + esc(adrHxApiNameOf(cur)) + '" placeholder="预设名，如 DS / Claude">'
+            + '<div class="adr044-template-mini-actions">'
+            + '<button type="button" id="adr044-api-profile-save-' + slot + '">保存</button>'
+            + '<button type="button" id="adr044-api-profile-delete-' + slot + '">删除</button>'
+            + '</div>'
+            + '<div class="adr044-template-status" id="adr044-api-profile-status-' + slot + '">' + esc(ADR_HX_API_HINT) + '</div>'
+            + '</div>';
+    }
+
+    function adrHxApiStatus(slot, text, color) { adrCdSetTextAll("adr044-api-profile-status-" + slot, text, color || "#8ed99d"); }
+
+    // 两端（浮窗 / 抽屉）的下拉与名字框对到现在的状态。下拉内容没变就不重写（原生选择器正开着时重写会把它关掉）
+    function adrHxApiRefresh(slot, setName) {
+        try {
+            var cur = adrHxApiCurrent(slot);
+            var html = adrHxApiOptionsHTML(slot), sig = adrHxApiOptSig(slot);
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-select-" + slot)).forEach(function (sel) {
+                if (adrCdIsBusyEl(sel)) return;
+                adrCdFillSelect(sel, html, cur, sig);
+                sel.value = cur;
+            });
+            if (setName !== false) adrCdSetValueSafe("adr044-api-profile-name-" + slot, adrHxApiNameOf(cur));
+        } catch (e) {}
+    }
+
+    function adrHxApiRefreshAll() { ["lamp", "pen", "stage"].forEach(function (slot) { adrHxApiRefresh(slot); }); }
+
+    // 借谁的下拉、自填框的显隐、说明行——各页自己的刷新函数会顺带把预设那一行也对一遍
+    function adrHxApiRefreshPage(slot) {
+        try {
+            if (ADR_HX_API_SLOT[slot].page === "lamp") adrLampRefreshPanelFields();
+            else adrTheaterRefreshFields(false);
+        } catch (e) {}
+    }
+
+    function adrHxApiField(slot, id) { return adrDActiveField(ADR_HX_API_SLOT[slot].page, id); }
+
+    function adrHxApiApply(slot, value) {
+        var hit = adrHxApiFind(value);
+        if (!hit) { adrHxApiStatus(slot, "没找到这个预设，可能已经删了", "#C98BA3"); adrHxApiRefresh(slot); return false; }
+        adrDResetConfirmAction("delete-hx-api-profile-" + slot);
+        var wasSelf = adrHxApiIsSelf(slot);
+        save(ADR_HX_API_SLOT[slot].borrowKey, "self");
+        adrDSetCurrentApiFields(slot, hit.item);   // 地址、钥匙、模型：写进设置，也写进两端的输入框
+        adrHxApiSetSelected(slot, value);
+        // 刚点过的那个下拉在「正在操作」的免疫期里，刷新会跳过它：先把它自己和借谁的下拉直接对上
+        try {
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-" + slot + "-borrow")).forEach(function (el) { el.value = "self"; });
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + slot)).forEach(function (el) { el.value = hit.name; });
+        } catch (e) {}
+        adrHxApiRefreshPage(slot);
+        adrHxApiRefreshAll();
+        adrHxApiStatus(slot, "已切换：" + hit.name + (hit.foreign ? "（" + hit.from + "那边存的）" : "") + (wasSelf ? "" : " · " + ADR_HX_API_SLOT[slot].label + "改成了自己填"), "#8ed99d");
+        return true;
+    }
+
+    function adrHxApiOnSelect(slot, el) {
+        var v = String(el && el.value || "");
+        if (!v) {
+            adrHxApiSetSelected(slot, "");
+            Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-api-profile-name-" + slot)).forEach(function (input) { input.value = ""; });
+            adrHxApiStatus(slot, "写个新名字点「保存」，就把现在填的存成一个预设", "#A9B2C8");
+            return false;
+        }
+        return adrHxApiApply(slot, v);
+    }
+
+    function adrHxApiSave(slot) {
+        adrDResetConfirmAction("delete-hx-api-profile-" + slot);
+        var nameEl = adrHxApiField(slot, "adr044-api-profile-name-" + slot);
+        var name = String(nameEl ? nameEl.value || "" : "").trim();
+        var ep = adrHxApiField(slot, "adr044-" + slot + "-endpoint");
+        var ky = adrHxApiField(slot, "adr044-" + slot + "-key");
+        var md = adrHxApiField(slot, "adr044-" + slot + "-model");
+        var item = {
+            name: name,
+            endpoint: String(ep ? ep.value || "" : "").trim(),
+            apiKey: String(ky ? ky.value || "" : "").trim(),
+            model: String(md ? md.value || "" : "").trim(),
+            updatedAt: Date.now()
+        };
+        if (!adrHxApiIsSelf(slot)) { adrHxApiStatus(slot, "先把" + ADR_HX_API_SLOT[slot].label + "选成「自己填」，填好地址、钥匙、模型，再存成预设", "#C98BA3"); return false; }
+        if (!item.endpoint && !item.apiKey && !item.model) { adrHxApiStatus(slot, "请先填写 API 地址、密钥或模型", "#C98BA3"); return false; }
+        if (!name) { adrHxApiStatus(slot, "请先在预设名里写个名字，例如 DS / Claude", "#C98BA3"); return false; }
+        if (name.indexOf(ADR_HX_API_FOREIGN) === 0) { adrHxApiStatus(slot, "预设名别用 :: 开头", "#C98BA3"); return false; }
+        var arr = adrHxApiProfiles();
+        var found = -1;
+        arr.forEach(function (it, i) { if (String(it.name).toLowerCase() === name.toLowerCase()) found = i; });
+        if (found >= 0) arr[found] = item; else arr.push(item);
+        if (!adrHxApiSaveProfiles(arr)) { adrHxApiStatus(slot, "没存上，再点一次试试", "#d4726a"); return false; }
+        adrDSetCurrentApiFields(slot, item);
+        adrHxApiSetSelected(slot, name);
+        adrHxApiRefreshAll();
+        adrHxApiStatus(slot, (found >= 0 ? "已更新预设：" : "已新增预设：") + name + "（三个位都能选）", "#8ed99d");
+        return true;
+    }
+
+    function adrHxApiDelete(slot, btn) {
+        var nameEl = adrHxApiField(slot, "adr044-api-profile-name-" + slot);
+        var selEl = adrHxApiField(slot, "adr044-api-profile-select-" + slot);
+        var name = String(nameEl ? nameEl.value || "" : "").trim();
+        var selVal = String(selEl ? selEl.value || "" : "");
+        if (!name && selVal) name = adrHxApiNameOf(selVal);
+        var arr = adrHxApiProfiles();
+        var idx = -1;
+        arr.forEach(function (it, i) { if (String(it.name).toLowerCase() === name.toLowerCase()) idx = i; });
+        if (idx < 0) {
+            var foreign = selVal.indexOf(ADR_HX_API_FOREIGN) === 0 || adrHxApiForeign().some(function (f) { return f.name.toLowerCase() === name.toLowerCase(); });
+            adrHxApiStatus(slot, foreign && name ? "「" + name + "」是导演那边存的，要删去那边的页里删" : "请先选择或写上要删除的预设名", "#C98BA3");
+            return false;
+        }
+        var real = arr[idx].name;
+        return adrDTwoStepConfirm("delete-hx-api-profile-" + slot, btn || adrHxApiField(slot, "adr044-api-profile-delete-" + slot), "确定删除？", "再点一次确认删除「" + real + "」（只删预设单里这一条，各位现在填着的不动）",
+            function (msg) { adrHxApiStatus(slot, msg, "#d6a26a"); },
+            function () {
+                var cur = adrHxApiProfiles().filter(function (it) { return String(it.name).toLowerCase() !== real.toLowerCase(); });
+                adrHxApiSaveProfiles(cur);
+                ["lamp", "pen", "stage"].forEach(function (s2) { if (adrHxApiSelected(s2).toLowerCase() === real.toLowerCase()) adrHxApiSetSelected(s2, ""); });
+                adrHxApiRefreshAll();
+                adrHxApiStatus(slot, "已删除：" + real, "#f0b36a");
+            });
+    }
+
+    function adrHxApiHandleButtonId(id, btn) {
+        var m = /^adr044-api-profile-(save|delete)-(lamp|pen|stage)$/.exec(String(id || ""));
+        if (!m) return false;
+        if (m[1] === "save") adrHxApiSave(m[2]); else adrHxApiDelete(m[2], btn);
+        return true;
+    }
+
+    try {
+        rootWin().__adrHxApiTest = {
+            profiles: adrHxApiProfiles, foreign: adrHxApiForeign, find: adrHxApiFind, apply: adrHxApiApply, save: adrHxApiSave, del: adrHxApiDelete,
+            selected: adrHxApiSelected, current: adrHxApiCurrent, optionsHTML: adrHxApiOptionsHTML, refreshAll: adrHxApiRefreshAll
+        };
+    } catch (eHxApiHook) {}
+    // ================= 小红霞这边的 API 预设 结束 =================
+
     function adrDApiProfileType(type) {
         if (type === "cd") return "cd";
         return type === "plot" ? "plot" : "emotion";
@@ -9769,7 +10052,7 @@
     }
 
     function adrDNormalizeApiProfileStore(raw) {
-        var store = { emotion: [], plot: [], cd: [] };
+        var store = { emotion: [], plot: [], cd: [], hx: [] };   // v1.46.0 hx：小红霞三个位（聊天 / 执笔 / 剧场）共用的一份
 
         // 兼容上一版共享数组：首次读取时复制到两边，随后两边各自保存、互不影响。
         if (Array.isArray(raw)) {
@@ -9784,6 +10067,7 @@
             store.emotion = adrDNormalizeApiProfiles(raw.emotion || []);
             store.plot = adrDNormalizeApiProfiles(raw.plot || []);
             store.cd = adrDNormalizeApiProfiles(raw.cd || []);
+            store.hx = adrDNormalizeApiProfiles(raw.hx || []);
 
             // 兼容可能存在的 shared 字段：只补空侧，不覆盖已有独立档案。
             if (Array.isArray(raw.shared)) {
@@ -9813,8 +10097,8 @@
             var s = "";
             try { s = rw.localStorage.getItem(ADR_D_API_PROFILE_KEY) || ""; } catch (e1) {}
             if (!s) {
-                rw.__adrDApiProfilesCache = { emotion: [], plot: [], cd: [] };
-                return { emotion: [], plot: [], cd: [] };
+                rw.__adrDApiProfilesCache = { emotion: [], plot: [], cd: [], hx: [] };
+                return { emotion: [], plot: [], cd: [], hx: [] };
             }
 
             var parsed = adrDNormalizeApiProfileStore(JSON.parse(s));
@@ -9823,7 +10107,7 @@
             saveNow();
             return adrDNormalizeApiProfileStore(parsed);
         } catch (e) {
-            return { emotion: [], plot: [], cd: [] };
+            return { emotion: [], plot: [], cd: [], hx: [] };
         }
     }
 
@@ -10512,13 +10796,15 @@
         // v1.39.0 掌灯页按钮：直接绑定 + 兜底表双注册（同抽卡）。
         ["adr044-tab-lamp", "adr044-lamp-send", "adr044-lamp-stop", "adr044-lamp-rewrite", "adr044-lamp-clear", "adr044-lamp-apply", "adr044-lamp-draft-discard",
          "adr044-lamp-refresh", "adr044-lamp-floor-latest", "adr044-lamp-load-models", "adr044-pen-load-models", "adr044-lamp-test", "adr044-pen-test", "adr044-lamp-preset-reset",
-         "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip", "adr044-lamp-jump-bottom", "adr044-lamp-jump-top", "adr044-lamp-quip-now"].forEach(function (lid) {
+         "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip", "adr044-lamp-jump-bottom", "adr044-lamp-jump-top", "adr044-lamp-quip-now",
+         "adr044-api-profile-save-lamp", "adr044-api-profile-delete-lamp", "adr044-api-profile-save-pen", "adr044-api-profile-delete-pen"].forEach(function (lid) {
             ids[lid] = function () { adrLampHandleButtonId(lid, qForm(lid)); };
         });
         // v1.43.0 红霞剧场按钮：同样双注册
         ["adr044-theater-save", "adr044-theater-delete", "adr044-theater-now", "adr044-theater-stop", "adr044-theater-remove", "adr044-theater-regex-copy",
          "adr044-theater-import", "adr044-theater-export", "adr044-theater-clear", "adr044-theater-restore",
          "adr044-theater-persona-fill", "adr044-theater-persona-reset",
+         "adr044-api-profile-save-stage", "adr044-api-profile-delete-stage",
          "adr044-tab-theater", "adr044-stage-load-models", "adr044-stage-test"].forEach(function (tid) {
             ids[tid] = function () { adrTheaterHandleButtonId(tid, qForm(tid)); };
         });
@@ -12777,6 +13063,8 @@
             if (id === "adr044-tab-theater" || id.indexOf("adr044-theater-") === 0 || id.indexOf("adr044-stage-") === 0) {
                 if (adrTheaterHandleButtonId(id, btn)) return true;
             }
+            // v1.46.0 小红霞三个位（聊天 / 执笔 / 剧场）的 API 预设「保存」「删除」：id 不以 lamp- / pen- / stage- 开头，上面两条路由接不到，单独进兜底表
+            if (adrHxApiHandleButtonId(id, btn)) return true;
             if (id === "adr044-api-profile-save-cd") { adrDSaveCurrentApiProfile("cd"); return true; }
             if (id === "adr044-api-profile-delete-cd") { adrDRequestDeleteCurrentApiProfile("cd"); return true; }
             if (id === "adr044-expand-load-models") { loadModels("expand"); return true; }

@@ -690,6 +690,34 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
         W.__adrDGenTest.setQuietMs(4000);
     }
 
+    section("API 预设：剧场位（v1.46.0）");
+    {
+        W.__adrDGenTest.setQuietMs(60);
+        const HA = W.__adrHxApiTest;
+        e.st().apiProfilesStore = { plot: [{ name: "DS", endpoint: "https://ds.example/v1", apiKey: "k-ds", model: "ds-chat" }], emotion: [], cd: [], hx: [{ name: "便宜又会玩梗", endpoint: "https://cheap.example/v1", apiKey: "k-cheap", model: "cheap-fun" }] };
+        W.__adrDApiProfilesCache = null;
+        click(W, d.querySelector("#adr048-popup-close")); await tick(400); click(W, d.querySelector("#adr048-fab")); await tick(600);
+        const selS = () => P("#adr044-api-profile-select-stage");
+        ok(!!selS() && !!P("#adr044-api-profile-name-stage") && !!P("#adr044-api-profile-save-stage") && !!P("#adr044-api-profile-delete-stage") && !!d.querySelector("#adr044-drawer #adr044-api-profile-select-stage"), "剧场位也有「API 预设」那一行，两端都有");
+        ok(Array.from(selS().options).map(o => o.textContent).join("|") === "选择已有预设|便宜又会玩梗|DS（统筹的）", "下拉：小红霞这份在前，导演那边存的在分组里", Array.from(selS().options).map(o => o.textContent).join("|"));
+        ok(selS().parentElement.previousElementSibling.textContent === "API 预设 · 剧场位" && selS().closest("details").querySelector("#adr044-stage-borrow") !== null, "这一行就在剧场位的 API 那一节里");
+        selS().value = "便宜又会玩梗"; change(W, selS()); await tick(80);
+        ok(e.st().theaterBorrow === "self" && e.st().stageApiEndpoint === "https://cheap.example/v1" && e.st().stageApiKey === "k-cheap" && e.st().stageModel === "cheap-fun" && T.apiCfg().from === "self" && T.apiCfg().model === "cheap-fun", "选「便宜又会玩梗」：剧场位改成自己填并填好，取 API 的函数给的也是它");
+        ok(P("#adr044-stage-borrow").value === "self" && !P("#adr044-stage-self").classList.contains("adr-lamp-hide") && P("#adr044-stage-key").value === "k-cheap" && P("#adr044-theater-api-note").textContent.indexOf("cheap-fun") >= 0 && P("#adr044-api-profile-status-stage").textContent.indexOf("已切换：便宜又会玩梗") === 0, "面板跟着变，说明行写着新模型", P("#adr044-api-profile-status-stage").textContent);
+        e.setScript((n, body) => isTheater(body) ? "走预设的一场" : "在");
+        await tick(500); click(W, P("#adr044-theater-now")); await tick(1500);
+        const cA = e.calls[e.calls.length - 1];
+        ok(cA.url.indexOf("https://cheap.example/v1") === 0 && cA.headers.Authorization === "Bearer k-cheap" && cA.body.model === "cheap-fun", "「现在来一场」走的就是这个预设", cA.url);
+        selS().value = "::plot::DS"; change(W, selS()); await tick(80);
+        ok(e.st().stageApiKey === "k-ds" && e.st().stageModel === "ds-chat" && P("#adr044-api-profile-name-stage").value === "DS", "再换成统筹存的 DS：一选就换");
+        P("#adr044-api-profile-name-stage").value = "剧场专用";
+        await tick(500); click(W, P("#adr044-api-profile-save-stage")); await tick(100);
+        ok(HA.profiles().map(x => x.name).join() === "便宜又会玩梗,剧场专用" && P("#adr044-api-profile-status-stage").textContent.indexOf("已新增预设：剧场专用") === 0, "在剧场位存一个：进的是同一份预设单", HA.profiles().map(x => x.name).join());
+        const sbA = P("#adr044-stage-borrow"); sbA.value = "lamp"; change(W, sbA); await tick(80);
+        ok(selS().value === "" && T.apiCfg().from === "lamp", "剧场位改回跟掌灯聊天位：预设下拉回到没选");
+        W.__adrDGenTest.setQuietMs(4000);
+    }
+
     section("打断（v1.45.4）");
     {
     W.__adrDGenTest.setQuietMs(60);
