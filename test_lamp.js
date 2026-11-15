@@ -805,6 +805,99 @@ const isPen = body => body.messages[0].content.indexOf("你刚和读者讨论完
         ok(eA.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一段全程没有 console.error", eA.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
     }
 
+    section("名字与人格：想让谁陪你看这部小说，就写谁（v1.50.0）");
+    {
+        const eN = build(); await boot(eN);
+        const dN = eN.doc, WN = eN.win, TN = eN.T();
+        click(WN, dN.querySelector("#adr044-drawer #adr044-tab-lamp")); await tick(50);
+        click(WN, dN.querySelector("#adr048-fab")); await tick(400);
+        const Q = s2 => dN.querySelector("#adr048-popup-body " + s2), D = s2 => dN.querySelector("#adr044-drawer " + s2);
+        const lastSys = () => eN.calls[eN.calls.length - 1].body.messages[0].content;
+        const say = async (t) => { await tick(500); Q("#adr044-lamp-input").value = t; click(WN, Q("#adr044-lamp-send")); await tick(300); };
+        const SC = TN.stance("chat");
+        const title = (scope, key) => scope('[data-drawer-id="' + key + '"] > summary').textContent;
+        ok(["#adr044-lamp-name", "#adr044-lamp-character", "#adr044-lamp-character-reset"].every(x => !!Q(x) && !!D(x)), "人设分节里多了名字、人格两栏和「变回小红霞」，浮窗和抽屉都有");
+        ok(TN.name() === "小红霞" && TN.identity() === "" && eN.st().lampName === "" && eN.st().lampCharacter === "", "默认：她叫小红霞，没有额外的身份段");
+        ok(title(Q, "lamp-chat") === "💬 和小红霞聊" && title(Q, "lamp-preset") === "🎭 小红霞的人设", "默认的分节标题没变");
+        eN.setScript(() => "这段没问题。");
+        await say("看看这一楼");
+        const sys0 = lastSys();
+        ok(sys0.indexOf("你是 Arrebol，小红霞：审美极高的高级改稿员。") === 0 && sys0.indexOf("【你是谁") < 0 && sys0 === TN.preset + "\n\n" + TN.editProtocol + "\n\n" + SC + sys0.slice((TN.preset + "\n\n" + TN.editProtocol + "\n\n" + SC).length), "两栏都空着：提示词和以前逐字相同");
+        ok(Q(".adr-lamp-msg.a .adr-lamp-who").textContent === "小红霞", "对话里的署名是小红霞");
+        // 只起名字
+        const nm = Q("#adr044-lamp-name"); nm.value = "  阿澈 \n"; change(WN, nm); await tick(80);
+        ok(eN.st().lampName === "阿澈" && nm.value === "阿澈" && D("#adr044-lamp-name").value === "阿澈" && TN.name() === "阿澈", "起名「阿澈」：去掉首尾空白存下，抽屉里那一栏跟着变");
+        ok(title(Q, "lamp-chat") === "💬 和阿澈聊" && title(Q, "lamp-preset") === "🎭 阿澈的人设" && title(D, "lamp-chat") === "💬 和阿澈聊", "两枚分节标题立刻跟着名字换，抽屉里也换");
+        ok(Q(".adr-lamp-msg.a .adr-lamp-who").textContent === "阿澈", "已经在的对话，署名也换成阿澈");
+        ok(Q("#adr044-lamp-chat-status").textContent.indexOf("阿澈") >= 0, "状态行告诉你以后叫她阿澈");
+        await say("再看一眼");
+        const sys1 = lastSys();
+        ok(sys1.indexOf("【你是谁 · 读者亲手定的】\n你叫「阿澈」。读者这样叫你，你也这样自称。\n\n在这里，你是审美极高的高级改稿员。你和读者一起看这部互动小说") === 0, "只起名字：提示词开头是名字，接着是改稿守则，守则里那句自我介绍让出来");
+        ok(sys1.indexOf("小红霞") < 0 && sys1.indexOf("Arrebol") < 0, "整段提示词里不再出现小红霞、Arrebol");
+        ok(sys1.indexOf(TN.editProtocol) > 0 && sys1.indexOf(SC) > sys1.indexOf(TN.editProtocol) && sys1.indexOf("【本篇原文 · #5") > sys1.indexOf(SC), "动笔手续、她自己那一段、素材，顺序和以前一样，一样不少");
+        ok(Q("#adr044-lamp-chat-status").textContent.indexOf("小红霞") < 0, "状态行里也不再叫小红霞");
+        // 再写人格
+        const ch = Q("#adr044-lamp-character"); ch.value = "你是我的爱人，说话温柔又有点坏，叫我「宝贝」。"; change(WN, ch); await tick(80);
+        ok(eN.st().lampCharacter === "你是我的爱人，说话温柔又有点坏，叫我「宝贝」。" && D("#adr044-lamp-character").value === ch.value, "人格写下来：存好，抽屉里同步");
+        await say("这句会不会太肉麻");
+        const sys2 = lastSys();
+        const iName = sys2.indexOf("你叫「阿澈」"), iCh = sys2.indexOf("你是我的爱人，说话温柔又有点坏"), iBridge = sys2.indexOf("性子、口吻、怎么称呼读者，都以上面这一段为准"), iJob = sys2.indexOf("在这里，你是审美极高的高级改稿员"), iProto = sys2.indexOf(TN.editProtocol), iSC = sys2.indexOf(SC);
+        ok(iName > 0 && iCh > iName && iBridge > iCh && iJob > iBridge && iProto > iJob && iSC > iProto, "名字 → 人格 → 交代一句 → 改稿守则 → 动笔手续 → 她自己那一段，按这个顺序排");
+        ok(sys2.indexOf("改稿是你的本职") > 0 && sys2.indexOf("是整楼全文") > 0, "换了人格，改稿该怎么改的守则原样都在");
+        // 人自己改过守则：不动它
+        eN.st().lampPreset = "你只负责挑错别字。";
+        await say("挑挑看");
+        const sys3 = lastSys();
+        ok(sys3.indexOf("【你是谁 · 读者亲手定的】") === 0 && sys3.indexOf("\n\n你只负责挑错别字。\n\n") > 0 && sys3.indexOf(SC) > 0, "守则是人自己写的：身份段照垫，守则一字不动，她自己那一段还在");
+        eN.st().lampPreset = "";
+        // 蛐蛐模式
+        click(WN, Q("#adr044-lamp-mode-gossip")); await tick(80);
+        await say("这楼你怎么看");
+        const sysG = lastSys();
+        ok(sysG.indexOf("【你是谁 · 读者亲手定的】") === 0 && sysG.indexOf("\n\n你和读者在追同一部剧，就是这部互动小说。") > 0 && sysG.indexOf("你是 Arrebol") < 0 && sysG.indexOf(SC) > 0 && sysG.indexOf(TN.editProtocol) < 0, "蛐蛐模式一样：身份段在前，蛐蛐守则开头的自我介绍让出来，没有动笔手续");
+        ok(Q(".adr-lamp-msg.a .adr-lamp-who").textContent === "阿澈", "蛐蛐里的署名也是阿澈");
+        // 自动蛐蛐的小窗
+        eN.setScript(() => "他这嘴迟早要还的。");
+        const okQ = await TN.autoQuip("test", true); await tick(120);
+        ok(okQ !== false && lastSys().indexOf("你叫「阿澈」") > 0 && lastSys().indexOf(SC) > 0, "自动蛐蛐那一句也带着名字、人格和她自己那一段");
+        const pop = dN.querySelector("#adr044-auto-trigger-popup .adr044-auto-trigger-popup-title");
+        ok(!!pop && pop.textContent.indexOf("阿澈蛐蛐") >= 0 && pop.textContent.indexOf("小红霞") < 0, "弹出来的小窗标题是「阿澈蛐蛐」");
+        const ack = dN.querySelector("#adr044-lamp-quip-ack"); if (ack) click(WN, ack); await tick(80);
+        // 动笔：讨论记录里用新名字；执笔位不扮人格
+        click(WN, Q("#adr044-lamp-mode-edit")); await tick(80);
+        eN.setScript((n, body) => isPen(body) ? "<content>改好的正文</content>" : "行，那就这么改。");
+        await say("把结尾收短一点");
+        await tick(500); await TN.rewrite(); await tick(200);
+        const pen = eN.calls.filter(c => isPen(c.body)).pop();
+        ok(!!pen && pen.body.messages[1].content.indexOf("【讨论记录 · 读者与阿澈】") >= 0 && pen.body.messages[1].content.indexOf("阿澈：行，那就这么改。") >= 0 && pen.body.messages[1].content.indexOf("小红霞：") < 0, "动笔时递过去的讨论记录里，她的话署名阿澈");
+        ok(pen.body.messages[0].content === TN.penPreset + "\n\n" + TN.stance("pen"), "执笔位的提示词不带人格：稿子照原文的文笔写，不照人格的口吻写");
+        // 名字的清洗
+        ok(TN.cleanName("  列夫·托尔斯泰  ") === "列夫·托尔斯泰" && TN.cleanName("a\nb<i>「c」[d]") === "a bicd" && TN.cleanName("一二三四五六七八九十一二三四五六七八九十一二三").length === 20 && TN.cleanName(null) === "", "名字只留一行、去掉尖括号和括号、最长 20 字");
+        nm.value = "<img src=x onerror=1>"; change(WN, nm); await tick(80);
+        ok(eN.st().lampName === "img src=x onerror=1" && !Q('[data-drawer-id="lamp-chat"] > summary').querySelector("img") && !Q(".adr-lamp-thread img"), "名字里塞标签：当普通字显示，不会变成页面元素");
+        // 只写人格、不起名字
+        nm.value = ""; change(WN, nm); await tick(80);
+        ch.value = "你是列夫·托尔斯泰，带着十九世纪俄国文豪的眼光陪我看这部小说。"; change(WN, ch); await tick(80);
+        ok(TN.name() === "小红霞" && title(Q, "lamp-chat") === "💬 和小红霞聊", "名字清空：面板上叫回小红霞");
+        await say("您觉得这一楼如何");
+        const sysT = lastSys();
+        ok(sysT.indexOf("【你是谁 · 读者亲手定的】\n你是列夫·托尔斯泰") === 0 && sysT.indexOf("你叫「") < 0 && sysT.indexOf("小红霞") < 0, "只写人格不起名字：提示词里不硬塞一个名字，也不提小红霞");
+        // 变回小红霞
+        click(WN, Q("#adr044-lamp-character-reset")); await tick(80);
+        ok(eN.st().lampName === "" && eN.st().lampCharacter === "" && nm.value === "" && ch.value === "" && D("#adr044-lamp-character").value === "", "点「变回小红霞」：两栏清空并保存");
+        ok(title(Q, "lamp-chat") === "💬 和小红霞聊" && Q(".adr-lamp-msg.a .adr-lamp-who").textContent === "小红霞", "标题和署名都回到小红霞");
+        await say("回来了吗");
+        ok(lastSys().indexOf("你是 Arrebol，小红霞：审美极高的高级改稿员。") === 0 && lastSys().indexOf("【你是谁") < 0, "提示词回到出厂，和最开始逐字同一个开头");
+        // 重开浮窗保留
+        nm.value = "栗子"; change(WN, nm); await tick(80);
+        click(WN, dN.querySelector("#adr048-popup-close")); await tick(100); click(WN, dN.querySelector("#adr048-fab")); await tick(400);
+        ok(Q("#adr044-lamp-name").value === "栗子" && title(Q, "lamp-chat") === "💬 和栗子聊" && Q(".adr-lamp-msg.a .adr-lamp-who").textContent === "栗子", "关了浮窗再开：名字还在，标题和署名都是它");
+        // 「现在蛐蛐一句」在左边那一行
+        const qn = Q("#adr044-lamp-quip-now");
+        ok(!!qn && qn.parentElement.classList.contains("adr-lamp-jumprow-start") && !Q("#adr044-lamp-jump-top").parentElement.classList.contains("adr-lamp-jumprow-start"), "「现在蛐蛐一句」那一行标了靠左，回顶 / 回底那一行不变");
+        ok(eN.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "这一节全程没有 console.error", eN.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));
+    }
+
     section("不碰导演那套");
     ok(e.calls.every(c => c.body.messages[0].content.indexOf("【情感方向】") < 0 && c.body.messages[0].content.indexOf("【派人】") < 0), "掌灯的请求里没有导演预设");
     ok(e.logs.filter(l => l.indexOf("ERR") === 0).length === 0, "全程没有 console.error", e.logs.filter(l => l.indexOf("ERR") === 0).join(" | "));

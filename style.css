@@ -8096,8 +8096,9 @@ html #adr048-popup-panel[data-arb-theme="dusk"][data-arb-theme] #adr048-popup-bo
 html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body .adrx-ta > input[type="text"] { padding-right: 42px !important; }
 
 /* ============================================================
-   v1.49.0 试验开关一：浮窗周围不盖毛玻璃（江：「把周围一圈毛玻璃清掉，正常就行，不需要毛玻璃遮盖」）
-   只在共享设置里勾了「试验：浮窗周围不盖毛玻璃」时生效（幕布上有 data-hx-veil="clear"）；不勾，这一段一条都不匹配。
+   v1.49.0 开关一：浮窗周围不盖毛玻璃（江：「把周围一圈毛玻璃清掉，正常就行，不需要毛玻璃遮盖」）
+   只在共享设置里勾着「浮窗周围不盖毛玻璃」时生效（幕布上有 data-hx-veil="clear"）；取消，这一段一条都不匹配。
+   v1.49.0 是默认关的试验开关；江在 iPhone 上验过没事，v1.50.0 起默认勾着。
    浮窗背后原来盖着三层：index.js 行内样式里按配色染的薄纱（开关开着时那边改成透明）、这里的全屏模糊、一层全屏的静态柔光。
    v1.48.0 把它直接改成默认，iPhone 上一点浮标页面就卡死，当天撤回；所以现在是自己选的开关。
    ============================================================ */
@@ -8112,8 +8113,9 @@ html #adr048-popup-panel[data-arb-theme][data-arb-theme][data-hx-veil="clear"]::
 
 
 /* ============================================================
-   v1.49.0 试验开关二：「云岫 · 留白」版式（江：「更有设计感一点，允许动 ui，更加仙气高级一点」）
-   只在共享设置里勾了「试验：浮窗用留白版式」时生效（幕布上有 data-hx-skin="airy"）；不勾，这一段一条都不匹配，浮窗和 v1.47.1 一样。
+   v1.49.0 开关二：「云岫 · 留白」版式（江：「更有设计感一点，允许动 ui，更加仙气高级一点」）
+   只在共享设置里勾着「浮窗用留白版式」时生效（幕布上有 data-hx-skin="airy"）；取消，这一段一条都不匹配，浮窗和 v1.47.1 一样。
+   v1.50.0 起默认勾着（江：「超好看！保留留白格式！」）。
    · 字：iPhone 的网页用不了宋体（Songti SC 在 iOS 上是要另外下载的字体，网页拿不到），前两版写的宋体在手机上
      其实一直是苹方。这套版式不指望宋体：中文标题用系统黑体的细字重拉开字距；
      拉丁字母和数字用 Didot / Bodoni 这类 iPhone 自带的高反差衬线。
@@ -8390,3 +8392,6 @@ html #adr048-popup-panel[data-arb-theme][data-hx-skin="airy"] #adr048-popup-body
     color: var(--adr-deck-muted);
     opacity: .38;
 }
+
+/* v1.50.0 「现在蛐蛐一句」靠左（江：放右边太容易误触）。回顶 / 回底那一行还在右边 */
+.adr-lamp-jumprow.adr-lamp-jumprow-start { justify-content: flex-start; }

@@ -193,7 +193,7 @@ function build() {
         check(e.chatMetadata.arrebol_d.auto.emotion.base === 35, '触发设置收起时仍能对表至当前楼层');
         check(counter(root(), 'emotion').querySelector('.arb-ct-nums b').textContent === '0' && counter(drawer, 'emotion').querySelector('.arb-ct-nums b').textContent === '0', '对表后两端进度都归零');
         check(e.chatMetadata.arrebol_d.auto.plot.base === plotBefore && e.chatMetadata.arrebol_d_cd.lastDrawAt === cdBefore, '情感对表不改统筹或抽卡基准线');
-        // v1.49.0：浮窗的两个试验开关（不盖毛玻璃 / 留白版式）。默认都关，关着时和以前一样；开了能关回去；浮窗没画出来会自己退回。
+        // v1.49.0 起：浮窗的两个开关（不盖毛玻璃 / 留白版式）。v1.50.0 起默认都开；取消就回到旧样子；浮窗没画出来会自己退回。
         {
             const T = w.__adr048PopupTest;
             const pnl = () => d.querySelector('#adr048-popup-panel'), shell = () => d.querySelector('#adr048-popup-shell'), body = () => d.querySelector('#adr048-popup-body');
@@ -201,8 +201,11 @@ function build() {
             const flip = (el, on) => { el.checked = on; el.dispatchEvent(new w.Event('change', { bubbles: true })); };
             const S = () => e.extensionSettings[KEY];
             S().themePalette = 'dusk'; w.uiTest.adr048ApplyPanelTheme();
-            check(S().popupClearVeil === false && S().popupAiry === false, '两个试验开关默认都是关');
-            check(['adr044-popup-clear-veil', 'adr044-popup-airy'].every(id => box(root(), id) && box(drawer, id) && !box(root(), id).checked && !box(drawer, id).checked), '两个开关在浮窗和内嵌抽屉里都有，默认没勾');
+            check(S().popupClearVeil === true && S().popupAiry === true && T.mode().clear && T.mode().airy, 'v1.50.0 起两个开关默认都开');
+            check(['adr044-popup-clear-veil', 'adr044-popup-airy'].every(id => box(root(), id) && box(drawer, id) && box(root(), id).checked && box(drawer, id).checked), '两个开关在浮窗和内嵌抽屉里都有，默认勾着');
+            check(pnl().getAttribute('data-hx-veil') === 'clear' && pnl().getAttribute('data-hx-skin') === 'airy' && sty(pnl(), 'pointer-events') === 'none' && sty(shell(), 'border-radius') === '30px', '默认打开的浮窗：不盖毛玻璃、留白版式');
+            flip(box(root(), 'adr044-popup-clear-veil'), false); flip(box(root(), 'adr044-popup-airy'), false);
+            check(S().popupClearVeil === false && S().popupAiry === false, '两枚都取消：存下来是关');
             check(pnl().getAttribute('data-hx-veil') === 'soft' && pnl().getAttribute('data-hx-skin') === 'classic', '都关着：幕布标 soft、版式标 classic');
             check(sty(pnl(), 'pointer-events') === 'auto' && !sty(pnl(), 'transform') && /rgba\(0, ?0, ?0, ?0?\.25\)/.test(sty(pnl(), 'background-color') || sty(pnl(), 'background')), '都关着：幕布还是原来那层（接点击、有底色）');
             check(/0?\.98\)/.test(sty(shell(), 'background-color') || sty(shell(), 'background')) && sty(shell(), 'border-radius') === '22px', '都关着：夜色壳体还是原来的底和 22px 圆角');
@@ -256,6 +259,12 @@ function build() {
             check(S().popupClearVeil === true && T.fallback() === false && pnl().getAttribute('data-hx-veil') === 'clear', '人再去抽屉里勾一次：再给它一次机会');
             flip(box(drawer, 'adr044-popup-clear-veil'), false);
             check(S().popupClearVeil === false && pnl().getAttribute('data-hx-veil') === 'soft', '在抽屉里取消：开着的浮窗跟着退回');
+            // 一次性迁移：v1.49.0 存下来的「关」是那一版的默认值，升上来各打开一次；之后人取消就听人的
+            S().popupClearVeil = false; S().popupAiry = false; S().popupSkinV150 = false;
+            check(T.mode().clear === true && T.mode().airy === true && S().popupClearVeil === true && S().popupAiry === true && S().popupSkinV150 === true, '从 v1.49.0 升上来（存着两个「关」、没有迁移记号）：各打开一次并记下');
+            S().popupAiry = false;
+            check(T.mode().airy === false && T.mode().clear === true && S().popupAiry === false, '迁移过以后人再取消：不会被再次打开');
+            S().popupAiry = true;
             T.reset(); S().themePalette = 'sunset'; w.uiTest.adr048ApplyPanelTheme();
         }
         check(e.requests() === 0, '全部 UI 操作没有发送 API 请求');

@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.49.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.50.0｜ripple & GPT & Claude
+ * v1.50.0 掌灯里的那位可以自己起名字、写人格（留空＝小红霞），面板称呼与提示词跟着换，改稿守则不受影响；「现在蛐蛐一句」挪到左边防误触；不盖毛玻璃与留白版式真机验过，改成默认开，开关留着当退路（提议 江「一个名字一个人格，想是啥人格是啥人格」「吃瓜按钮移到左边」「保留留白格式，去掉毛玻璃」；施工 Claude）
  * v1.49.0 去毛玻璃和「留白」版式改成两个试验开关（共享设置里，默认都关，关着时和 v1.47.1 一样）：开了不对劲能在酒馆扩展页的抽屉里关掉；不盖毛玻璃时幕布不接点击；浮窗没画出来会自动退回并写出量到的数（起因 江「一点就卡死页面」；施工 Claude）
  * v1.48.1 撤回 v1.48.0：那一版在 iPhone 上一点浮标页面就卡死（报告 江）。代码整体退回 v1.47.1，只有版本号往前走；去毛玻璃和新版式等查清原因后分步重做（施工 Claude）
  * v1.47.1 「云岫」细处：对话气泡、蛐蛐小窗、楼里的剧场卡片、放大编辑框、滑杆顺一遍，小字的字距行距放松；修上一版带进来的夜色主题主按钮深字压深底、按钮折行、放大钮压字、吸顶页签上沿漏字（提议 江「包括 ui、文字排版、美感，仙气飘飘就好」；施工 Claude）
@@ -120,7 +121,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.49.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.50.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -133,8 +134,9 @@
         injectMode: "visible",
         showFloatingWindow: true,
         fabMotion: true,            // v1.37.0 浮标动效开关：关掉后水波与亮流全停，给怀疑手机发烫的人做实验
-        popupClearVeil: false,      // v1.49.0 试验开关：浮窗周围不盖毛玻璃。默认关——v1.48.0 直接改成这样在 iPhone 上卡死过，撤回后改成自己选
-        popupAiry: false,           // v1.49.0 试验开关：浮窗用「留白」版式。默认关，理由同上
+        popupClearVeil: true,       // 浮窗周围不盖毛玻璃。v1.49.0 是默认关的试验开关；江在 iPhone 上两枚都验过没事，v1.50.0 起默认开，开关留着当退路
+        popupAiry: true,            // 浮窗用「留白」版式。同上
+        popupSkinV150: false,       // 一次性迁移记号：v1.49.0 存下来的「关」是那一版的默认值，不是谁选的；升到 v1.50.0 时各打开一次，之后听人的
         themePalette: "",          // dusk / sunset / pearl / celadon / wine / morandi / skyrose; empty migrates the previous light switch.
         dawnTheme: false,           // v1.14.4 开灯：浮窗朝霞浅色皮，默认关（暗河红霞）
         showAutoTriggerPopup: true,
@@ -213,6 +215,8 @@
         penApiEndpoint: "",
         penApiKey: "",
         penModel: "",
+        lampName: "",               // v1.50.0 掌灯里和你说话的那位叫什么；留空＝小红霞
+        lampCharacter: "",          // v1.50.0 她是谁、怎么跟你说话（人格）；留空＝出厂的小红霞
         lampPreset: "",
         lampSummaryTags: "report",
         lampStatusTags: "status,StatusBlock,状态栏",   // v1.46.1 改稿时状态栏跟着正文一起更新；多个用逗号分隔，留空＝不管状态栏
@@ -7038,6 +7042,63 @@
         return t;
     }
 
+    // ===== v1.50.0 名字与人格（江：「有人可能希望和自己 ai 老公、闺蜜，或者自己起名字……一个名字一个人格，想是啥人格是啥人格」）=====
+    // 名字管面板上怎么叫她、提示词里她怎么自称；人格是一段自由文字，垫在两份工作守则（改稿 / 蛐蛐）前面。
+    // 守则讲的是「在这里做什么」，人格讲的是「她是谁」，两层分开：换了人格，改稿该怎么改还是怎么改。
+    var ADR_LAMP_NAME_DEFAULT = "小红霞";
+    // 两份出厂守则开头的自我介绍。名字或人格是人自己定的时候，「她是谁」归上面那一段管，这里只留「在这里做什么」
+    var ADR_LAMP_SELF_INTRO_EDIT = ["你是 Arrebol，小红霞：审美极高的高级改稿员。", "在这里，你是审美极高的高级改稿员。"];
+    var ADR_LAMP_SELF_INTRO_GOSSIP = ["你是 Arrebol，小红霞。", ""];
+    function adrLampCleanName(v) {
+        var t = String(v == null ? "" : v).replace(/[\r\n\t]+/g, " ").replace(/[<>「」【】\[\]]/g, "").replace(/\s+/g, " ").trim();
+        return t.length > 20 ? t.slice(0, 20).trim() : t;
+    }
+    function adrLampNameCustom() { try { return adrLampCleanName(settings().lampName); } catch (e) { return ""; } }
+    function adrLampName() { return adrLampNameCustom() || ADR_LAMP_NAME_DEFAULT; }
+    function adrLampCharacter() { try { return String(settings().lampCharacter || "").trim(); } catch (e) { return ""; } }
+    function adrLampPersonaIsCustom() { return !!(adrLampNameCustom() || adrLampCharacter()); }
+    // 垫在守则前面的那一段。名字和人格都没填就什么都不加，提示词和以前逐字相同。
+    function adrLampIdentityText() {
+        if (!adrLampPersonaIsCustom()) return "";
+        var custom = adrLampNameCustom(), ch = adrLampCharacter();
+        var lines = ["【你是谁 · 读者亲手定的】"];
+        if (custom) lines.push("你叫「" + custom + "」。读者这样叫你，你也这样自称。");
+        if (ch) {
+            lines.push(ch);
+            lines.push("性子、口吻、怎么称呼读者，都以上面这一段为准。下面讲的是你在这里做什么、怎么做；里面要是还提到别的名字，说的都是你。");
+        }
+        return lines.join("\n");
+    }
+    // 出厂守则开头那句自我介绍让给上面那一段；人自己改过的守则不动它
+    function adrLampNamedPreset(text) {
+        if (!adrLampPersonaIsCustom()) return text;
+        var s = String(text || "");
+        var pairs = [ADR_LAMP_SELF_INTRO_EDIT, ADR_LAMP_SELF_INTRO_GOSSIP];
+        for (var i = 0; i < pairs.length; i++) if (s.indexOf(pairs[i][0]) === 0) return pairs[i][1] + s.slice(pairs[i][0].length);
+        return s;
+    }
+    // 聊天位的系统提示：身份（可选）+ 守则 +（改稿才有的）动笔手续 + 她自己的那一段 + 素材
+    function adrLampChatSystem(gossip, mat) {
+        var id = adrLampIdentityText();
+        var head = (id ? id + "\n\n" : "") + adrLampNamedPreset(gossip ? adrLampGossipPresetText() : adrLampPresetText());
+        return gossip
+            ? head + "\n\n" + adrHxStance("chat") + "\n\n" + adrLampMaterialsText(mat)
+            : head + "\n\n" + ADR_LAMP_EDIT_PROTOCOL + "\n\n" + adrHxStance("chat") + "\n\n" + adrLampMaterialsText(mat);
+    }
+    // 名字改了：面板上带名字的地方跟着换（两枚分节标题、对话里的署名）
+    function adrLampApplyNameToPanels() {
+        try {
+            var d = rootDoc(), name = adrLampName();
+            var set = function (key, text) {
+                var list = d.querySelectorAll('[data-drawer-id="' + key + '"] > summary');
+                for (var i = 0; i < list.length; i++) if (list[i].textContent !== text) list[i].textContent = text;
+            };
+            set("lamp-chat", "💬 和" + name + "聊");
+            set("lamp-preset", "🎭 " + name + "的人设");
+        } catch (e) {}
+        try { adrLampRenderThread(); } catch (e2) {}
+    }
+
     function adrLampPresetText() {
         var p = "";
         try { p = String(settings().lampPreset || "").trim(); } catch (e) {}
@@ -7088,11 +7149,12 @@
 
     // ---- 聊 ----
     function adrLampTranscript(msgs) {
-        return msgs.filter(function (m) { return m.r !== "n"; }).map(function (m) { return (m.r === "u" ? "读者：" : "小红霞：") + m.t; }).join("\n\n");
+        var who = adrLampName() + "：";
+        return msgs.filter(function (m) { return m.r !== "n"; }).map(function (m) { return (m.r === "u" ? "读者：" : who) + m.t; }).join("\n\n");
     }
 
     async function adrLampSend() {
-        if (adrLampRun.busy) { adrLampStatus("小红霞还在说，先听完或点「打断」", "#d6b177"); return false; }
+        if (adrLampRun.busy) { adrLampStatus(adrLampName() + "还在说，先听完或点「打断」", "#d6b177"); return false; }
         var input = qForm("adr044-lamp-input");
         var text = input ? String(input.value || "").trim() : "";
         if (!text) { adrLampStatus("先说点什么", "#d6b177"); return false; }
@@ -7117,12 +7179,10 @@
         adrLampLiveText = "";
         adrLampSetButtons();
         adrLampRenderThread();
-        adrLampStatus(gossip ? "小红霞在看剧…" : "小红霞在看稿…", "#8ed99d");
+        adrLampStatus(adrLampName() + (gossip ? "在看剧…" : "在看稿…"), "#8ed99d");
 
         // 改稿模式：人设（能改）+ 动笔手续（代码接管）+ 素材；蛐蛐模式：人设 + 素材，和以前一样
-        var sysText = gossip
-            ? adrLampGossipPresetText() + "\n\n" + adrHxStance("chat") + "\n\n" + adrLampMaterialsText(mat)
-            : adrLampPresetText() + "\n\n" + ADR_LAMP_EDIT_PROTOCOL + "\n\n" + adrHxStance("chat") + "\n\n" + adrLampMaterialsText(mat);
+        var sysText = adrLampChatSystem(gossip, mat);
         var messages = [{ role: "system", content: sysText }].concat(adrLampApiHistory(th.msgs, gossip));
         var partial = "";
         var outcome = "";
@@ -7149,7 +7209,7 @@
                 adrLampStatus("打断了", "#d6b177");
                 outcome = "abort";
             } else {
-                adrLampStatus("小红霞没接上：" + (e && e.message ? e.message : String(e)), "#d4726a");
+                adrLampStatus(adrLampName() + "没接上：" + (e && e.message ? e.message : String(e)), "#d4726a");
                 outcome = "error";
             }
         } finally {
@@ -7243,7 +7303,7 @@
     }
 
     async function adrLampRewrite() {
-        if (adrLampRun.busy) { adrLampStatus("小红霞还在说，先听完或点「打断」", "#d6b177"); return false; }
+        if (adrLampRun.busy) { adrLampStatus(adrLampName() + "还在说，先听完或点「打断」", "#d6b177"); return false; }
         if (adrLampIsGossip()) { adrLampStatus("蛐蛐模式只聊不改稿；想改这一楼，切到「改稿」模式再说", "#d6b177"); return false; }
         var cfg = adrLampApiCfg("pen");
         if (!cfg.endpoint || !cfg.model) { adrLampStatus("执笔位没有可用的 API：" + adrLampApiNote("pen"), "#d4726a"); return false; }
@@ -7251,7 +7311,7 @@
         if (mat.idx < 0) { adrLampStatus("这把聊天还没有可改的助手楼", "#d4726a"); return false; }
         var state = adrLampState();
         var th = adrLampThread(state, mat.idx, false);
-        if (!th || !th.msgs.filter(function (m) { return m.r !== "n"; }).length) { adrLampStatus("先和小红霞聊几句、把要改什么说清楚，再让她改", "#d6b177"); return false; }
+        if (!th || !th.msgs.filter(function (m) { return m.r !== "n"; }).length) { adrLampStatus("先和" + adrLampName() + "聊几句、把要改什么说清楚，再让她改", "#d6b177"); return false; }
 
         var homeKey = adrDChatKey();
         var cTag = adrLampContentTagName();
@@ -7266,7 +7326,7 @@
         if (wantStatus) fmt += "；然后给新状态栏：" + statusTags.map(function (t) { return "<" + t + ">…</" + t + ">"; }).join("、");
         fmt += "。标签外不要有任何字。";
         var task = [
-            "【讨论记录 · 读者与小红霞】",
+            "【讨论记录 · 读者与" + adrLampName() + "】",
             adrLampTranscript(th.msgs)
         ];
         if (wantSummary) task.push("", "【本篇原摘要 · 改后要跟着重写，写法和长短照它】", mat.origSummary);
@@ -7571,7 +7631,7 @@
             var rest = adrLampQuipQueue.length - 1;
             box.setAttribute("data-kind", "quip");
             box.innerHTML = ''
-                + '<div class="adr044-auto-trigger-popup-title">' + esc("🍉 小红霞蛐蛐 · #" + cur.idx) + '</div>'
+                + '<div class="adr044-auto-trigger-popup-title">' + esc("🍉 " + adrLampName() + "蛐蛐 · #" + cur.idx) + '</div>'
                 + '<div class="adr044-auto-trigger-popup-text">' + esc(cur.text) + '</div>'
                 + '<button type="button" id="adr044-lamp-quip-ack" class="adr044-lamp-quip-ack">朕已阅' + (rest > 0 ? '（还有 ' + rest + ' 条）' : '') + '</button>';
             box.setAttribute("data-open", "1");
@@ -7644,7 +7704,7 @@
             if (!mat.body) return false;
             var state = adrLampState();
             var history = adrLampApiHistory(state.gossip.msgs.concat([{ r: "u", t: ADR_LAMP_QUIP_ASK, f: idx, at: Date.now() }]), true);
-            var messages = [{ role: "system", content: adrLampGossipPresetText() + "\n\n" + adrHxStance("chat") + "\n\n" + adrLampMaterialsText(mat) }].concat(history);
+            var messages = [{ role: "system", content: adrLampChatSystem(true, mat) }].concat(history);
             // v1.42.0 不设 max_tokens：会思考的模型把配额先花在思考上，400 一到正文为空，自动蛐蛐就"不触发"
             var out = await adrDChatCompletionText({ endpoint: cfg.endpoint, key: cfg.key, model: cfg.model, temperature: adrLampTemp(), messages: messages });
             var quip = String(out || "").trim();
@@ -7682,9 +7742,9 @@
 
     // ---- 画面 ----
     function adrLampBubble(m) {
-        var who = m.r === "u" ? "你" : (m.auto ? "小红霞 · 自动" : "小红霞");
+        var who = m.r === "u" ? "你" : (m.auto ? adrLampName() + " · 自动" : adrLampName());
         if (m.r === "n") return '<div class="adr-lamp-msg n">' + esc(m.t) + '</div>';
-        return '<div class="adr-lamp-msg ' + m.r + '"><span class="adr-lamp-who">' + who + '</span>' + esc(m.t) + '</div>';
+        return '<div class="adr-lamp-msg ' + m.r + '"><span class="adr-lamp-who">' + esc(who) + '</span>' + esc(m.t) + '</div>';
     }
 
     function adrLampRenderThread() {
@@ -7699,7 +7759,7 @@
             if (!msgs.length) {
                 html = '<div class="adr-lamp-empty">' + (idx < 0 ? "这把聊天还没有可聊的助手楼。"
                     : (gossip ? "剧情到 #" + idx + " 了。蛐蛐两句？主角这楼干的事、配角的下场、你押谁——她都接得住，而且记仇。"
-                        : "对着 #" + idx + " 说点什么——哪里不对、哪里想改、哪里看着别扭。小红霞看得见上面那三块素材。")) + '</div>';
+                        : "对着 #" + idx + " 说点什么——哪里不对、哪里想改、哪里看着别扭。" + adrLampName() + "看得见上面那三块素材。")) + '</div>';
             } else {
                 // 蛐蛐模式按楼号打分隔线，一眼看出这段话是追到哪一楼时聊的
                 var lastF = -1;
@@ -7713,7 +7773,7 @@
                 if (gossip && idx >= 0 && lastF >= 0 && idx > lastF && !adrLampRun.busy) html += '<div class="adr-lamp-divider adr-lamp-divider-new">📍 剧情走到 #' + idx + ' 了，下一句她就能看到</div>';
             }
             if (adrLampRun.busy && adrLampRun.mode === "chat") {
-                html += '<div class="adr-lamp-msg a adr-lamp-live"><span class="adr-lamp-who">小红霞</span>' + esc(adrLampLiveText || "") + '</div>';
+                html += '<div class="adr-lamp-msg a adr-lamp-live"><span class="adr-lamp-who">' + esc(adrLampName()) + '</span>' + esc(adrLampLiveText || "") + '</div>';
             }
             Array.prototype.slice.call(d.querySelectorAll("#adr044-lamp-thread")).forEach(function (el) {
                 el.innerHTML = html;
@@ -7754,11 +7814,11 @@
         adrLampLivePaintAt = now;
         try {
             Array.prototype.slice.call(rootDoc().querySelectorAll("#adr044-lamp-thread .adr-lamp-live")).forEach(function (el) {
-                el.innerHTML = '<span class="adr-lamp-who">小红霞</span>' + esc(adrLampLiveText);
+                el.innerHTML = '<span class="adr-lamp-who">' + esc(adrLampName()) + '</span>' + esc(adrLampLiveText);
                 try { var box = el.parentNode; if (box) box.scrollTop = box.scrollHeight; } catch (eS) {}
             });
         } catch (e) {}
-        adrLampStatus(chars > 0 ? "小红霞在说…已收到 " + chars + " 字" : (thought > 0 ? "小红霞在想（" + thought + " 字）…" : "等小红霞开口…"), "#8ed99d");
+        adrLampStatus(chars > 0 ? adrLampName() + "在说…已收到 " + chars + " 字" : (thought > 0 ? adrLampName() + "在想（" + thought + " 字）…" : "等" + adrLampName() + "开口…"), "#8ed99d");
     }
 
     function adrLampRefreshMaterials() {
@@ -7802,6 +7862,8 @@
             });
             adrCdSetValueSafe("adr044-lamp-preset", st.lampPreset || "");
             adrCdSetValueSafe("adr044-lamp-gossip-preset", st.lampGossipPreset || "");
+            adrCdSetValueSafe("adr044-lamp-name", st.lampName || "");
+            adrCdSetValueSafe("adr044-lamp-character", st.lampCharacter || "");
             adrCdSetCheckedSafe("adr044-lamp-reset-after-apply", st.lampResetAfterApply !== false);
             adrCdSetCheckedSafe("adr044-lamp-auto-quip", st.lampAutoQuip === true);
             adrLampToggleSelfBlocks();
@@ -7910,7 +7972,7 @@
             + '<input type="number" id="adr044-lamp-summary-floors" min="0" max="999" value="' + esc(String(adrLampSummaryFloors())) + '">'
             + secClose()
 
-            + secOpen("💬 和小红霞聊", false, "lamp-chat")
+            + secOpen("💬 和" + esc(adrLampName()) + "聊", false, "lamp-chat")
             + '<div class="adr-lamp-thread" id="adr044-lamp-thread"></div>'
             + '<div class="adr-lamp-jumprow"><button type="button" id="adr044-lamp-jump-top" class="adr-lamp-jump" title="对话框卷到最早">↑ 回顶</button><button type="button" id="adr044-lamp-jump-bottom" class="adr-lamp-jump" title="对话框卷到最新">↓ 回底</button></div>'   // v1.41.9 只管对话框
             + '<textarea id="adr044-lamp-input" rows="3" placeholder="哪里不对、哪里想改、哪里看着别扭……Ctrl/⌘+Enter 发送"></textarea>'
@@ -7920,7 +7982,7 @@
             + '<div class="' + actionsClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><button id="adr044-lamp-rewrite" type="button" class="adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '">改好给我</button></div>'
             + '<label class="' + checkClass + ' adr-lamp-edit-only' + (gossip ? " adr-lamp-hide" : "") + '"><input type="checkbox" id="adr044-lamp-reset-after-apply"' + (st.lampResetAfterApply !== false ? " checked" : "") + '> 替换后自动清空本轮对话（这一楼改完了，下一次从头说）</label>'
             + '<label class="' + checkClass + '"><input type="checkbox" id="adr044-lamp-auto-quip"' + (st.lampAutoQuip === true ? " checked" : "") + '> 🍉 新楼落地自动蛐蛐一句，弹个小窗（走聊天位 API，每楼一次，花钱；写进蛐蛐记录，你能接着回）</label>'
-            + '<div class="adr-lamp-jumprow"><button type="button" id="adr044-lamp-quip-now" class="adr-lamp-jump" title="不等新楼，现在就对最新一楼蛐蛐一句">🍉 现在蛐蛐一句</button></div>'
+            + '<div class="adr-lamp-jumprow adr-lamp-jumprow-start"><button type="button" id="adr044-lamp-quip-now" class="adr-lamp-jump" title="不等新楼，现在就对最新一楼蛐蛐一句">🍉 现在蛐蛐一句</button></div>'
             + '<div class="adr044-template-status" id="adr044-lamp-chat-status">聊到你觉得可以了，直接跟她说「改吧」，或者点「改好给我」：她按讨论把这一楼改好，先预览再替换。</div>'
             + '<div id="adr044-lamp-draft-wrap" class="adr-lamp-hide">'
             + '<label>📝 改稿 · 正文（能改两笔再替换）</label>'
@@ -7944,7 +8006,13 @@
             + '<div class="adr044-template-status" id="adr044-lamp-api-note"></div>'
             + secClose()
 
-            + secOpen("🎭 小红霞的人设", true, "lamp-preset")
+            + secOpen("🎭 " + esc(adrLampName()) + "的人设", true, "lamp-preset")
+            + '<label>名字（留空＝小红霞）</label>'
+            + '<input id="adr044-lamp-name" type="text" maxlength="20" placeholder="小红霞" value="' + esc(st.lampName || "") + '">'
+            + '<label>人格 · 她是谁、怎么跟你说话（留空＝出厂的小红霞）</label>'
+            + '<textarea id="adr044-lamp-character" rows="5" placeholder="例：你是阿澈，我的爱人，说话温柔又有点坏，叫我「宝贝」。&#10;或者：你是列夫·托尔斯泰，带着十九世纪俄国文豪的眼光，陪我看这部小说。">' + esc(st.lampCharacter || "") + '</textarea>'
+            + '<div class="' + actionsClass + '"><button id="adr044-lamp-character-reset" type="button">变回小红霞</button></div>'
+            + '<div class="' + noteClass + '">名字和人格管的是「她是谁」：想让谁陪你看这部小说，就写谁。面板上的称呼会跟着名字换。下面两份管的是「改稿、蛐蛐时她做什么」，换了人格也照做，一般不用动。</div>'
             + '<div class="' + noteClass + '">两种模式各一份性子，不是导演框架，留空用出厂。改稿：审美极高的高级改稿员，不是扮演者；和读者讨论（反对要带依据：人的真实情感心理 / 此刻的物理处境 / 世界书规矩），读者说改就改、改好整楼。蛐蛐：一起追剧的朋友，站队、押注、翻旧账，只聊不改。两份都写明：屏幕前是书外的成年读者（不是剧情里的 user），讨厌低俗、拒绝恶俗；艺术创作也有边界和底线；读者问意见时可以给回复建议。「在聊天里说改吧就自动动笔」的手续和执笔位的规矩由代码接管，不在这里；自己改过改稿人设的，要点「恢复出厂人设」才用得上新版。</div>'
             + '<label>✏️ 改稿模式的人设</label>'
             + '<textarea id="adr044-lamp-preset" rows="6" placeholder="留空＝出厂人设">' + esc(st.lampPreset || "") + '</textarea>'
@@ -8018,6 +8086,13 @@
         if (id === "adr044-pen-load-models") { loadModels("pen"); return true; }
         if (id === "adr044-lamp-test") { adrLampTestConnection("lamp"); return true; }
         if (id === "adr044-pen-test") { adrLampTestConnection("pen"); return true; }
+        if (id === "adr044-lamp-character-reset") {
+            adrCdSetValueSafe("adr044-lamp-name", ""); adrCdSetValueSafe("adr044-lamp-character", "");
+            save("lampName", ""); save("lampCharacter", ""); saveNow();
+            adrLampApplyNameToPanels();
+            adrLampStatus("变回小红霞了 ✓", "#8ed99d");
+            return true;
+        }
         if (id === "adr044-lamp-preset-reset") { adrCdSetValueSafe("adr044-lamp-preset", ""); save("lampPreset", ""); saveNow(); adrLampStatus("已恢复出厂人设 ✓", "#8ed99d"); return true; }
         if (id === "adr044-lamp-gossip-preset-reset") { adrCdSetValueSafe("adr044-lamp-gossip-preset", ""); save("lampGossipPreset", ""); saveNow(); adrLampStatus("蛐蛐人设已恢复出厂 ✓", "#8ed99d"); return true; }
         if (id === "adr044-lamp-quip-ack") { return adrLampQuipAck(); }
@@ -8135,6 +8210,24 @@
             each("adr044-lamp-gossip-preset", function (el) {
                 guard(el);
                 el.addEventListener("change", function () { save("lampGossipPreset", String(el.value || "")); saveNow(); });
+            });
+            each("adr044-lamp-name", function (el) {
+                guard(el);
+                el.addEventListener("change", function () {
+                    var clean = adrLampCleanName(el.value);
+                    save("lampName", clean); saveNow();
+                    adrCdSetValueSafe("adr044-lamp-name", clean);
+                    if (el.value !== clean) el.value = clean;
+                    adrLampApplyNameToPanels();
+                    adrLampStatus(clean ? "以后叫她「" + clean + "」✓" : "名字清空了，还叫小红霞 ✓", "#8ed99d");
+                });
+            });
+            each("adr044-lamp-character", function (el) {
+                guard(el);
+                el.addEventListener("change", function () {
+                    save("lampCharacter", String(el.value || "")); saveNow();
+                    adrLampStatus(String(el.value || "").trim() ? "人格记下了，下一句起生效 ✓" : "人格清空了，用出厂的小红霞 ✓", "#8ed99d");
+                });
             });
             each("adr044-lamp-draft", function (el) { guard(el); el.addEventListener("change", adrLampSaveDraftEdits); });
             each("adr044-lamp-draft-summary", function (el) { guard(el); el.addEventListener("change", adrLampSaveDraftEdits); });
@@ -9150,7 +9243,8 @@
             stance: adrHxStance,
             setMode: adrLampSetMode, apiHistory: adrLampApiHistory, gossipPreset: ADR_LAMP_GOSSIP_PRESET,
             autoQuip: adrLampAutoQuipNow, quipAsk: ADR_LAMP_QUIP_ASK,
-            quipPush: adrLampQuipPush, quipAck: adrLampQuipAck, quipQueue: adrLampQuipQueue
+            quipPush: adrLampQuipPush, quipAck: adrLampQuipAck, quipQueue: adrLampQuipQueue,
+            name: adrLampName, cleanName: adrLampCleanName, identity: adrLampIdentityText, chatSystem: adrLampChatSystem, namedPreset: adrLampNamedPreset
         };
     } catch (eLampHook) {}
     // ================= 小红霞掌灯 模块结束 =================
@@ -9295,8 +9389,8 @@
             + '</select>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-fab-motion"' + (st.fabMotion !== false ? " checked" : "") + '> 浮标流动动效（怀疑手机发烫可以关掉对比）</label>'
-            + '<label class="adr044-check"><input type="checkbox" id="adr044-popup-clear-veil"' + (st.popupClearVeil === true ? " checked" : "") + '> 试验：浮窗周围不盖毛玻璃（打开后不对劲，回酒馆扩展页的小红霞抽屉里关掉）</label>'
-            + '<label class="adr044-check"><input type="checkbox" id="adr044-popup-airy"' + (st.popupAiry === true ? " checked" : "") + '> 试验：浮窗用「留白」版式（同上，不对劲就关）</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-popup-clear-veil"' + (adr048PopupFlag("popupClearVeil") ? " checked" : "") + '> 浮窗周围不盖毛玻璃（浮窗打不开或不对劲，就到酒馆扩展页的小红霞抽屉里取消这一枚）</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-popup-airy"' + (adr048PopupFlag("popupAiry") ? " checked" : "") + '> 浮窗用「留白」版式（取消就回到旧版式）</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
             + adrxDrawerStart("shared-adv", "⚙️ 进阶开关（默认已调好，一般不用动）", false)
@@ -9445,8 +9539,8 @@
             adrDSetAllById("adr044-inject-mode", st.injectMode || "visible");
             adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
             adrDSetAllById("adr044-fab-motion", "", st.fabMotion !== false);
-            adrDSetAllById("adr044-popup-clear-veil", "", st.popupClearVeil === true);
-            adrDSetAllById("adr044-popup-airy", "", st.popupAiry === true);
+            adrDSetAllById("adr044-popup-clear-veil", "", adr048PopupFlag("popupClearVeil"));
+            adrDSetAllById("adr044-popup-airy", "", adr048PopupFlag("popupAiry"));
             adrDSetAllById("adr044-float-inject", "", st.floatInjectEnabled !== false);
             adrDSetAllById("adr044-float-depth", String(st.floatDepth != null ? st.floatDepth : 2));
             adrDSetAllById("adr044-director-log", "", st.directorLogEnabled !== false);
@@ -10911,7 +11005,7 @@
         // v1.39.0 掌灯页按钮：直接绑定 + 兜底表双注册（同抽卡）。
         ["adr044-tab-lamp", "adr044-lamp-send", "adr044-lamp-stop", "adr044-lamp-rewrite", "adr044-lamp-clear", "adr044-lamp-apply", "adr044-lamp-draft-discard",
          "adr044-lamp-refresh", "adr044-lamp-floor-latest", "adr044-lamp-load-models", "adr044-pen-load-models", "adr044-lamp-test", "adr044-pen-test", "adr044-lamp-preset-reset",
-         "adr044-lamp-gossip-preset-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip", "adr044-lamp-jump-bottom", "adr044-lamp-jump-top", "adr044-lamp-quip-now",
+         "adr044-lamp-gossip-preset-reset", "adr044-lamp-character-reset", "adr044-lamp-mode-edit", "adr044-lamp-mode-gossip", "adr044-lamp-jump-bottom", "adr044-lamp-jump-top", "adr044-lamp-quip-now",
          "adr044-api-profile-save-lamp", "adr044-api-profile-delete-lamp", "adr044-api-profile-save-pen", "adr044-api-profile-delete-pen"].forEach(function (lid) {
             ids[lid] = function () { adrLampHandleButtonId(lid, qForm(lid)); };
         });
@@ -11395,8 +11489,8 @@
             + '</select>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-fab-motion"' + (st.fabMotion !== false ? " checked" : "") + '> 浮标流动动效（怀疑手机发烫可以关掉对比）</label>'
-            + '<label class="adr048-check"><input type="checkbox" id="adr044-popup-clear-veil"' + (st.popupClearVeil === true ? " checked" : "") + '> 试验：浮窗周围不盖毛玻璃（打开后不对劲，回酒馆扩展页的小红霞抽屉里关掉）</label>'
-            + '<label class="adr048-check"><input type="checkbox" id="adr044-popup-airy"' + (st.popupAiry === true ? " checked" : "") + '> 试验：浮窗用「留白」版式（同上，不对劲就关）</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-popup-clear-veil"' + (adr048PopupFlag("popupClearVeil") ? " checked" : "") + '> 浮窗周围不盖毛玻璃（浮窗打不开或不对劲，就到酒馆扩展页的小红霞抽屉里取消这一枚）</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-popup-airy"' + (adr048PopupFlag("popupAiry") ? " checked" : "") + '> 浮窗用「留白」版式（取消就回到旧版式）</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
 
@@ -11639,9 +11733,22 @@
     // 开了以后浮窗要是没画出来，自己退回去并把量到的数写出来，不让人卡在一层看不见的幕布后面。
     var adr048PopupFallback = false;   // 这次会话里自检没过：两个开关当作关着，直到人再去动它
     var adr048PopupDiag = "";
-    function adr048PopupMode() {
+    // 开关现在的值（v1.50.0 起默认开）。第一次读的时候做一次迁移：v1.49.0 会把那一版的默认值「关」存进设置，
+    // 那不是谁选的；升上来各打开一次并记下来，之后人再取消就听人的。
+    function adr048PopupFlag(key) {
         var st = settings();
-        return { clear: !adr048PopupFallback && st.popupClearVeil === true, airy: !adr048PopupFallback && st.popupAiry === true };
+        try {
+            if (st.popupSkinV150 !== true) {
+                save("popupClearVeil", true);
+                save("popupAiry", true);
+                save("popupSkinV150", true);
+                st = settings();
+            }
+        } catch (e) {}
+        return st[key] !== false;
+    }
+    function adr048PopupMode() {
+        return { clear: !adr048PopupFallback && adr048PopupFlag("popupClearVeil"), airy: !adr048PopupFallback && adr048PopupFlag("popupAiry") };
     }
     // 量一下浮窗是不是真的在屏幕上。rect 可以由测试传进来；没有版面信息的环境（jsdom）不量。
     function adr048VerifyPopup(fakeRect) {
@@ -11667,7 +11774,7 @@
             saveNow();
             try { adrDSetAllById("adr044-popup-clear-veil", "", false); adrDSetAllById("adr044-popup-airy", "", false); } catch (eSet) {}
             adr048ApplyPanelTheme();
-            try { adrDToast("试验版浮窗在这台设备上没画出来，已自动退回原样并关掉开关。量到的：" + adr048PopupDiag); } catch (eToast) {}
+            try { adrDToast("新版浮窗在这台设备上没画出来，已自动退回旧样子并关掉开关。量到的：" + adr048PopupDiag); } catch (eToast) {}
             try { console.warn("[Arrebol D] popup experiment fell back:", adr048PopupDiag); } catch (eLog) {}
             return "fallback";
         } catch (e) { return "error"; }
