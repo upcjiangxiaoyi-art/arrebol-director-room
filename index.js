@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.50.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.50.1｜ripple & GPT & Claude
+ * v1.50.1 留白版式的开关撤掉：留白就是浮窗的样子，不再退回旧版式；「不盖毛玻璃」那枚还在；共享设置里一排开关左边对齐（提议 江「留白开关去掉吧，默认留白，不应退回旧版本」；施工 Claude）
  * v1.50.0 掌灯里的那位可以自己起名字、写人格（留空＝小红霞），面板称呼与提示词跟着换，改稿守则不受影响；「现在蛐蛐一句」挪到左边防误触；不盖毛玻璃与留白版式真机验过，改成默认开，开关留着当退路（提议 江「一个名字一个人格，想是啥人格是啥人格」「吃瓜按钮移到左边」「保留留白格式，去掉毛玻璃」；施工 Claude）
  * v1.49.0 去毛玻璃和「留白」版式改成两个试验开关（共享设置里，默认都关，关着时和 v1.47.1 一样）：开了不对劲能在酒馆扩展页的抽屉里关掉；不盖毛玻璃时幕布不接点击；浮窗没画出来会自动退回并写出量到的数（起因 江「一点就卡死页面」；施工 Claude）
  * v1.48.1 撤回 v1.48.0：那一版在 iPhone 上一点浮标页面就卡死（报告 江）。代码整体退回 v1.47.1，只有版本号往前走；去毛玻璃和新版式等查清原因后分步重做（施工 Claude）
@@ -121,7 +122,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.50.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.50.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -135,8 +136,8 @@
         showFloatingWindow: true,
         fabMotion: true,            // v1.37.0 浮标动效开关：关掉后水波与亮流全停，给怀疑手机发烫的人做实验
         popupClearVeil: true,       // 浮窗周围不盖毛玻璃。v1.49.0 是默认关的试验开关；江在 iPhone 上两枚都验过没事，v1.50.0 起默认开，开关留着当退路
-        popupAiry: true,            // 浮窗用「留白」版式。同上
-        popupSkinV150: false,       // 一次性迁移记号：v1.49.0 存下来的「关」是那一版的默认值，不是谁选的；升到 v1.50.0 时各打开一次，之后听人的
+        popupSkinV150: false,       // 一次性迁移记号：v1.49.0 存下来的「关」是那一版的默认值，不是谁选的；升上来时打开一次，之后听人的
+        // 留白版式 v1.49.0–1.50.0 也有一枚开关（popupAiry）；v1.50.1 起它就是浮窗的样子，不再能退回旧版式，开关和这个设置都撤了
         themePalette: "",          // dusk / sunset / pearl / celadon / wine / morandi / skyrose; empty migrates the previous light switch.
         dawnTheme: false,           // v1.14.4 开灯：浮窗朝霞浅色皮，默认关（暗河红霞）
         showAutoTriggerPopup: true,
@@ -883,8 +884,6 @@
 
         var pcv = qForm("adr044-popup-clear-veil");
         if (pcv) save("popupClearVeil", !!pcv.checked);
-        var pai = qForm("adr044-popup-airy");
-        if (pai) save("popupAiry", !!pai.checked);
 
         adr048ApplyFabTheme();
 
@@ -9390,7 +9389,6 @@
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-fab-motion"' + (st.fabMotion !== false ? " checked" : "") + '> 浮标流动动效（怀疑手机发烫可以关掉对比）</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-popup-clear-veil"' + (adr048PopupFlag("popupClearVeil") ? " checked" : "") + '> 浮窗周围不盖毛玻璃（浮窗打不开或不对劲，就到酒馆扩展页的小红霞抽屉里取消这一枚）</label>'
-            + '<label class="adr044-check"><input type="checkbox" id="adr044-popup-airy"' + (adr048PopupFlag("popupAiry") ? " checked" : "") + '> 浮窗用「留白」版式（取消就回到旧版式）</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
             + adrxDrawerStart("shared-adv", "⚙️ 进阶开关（默认已调好，一般不用动）", false)
@@ -9540,7 +9538,6 @@
             adrDSetAllById("adr044-show-floating-window", "", st.showFloatingWindow);
             adrDSetAllById("adr044-fab-motion", "", st.fabMotion !== false);
             adrDSetAllById("adr044-popup-clear-veil", "", adr048PopupFlag("popupClearVeil"));
-            adrDSetAllById("adr044-popup-airy", "", adr048PopupFlag("popupAiry"));
             adrDSetAllById("adr044-float-inject", "", st.floatInjectEnabled !== false);
             adrDSetAllById("adr044-float-depth", String(st.floatDepth != null ? st.floatDepth : 2));
             adrDSetAllById("adr044-director-log", "", st.directorLogEnabled !== false);
@@ -11146,8 +11143,8 @@
             });
         }
 
-        // v1.49.0 两个试验开关：一改就落盘（万一打开后页面不对，刷新回来还是这次选的，能去抽屉里关），并立刻套到开着的浮窗上
-        [["adr044-popup-clear-veil", "popupClearVeil"], ["adr044-popup-airy", "popupAiry"]].forEach(function (pair) {
+        // 「不盖毛玻璃」开关：一改就落盘（万一打开后页面不对，刷新回来还是这次选的，能去抽屉里关），并立刻套到开着的浮窗上
+        [["adr044-popup-clear-veil", "popupClearVeil"]].forEach(function (pair) {
             try {
                 var list = rootDoc().querySelectorAll("#" + pair[0]);
                 for (var i = 0; i < list.length; i++) (function (el) {
@@ -11490,7 +11487,6 @@
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-floating-window"' + (st.showFloatingWindow ? " checked" : "") + '> 显示小红霞浮窗</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-fab-motion"' + (st.fabMotion !== false ? " checked" : "") + '> 浮标流动动效（怀疑手机发烫可以关掉对比）</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-popup-clear-veil"' + (adr048PopupFlag("popupClearVeil") ? " checked" : "") + '> 浮窗周围不盖毛玻璃（浮窗打不开或不对劲，就到酒馆扩展页的小红霞抽屉里取消这一枚）</label>'
-            + '<label class="adr048-check"><input type="checkbox" id="adr044-popup-airy"' + (adr048PopupFlag("popupAiry") ? " checked" : "") + '> 浮窗用「留白」版式（取消就回到旧版式）</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-show-auto-trigger-popup"' + (st.showAutoTriggerPopup !== false ? " checked" : "") + '> 导演上岗前先打个招呼</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-stream-enabled"' + (st.streamEnabled !== false ? " checked" : "") + '> 流式接收导演稿（thinking 模型建议开；中转站不支持流式就关掉）</label>'
 
@@ -11731,7 +11727,7 @@
     // v1.48.0 把这两样直接改成了默认，只在 Chromium 里验过，推上去以后江的 iPhone 上一点浮标页面就卡死，当天撤回（v1.48.1）。
     // 这里没有 WebKit，复现不了，所以改成：默认都关（关着时和 v1.47.1 逐行相同），想要的人自己开；
     // 开了以后浮窗要是没画出来，自己退回去并把量到的数写出来，不让人卡在一层看不见的幕布后面。
-    var adr048PopupFallback = false;   // 这次会话里自检没过：两个开关当作关着，直到人再去动它
+    var adr048PopupFallback = false;   // 这次会话里自检没过：「不盖毛玻璃」当作关着，直到人再去动它
     var adr048PopupDiag = "";
     // 开关现在的值（v1.50.0 起默认开）。第一次读的时候做一次迁移：v1.49.0 会把那一版的默认值「关」存进设置，
     // 那不是谁选的；升上来各打开一次并记下来，之后人再取消就听人的。
@@ -11740,15 +11736,15 @@
         try {
             if (st.popupSkinV150 !== true) {
                 save("popupClearVeil", true);
-                save("popupAiry", true);
                 save("popupSkinV150", true);
                 st = settings();
             }
         } catch (e) {}
         return st[key] !== false;
     }
+    // 留白版式不是选项，一直是它（江：「留白开关去掉吧，默认留白，不应退回旧版本」）。能关的只有「不盖毛玻璃」。
     function adr048PopupMode() {
-        return { clear: !adr048PopupFallback && adr048PopupFlag("popupClearVeil"), airy: !adr048PopupFallback && adr048PopupFlag("popupAiry") };
+        return { clear: !adr048PopupFallback && adr048PopupFlag("popupClearVeil"), airy: true };
     }
     // 量一下浮窗是不是真的在屏幕上。rect 可以由测试传进来；没有版面信息的环境（jsdom）不量。
     function adr048VerifyPopup(fakeRect) {
@@ -11757,7 +11753,7 @@
             var p = d.querySelector("#adr048-popup-panel"), shell = d.querySelector("#adr048-popup-shell");
             if (!p || !shell || p.getAttribute("data-open") !== "1") return "skip";
             var mode = adr048PopupMode();
-            if (!mode.clear && !mode.airy) return "skip";
+            if (!mode.clear) return "skip";   // 自检只管「不盖毛玻璃」：幕布照旧盖着的时候，浮窗画没画出来一眼看得见，不用量
             var vw = (d.documentElement && d.documentElement.clientWidth) || w.innerWidth || 0;
             var vh = (d.documentElement && d.documentElement.clientHeight) || w.innerHeight || 0;
             // 没有排版引擎的环境（jsdom）里什么都量出来是 0，那不叫「没画出来」：先量整页，整页都没有尺寸就不判
@@ -11768,13 +11764,12 @@
             if (ok) return "ok";
             adr048PopupFallback = true;
             adr048PopupDiag = "浮窗 " + Math.round(r.width) + "×" + Math.round(r.height) + " @ " + Math.round(r.left) + "," + Math.round(r.top) + " · 屏 " + vw + "×" + vh
-                + " · 开关 " + (mode.clear ? "去毛玻璃 " : "") + (mode.airy ? "留白" : "");
+                + " · 不盖毛玻璃";
             save("popupClearVeil", false);
-            save("popupAiry", false);
             saveNow();
-            try { adrDSetAllById("adr044-popup-clear-veil", "", false); adrDSetAllById("adr044-popup-airy", "", false); } catch (eSet) {}
+            try { adrDSetAllById("adr044-popup-clear-veil", "", false); } catch (eSet) {}
             adr048ApplyPanelTheme();
-            try { adrDToast("新版浮窗在这台设备上没画出来，已自动退回旧样子并关掉开关。量到的：" + adr048PopupDiag); } catch (eToast) {}
+            try { adrDToast("不盖毛玻璃时浮窗在这台设备上没画出来，已自动把毛玻璃盖回去并关掉那枚开关。量到的：" + adr048PopupDiag); } catch (eToast) {}
             try { console.warn("[Arrebol D] popup experiment fell back:", adr048PopupDiag); } catch (eLog) {}
             return "fallback";
         } catch (e) { return "error"; }

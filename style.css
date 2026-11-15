@@ -8114,8 +8114,8 @@ html #adr048-popup-panel[data-arb-theme][data-arb-theme][data-hx-veil="clear"]::
 
 /* ============================================================
    v1.49.0 开关二：「云岫 · 留白」版式（江：「更有设计感一点，允许动 ui，更加仙气高级一点」）
-   只在共享设置里勾着「浮窗用留白版式」时生效（幕布上有 data-hx-skin="airy"）；取消，这一段一条都不匹配，浮窗和 v1.47.1 一样。
-   v1.50.0 起默认勾着（江：「超好看！保留留白格式！」）。
+   挂在幕布的 data-hx-skin="airy" 下面。v1.49.0–1.50.0 这是一枚能取消的开关；v1.50.1 起这个标记一直在，
+   留白就是浮窗的样子，不再退回旧版式（江：「留白开关去掉吧，默认留白，不应退回旧版本」）。
    · 字：iPhone 的网页用不了宋体（Songti SC 在 iOS 上是要另外下载的字体，网页拿不到），前两版写的宋体在手机上
      其实一直是苹方。这套版式不指望宋体：中文标题用系统黑体的细字重拉开字距；
      拉丁字母和数字用 Didot / Bodoni 这类 iPhone 自带的高反差衬线。
@@ -8395,3 +8395,7 @@ html #adr048-popup-panel[data-arb-theme][data-hx-skin="airy"] #adr048-popup-body
 
 /* v1.50.0 「现在蛐蛐一句」靠左（江：放右边太容易误触）。回顶 / 回底那一行还在右边 */
 .adr-lamp-jumprow.adr-lamp-jumprow-start { justify-content: flex-start; }
+
+/* v1.50.1 一排开关没对齐：紧挨着的第二枚起，旧规则把左边距清成了 0（那是给横排用的），于是比第一枚往左缩了 10px，
+   光晕还被卡片边切掉一点。竖排时每一枚都留同样的左边距 */
+html #adr048-popup-panel[data-arb-theme][data-hx-skin="airy"] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body details.adrx-drawer > label.adr048-check + label.adr048-check { margin-left: 10px !important; }
