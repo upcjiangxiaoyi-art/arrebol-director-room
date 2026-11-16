@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.51.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.52.0｜ripple & GPT & Claude
+ * v1.52.0 两位导演改四处：贴耳稿各占一格（不再互相顶掉）；稿子分「这几楼」和长期两类，前者挂 3 楼自动撤下；判「维持」时不往楼里挂、不换稿；出厂提示词重写（先分演法不同与真出戏、提醒必须配换成什么、验收有了位置），只升级没改过的（提议 江「情感和统筹还有什么可改进的，能起到真实作用」；施工 Claude）
  * v1.51.1 页签「情感导演」改叫「情感」，五枚页签都是两个字；这一页的分节标题和进度条小标题跟着改；稿子标题、提示词、旧稿识别不动（提议 江「把情感导演改成情感吧，比较统一」；施工 Claude）
  * v1.51.0 第八、九套配色：「素笺墨白」（纯黑白，浅色）与「松烟月色」（松烟墨绿打底、月色淡金点睛，深色）；两套的浮标各有自己的图案——墨白是一枚墨点一枚空圈，松烟是两道山脊一弯月（提议 江「再加一套黑白美化……你再自己选一个配色……浮标图案可以和别的不一样」；施工 Claude）
  * v1.50.1 留白版式的开关撤掉：留白就是浮窗的样子，不再退回旧版式；「不盖毛玻璃」那枚还在；共享设置里一排开关左边对齐（提议 江「留白开关去掉吧，默认留白，不应退回旧版本」；施工 Claude）
@@ -124,9 +125,13 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.51.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
-    var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
-    var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
+    var ADR_D_VERSION = "1.52.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    // v1.52.0 两位导演的出厂提示词重写：允许判「维持」、先分「演法不同」和「真出戏」、稿子分「这几楼」和长期两类、
+    // 提醒必须配「换成什么」。旧的两份留作 _V1 / _V2：存量设置和模板里逐字相同的才就地升级，人自己改过的不动。
+    var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容、跟组记录和用户补充信息，只看情感曲线与人设稳定，不写正文。\n\n先分清两种情况，再下判断：\n· 演法不同：主模型的演法和你预想的不一样，但从角色出发说得通。这不算出戏，顺着它找补，别拧回你想的那条路。\n· 真出戏：秒爱、秒软、秒承诺、隐藏深情化；把照顾写成占有，把心疼写成告白；替用户演了心理和选择；或者人设明显断了。这才修正。\n\n你要看的：\n1. 现在的关系走到了哪一步。\n2. 情绪温度是过热、过冷、空转，还是错拍。\n3. 角色照人设该怎么接住这份情绪。\n4. 接下来该升温、降温、维持、错拍，还是再等等。\n\n输出纪律（硬性）：\n· 每条意见都要落到一个演得出来的动作，或一句话的方向。「让他先问她吃了没，再绕回正题」合格；「放慢节奏」「注意分寸」这类口号不合格，不要写。\n· 不许只说别做什么。要提醒，就写成「别这样 → 换成这样」，最多两条。\n· 戏走得好好的，就判「维持」，只回【判断】那一行，别硬找毛病。\n· 不替用户决定行动。不写正文。不写分析过程。全文不超过 320 字。\n\n固定输出格式（用不上的栏目整栏不写）：\n【验收】\n有此前指导才写，一句：上次的方向是执行了、没执行，还是执行过头。连着两次没执行，这次换一种说法，别原话重复。\n\n【判断】\n维持 / 找补 / 修正（三选一）\n\n【这几楼】\n只管接下来两三楼的事，过后会自动撤下。\n\n【长期边界】\n要一直守的人设与关系边界。它会一直挂着，所以每次都写全，哪怕和上次一样。\n\n【换个写法】\n别这样 → 换成这样";
+    var EMOTION_PRESET_V1 = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
+    var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。连着两次没执行，这次换一种安排，别原话重复。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n戏走得顺，没有要派的人、要顺的场、该收的线，就只回一行「【判断】维持」，别硬凑安排。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式（用不上的栏目整栏不写）：\n【派人】\n只管接下来两三楼，过后会自动撤下。\n\n【顺场】\n只管接下来两三楼，过后会自动撤下。\n\n【收线】\n没收的线和没兑现的卡。它会一直挂着，所以每次都写全。\n\n【本轮重点】\n只管接下来两三楼，过后会自动撤下。";
+    var PLOT_PRESET_V2 = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
     var PLOT_PRESET_LEGACY = "你是 RP 剧情导演。请阅读最近的聊天内容和用户补充信息，只分析剧情推进、事件张力、伏笔与场景调度，不写正文。\n\n你需要判断：\n1. 当前剧情是否停滞、空转或重复。\n2. 场景是否需要推进、转场、插入事件、制造阻碍，还是维持压抑。\n3. 哪些伏笔可以轻轻回收，哪些伏笔不能急着揭开。\n4. NPC、环境、现实阻尼是否应该介入。\n5. 当前剧情的下一步应该发生什么“可执行事件”。\n6. 避免强行相遇、强行表白、强行救场、巧合堆叠。\n7. 不要替用户决定行动，只给世界和角色侧的推进方向。\n\n输出必须短，不超过 300 字。不要写正文。不要写分析过程。只给下一阶段剧情方向。\n\n固定输出格式：\n【剧情推进】\n……\n\n【事件抓手】\n……\n\n【避免】\n……";
     var DEFAULTS = {
@@ -157,6 +162,7 @@
         ngDetectEnabled: true,
         floatInjectEnabled: true,
         floatDepth: 2,
+        floatShortFloors: 3,        // v1.52.0 稿子里「这几楼」那部分挂几楼就撤（长期边界一直挂着）；0＝不撤，和以前一样整份常驻
         fabLeft: null,
         fabTop: null,
         autoTriggerEmotion: false,
@@ -384,6 +390,9 @@
         if (!st.plotPreset) st.plotPreset = PLOT_PRESET;
         // v1.10.0：统筹转岗化石合并。存量若与旧默认逐字相同，就地升级；用户自改过的预设一律不动。
         if (st.plotPreset === PLOT_PRESET_LEGACY) st.plotPreset = PLOT_PRESET;
+        // v1.52.0：出厂提示词重写。存量与上一版出厂逐字相同的就地升级；人自己改过的一律不动。
+        if (st.plotPreset === PLOT_PRESET_V2) st.plotPreset = PLOT_PRESET;
+        if (st.emotionPreset === EMOTION_PRESET_V1) st.emotionPreset = EMOTION_PRESET;
         // v1.9.29：注入方式化石合并。hidden 与 folded 自统一以来行为完全一致，存量值就地迁移。
         if (st.injectMode === "hidden") st.injectMode = "folded";
         return st;
@@ -900,6 +909,8 @@
 
         var fd = qForm("adr044-float-depth");
         if (fd) save("floatDepth", Number(fd.value || 2));
+        var fsf = qForm("adr044-float-short-floors");
+        if (fsf) save("floatShortFloors", String(fsf.value).trim() === "" ? 3 : Math.max(0, Math.min(99, Math.round(Number(fsf.value) || 0))));
 
         var dlog = qForm("adr044-director-log");
         if (dlog) save("directorLogEnabled", !!dlog.checked);
@@ -1821,6 +1832,11 @@
                 failureMsg = "中途切换了聊天";
                 status(type, "分析完成，但你中途切换了聊天：这份稿是上一把的，不挂到这把（预览框里还在）", "#d6b177");
                 try { console.warn("[Arrebol D] director result discarded: chat switched mid-run", { type: type, from: homeKey, to: adrDChatKey() }); } catch (eSwLog) {}
+            } else if (st[autoKey] && adrDIsHoldVerdict(out)) {
+                // v1.52.0：导演看过了，判「维持」。不往楼里挂、不换耳边那份；记进跟组记录，下次它知道这一轮自己没动
+                success = true;
+                try { adrDDirectorLogPush(type, out); } catch (eHoldLog) {}
+                status(type, "看过了：这一轮判「维持」，不换稿，耳边那份照旧 ✓", "#8ed99d");
             } else if (st[autoKey]) {
                 var ok = isAutoRun ? await injectDirectorAsync(type, out) : injectDirector(type, out);
                 if (ok) {
@@ -2005,6 +2021,12 @@
         return { on: true, t: Number(o.t) || 0, floor: Number.isFinite(Number(o.floor)) ? Number(o.floor) : -1 };
     }
 
+    function adrDNormFloatSlot(o, type) {
+        if (!o || typeof o !== "object" || typeof o.text !== "string" || !o.text) return null;
+        var r = Number(o.r);
+        return { t: Number(o.t) || 0, type: adrDTypeOf(type), r: Number.isFinite(r) ? r : -1, text: o.text, long: typeof o.long === "string" ? o.long : "" };
+    }
+
     function adrDNormalizeChatState(o) {
         o = o && typeof o === "object" ? o : {};
         var auto = o.auto && typeof o.auto === "object" ? o.auto : {};
@@ -2014,11 +2036,17 @@
         if (o.float && typeof o.float === "object" && typeof o.float.text === "string" && o.float.text) {
             fl = { t: Number(o.float.t) || 0, type: adrDTypeOf(o.float.type), text: o.float.text };
         }
+        // v1.52.0 贴耳稿两位导演各占一格（floats）。float 还留着，记的是最新的那一份：旧版本读得懂，降级不丢。
+        var slots = { emotion: null, plot: null };
+        var rawSlots = o.floats && typeof o.floats === "object" ? o.floats : null;
+        if (rawSlots) ["emotion", "plot"].forEach(function (k) { slots[k] = adrDNormFloatSlot(rawSlots[k], k); });
+        else if (fl) slots[fl.type] = { t: fl.t, type: fl.type, r: -1, text: fl.text, long: "" };   // 旧的单槽搬进来：不知道是哪一楼挂的，整份照旧常驻
         return {
             v: 1,
             auto: { emotion: adrDNormAutoItem(auto.emotion), plot: adrDNormAutoItem(auto.plot) },
             log: { emotion: adrDNormLogList(log.emotion), plot: adrDNormLogList(log.plot) },
             float: fl,
+            floats: slots,
             graze: { emotion: adrDNormGraze(graze.emotion), plot: adrDNormGraze(graze.plot) },
             tone: adrDNormTone(o.tone)   // v1.30.0 这局的基调
         };
@@ -2051,7 +2079,11 @@
         try {
             var flAll = adrDReadJsonLS(ADR_D_FLOAT_KEY);
             var fl = flAll[key];
-            if (fl && typeof fl.text === "string" && fl.text) { st.float = { t: Number(fl.t) || 0, type: adrDTypeOf(fl.type), text: fl.text }; found = true; }
+            if (fl && typeof fl.text === "string" && fl.text) {
+                st.float = { t: Number(fl.t) || 0, type: adrDTypeOf(fl.type), text: fl.text };
+                st.floats[st.float.type] = { t: st.float.t, type: st.float.type, r: -1, text: st.float.text, long: "" };
+                found = true;
+            }
         } catch (e2) {}
         try {
             var gzAll = adrDReadJsonLS(ADR_D_GRAZE_KEY);
@@ -2431,28 +2463,124 @@
         return "【暗河红霞 Arrebol D｜" + title + "·最新指导（常驻）】\n" + String(text || "").trim();
     }
 
+    // ===== v1.52.0 贴耳稿的三处改动（江：「情感和统筹还有什么可改进的，能起到真实作用」）=====
+    // 1) 两位导演各占一格。以前全聊天只有一格，谁后上岗就把对方的顶掉：情感导演一来，统筹的安排就没了。
+    // 2) 稿子分两类：管接下来几楼的（降温、派谁出场），和要一直守的（人设边界、没收的线）。
+    //    前一类挂够几楼自动撤下，只留后一类常驻。以前整份一直挂到下一次导演上岗，早过了那个点的话还压着戏。
+    // 3) 导演判「维持」时不换稿：戏走得好好的，不必每到点都塞一份新方向进去。
+    // 认栏目靠小标题：下面这些算长期，其余都算「这几楼」。旧格式的【人设边界】也认，所以老提示词、自己改的提示词一样能分。
+    // 一份稿里认不出长期栏目的，整份照旧常驻，不撤。
+    var ADR_D_FLOAT_LONG_HEADS = { emotion: ["长期边界", "人设边界"], plot: ["收线"] };
+    var ADR_D_FLOAT_LONG_TITLE = { emotion: "情感导演·长期边界（常驻）", plot: "统筹·没收的线（常驻）" };
+    var ADR_D_FLOAT_SKIP_HEADS = ["验收", "判断"];   // 这两栏是给人看的账，不贴到主模型耳边
+    function adrDGuidanceSections(text) {
+        var src = String(text || "").replace(/\r\n?/g, "\n");
+        var re = /^[ \t]*【([^】\n]{1,16})】[ \t]*/gm, out = [], last = 0, head = "", m;
+        while ((m = re.exec(src))) {
+            var chunk = src.slice(last, m.index).trim();
+            if (chunk || head) out.push({ head: head, body: chunk });
+            head = m[1].trim();
+            last = re.lastIndex;
+        }
+        var tail = src.slice(last).trim();
+        if (tail || head) out.push({ head: head, body: tail });
+        return out;
+    }
+    function adrDGuidanceParts(type, text) {
+        var t = adrDTypeOf(type), longHeads = ADR_D_FLOAT_LONG_HEADS[t] || [];
+        var keep = [], lng = [];
+        adrDGuidanceSections(text).forEach(function (sec) {
+            if (ADR_D_FLOAT_SKIP_HEADS.indexOf(sec.head) >= 0) return;
+            var block = (sec.head ? "【" + sec.head + "】\n" : "") + sec.body;
+            if (!block.trim()) return;
+            keep.push(block.trim());
+            if (sec.head && longHeads.indexOf(sec.head) >= 0 && sec.body) lng.push(block.trim());
+        });
+        var full = keep.join("\n\n");
+        return { full: full || String(text || "").trim(), long: lng.length && lng.length < keep.length ? lng.join("\n\n") : "" };
+    }
+    // 导演这一轮判的是「维持」：没有新方向要给
+    function adrDIsHoldVerdict(text) {
+        return /【判断】[\s:：]*维持/.test(String(text || ""));
+    }
+    function adrDFloatShortFloors() {
+        var n = Number(settings().floatShortFloors);
+        if (!Number.isFinite(n) || n < 0) n = 3;
+        if (n > 99) n = 99;
+        return Math.round(n);
+    }
+    function adrDFloatSlots(state) {
+        if (!state.floats || typeof state.floats !== "object") state.floats = { emotion: null, plot: null };
+        return state.floats;
+    }
+    // 这一格现在该贴哪段：没到期贴整份；到期了、又分得出长期栏目的，只贴长期那段
+    function adrDFloatSlotText(item, round) {
+        if (!item || !item.text) return "";
+        var k = adrDFloatShortFloors();
+        if (k > 0 && item.long && item.r >= 0 && Number.isFinite(round) && round - item.r >= k) return item.long;
+        return item.text;
+    }
+    function adrDFloatCompose() {
+        try {
+            var slots = adrDFloatSlots(adrDChatState());
+            var round = adrDAssistantRoundCount();
+            return ["emotion", "plot"].map(function (k) { return slots[k]; }).filter(function (it) { return it && it.text; })
+                .sort(function (a, b) { return (a.t || 0) - (b.t || 0); })   // 新的那份排在后面，离正文更近
+                .map(function (it) { return adrDFloatSlotText(it, round); }).filter(Boolean).join("\n\n");
+        } catch (e) { return ""; }
+    }
+    var adrDFloatLastApplied = null;
+    // 把该贴的贴上去。和上次贴的一样就不重贴；每来一楼会过一遍，到期的那段就是在这里撤下的
+    function adrDFloatRefresh(force) {
+        try {
+            var st = settings();
+            var text = (!st.floatInjectEnabled || !adrDMasterEnabled()) ? "" : adrDFloatCompose();
+            if (!force && text === adrDFloatLastApplied) return false;
+            adrDFloatLastApplied = text;
+            adrDApplyFloatPrompt(text);
+            return true;
+        } catch (e) { return false; }
+    }
+    function adrDFloatMirror(state) {
+        // float 记最新的那一份，给旧版本和换设备用
+        var slots = adrDFloatSlots(state), best = null;
+        ["emotion", "plot"].forEach(function (k) { var it = slots[k]; if (it && it.text && (!best || (it.t || 0) >= (best.t || 0))) best = it; });
+        state.float = best ? { t: best.t, type: best.type, text: best.text } : null;
+    }
+
     function adrDUpdateFloatFromInjection(type, text) {
         try {
             var st = settings();
             if (!st.floatInjectEnabled || !adrDMasterEnabled()) return;
-            var body = adrDFloatText(type, text);
+            if (adrDIsHoldVerdict(text)) return;   // 判了「维持」：耳边那份照旧，不拿一句「维持」把它顶掉
+            var t = adrDTypeOf(type);
+            var parts = adrDGuidanceParts(t, text);
             var state = adrDChatState();
-            state.float = { t: Date.now(), type: adrDTypeOf(type), text: body };
+            adrDFloatSlots(state)[t] = {
+                t: Date.now(), type: t, r: adrDAssistantRoundCount(),
+                text: adrDFloatText(t, parts.full),
+                long: parts.long ? "【暗河红霞 Arrebol D｜" + ADR_D_FLOAT_LONG_TITLE[t] + "】\n" + parts.long : ""
+            };
+            adrDFloatMirror(state);
             adrDSaveChatState(state);
-            adrDApplyFloatPrompt(body);
+            adrDFloatRefresh(true);
         } catch (e) {}
     }
+
+    try {
+        rootWin().__adrDFloatTest = {
+            sections: adrDGuidanceSections, parts: adrDGuidanceParts, isHold: adrDIsHoldVerdict, compose: adrDFloatCompose, refresh: adrDFloatRefresh,
+            update: adrDUpdateFloatFromInjection, write: function (type, text) { return adrDWriteDirectorInjection(type, text); },
+            clearType: function (type) { return adrDGrazeClearFloatIfType(type); }, shortFloors: adrDFloatShortFloors,
+            presets: { emotion: EMOTION_PRESET, plot: PLOT_PRESET, emotionV1: EMOTION_PRESET_V1, plotV2: PLOT_PRESET_V2 }
+        };
+    } catch (eFloatHook) {}
 
     function adrDRestoreFloatForCurrentChat(reason) {
         try { adrCdRestoreFloat(reason); } catch (eCdRestore) {} // v1.10.0：抽卡小能手耳机同车恢复（导演早退路径不影响）
         try {
             var st = settings();
-            if (!st.floatInjectEnabled || !adrDMasterEnabled()) {
-                adrDApplyFloatPrompt("");
-                return;
-            }
-            var item = adrDChatState().float;
-            adrDApplyFloatPrompt(item && item.text ? item.text : "");
+            adrDFloatRefresh(true);   // v1.52.0：两格拼起来贴；开关关着就贴空的
         } catch (e) {}
     }
 
@@ -2537,14 +2665,15 @@
     }
 
     function adrDGrazeClearFloatIfType(type) {
-        // 常驻浮动稿是全聊天单槽；只有当前挂的是本类型时才撤，另一类型的浮动稿不动。
+        // 常驻浮动稿两位导演各占一格（v1.52.0 前是全聊天单槽）；只撤本类型那一格。
         try {
             var state = adrDChatState();
-            var item = state.float;
-            if (item && item.type === adrDTypeOf(type)) {
-                state.float = null;
+            var slots = adrDFloatSlots(state), t = adrDTypeOf(type);
+            if (slots[t]) {
+                slots[t] = null;   // v1.52.0：各占一格，撤的只是这位导演的那一格，另一位的照旧挂着
+                adrDFloatMirror(state);
                 adrDSaveChatState(state);
-                adrDApplyFloatPrompt("");
+                adrDFloatRefresh(true);
                 return true;
             }
         } catch (e) {}
@@ -9399,6 +9528,7 @@
             + '<input type="text" id="adr044-content-tags" placeholder="content" value="' + esc(st.contentTagNames || "content") + '">' 
             + '<label class="adr044-check"><input type="checkbox" id="adr044-float-inject"' + (st.floatInjectEnabled !== false ? " checked" : "") + '> 贴耳模式：最新一份稿始终跟着对话走（藏楼/摘要洗不掉）</label>'
             + '<label>贴耳位置：稿子塞在倒数第几条（默认 2，不懂别动）</label><input type="number" id="adr044-float-depth" min="0" max="99" value="' + esc(st.floatDepth != null ? st.floatDepth : 2) + '">'
+            + '<label>稿子里「这几楼」的话挂几楼就撤（默认 3；长期边界一直挂着；0＝不撤，整份常驻）</label><input type="number" id="adr044-float-short-floors" min="0" max="99" value="' + esc(st.floatShortFloors != null ? st.floatShortFloors : 3) + '">'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-director-log"' + (st.directorLogEnabled !== false ? " checked" : "") + '> 跟组模式：导演记得自己说过什么，不翻烧饼</label>'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-ng-detect"' + (st.ngDetectEnabled !== false ? " checked" : "") + '> NG 检测：同一楼重 roll ' + ADR_D_NG_THRESHOLD + ' 次提示请导演</label>'
             + '</details>'
@@ -9543,6 +9673,7 @@
             adrDSetAllById("adr044-popup-clear-veil", "", adr048PopupFlag("popupClearVeil"));
             adrDSetAllById("adr044-float-inject", "", st.floatInjectEnabled !== false);
             adrDSetAllById("adr044-float-depth", String(st.floatDepth != null ? st.floatDepth : 2));
+            adrDSetAllById("adr044-float-short-floors", String(st.floatShortFloors != null ? st.floatShortFloors : 3));
             adrDSetAllById("adr044-director-log", "", st.directorLogEnabled !== false);
             adrDSetAllById("adr044-ng-detect", "", st.ngDetectEnabled !== false);
             adrDSetAllById("adr044-show-auto-trigger-popup", "", st.showAutoTriggerPopup !== false);
@@ -9648,6 +9779,9 @@
                 if (!it) return;
                 var name = String(it.name || "").trim();
                 var text = String(it.text || "");
+                // v1.52.0：模板仓里存着的上一版出厂提示词（逐字相同才算）跟着升级；改过一个字的都不动
+                if (type === "emotion" && text === EMOTION_PRESET_V1) text = EMOTION_PRESET;
+                if (type === "plot" && text === PLOT_PRESET_V2) text = PLOT_PRESET;
                 if (name) out[type].push({ name: name, text: text });
             });
             if (!out[type].length) out[type] = def[type];
@@ -11498,6 +11632,7 @@
             + '<input type="text" id="adr044-content-tags" placeholder="content" value="' + esc(st.contentTagNames || "content") + '">' 
             + '<label class="adr048-check"><input type="checkbox" id="adr044-float-inject"' + (st.floatInjectEnabled !== false ? " checked" : "") + '> 贴耳模式：最新一份稿始终跟着对话走（不占楼层）</label>'
             + '<label>贴耳位置：稿子塞在倒数第几条（默认 2，不懂别动）</label><input type="number" id="adr044-float-depth" min="0" max="99" value="' + esc(st.floatDepth != null ? st.floatDepth : 2) + '">'
+            + '<label>稿子里「这几楼」的话挂几楼就撤（默认 3；长期边界一直挂着；0＝不撤，整份常驻）</label><input type="number" id="adr044-float-short-floors" min="0" max="99" value="' + esc(st.floatShortFloors != null ? st.floatShortFloors : 3) + '">'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-director-log"' + (st.directorLogEnabled !== false ? " checked" : "") + '> 跟组模式：导演记得自己说过什么，不翻烧饼</label>'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-ng-detect"' + (st.ngDetectEnabled !== false ? " checked" : "") + '> NG 检测：同一楼重 roll ' + ADR_D_NG_THRESHOLD + ' 次提示请导演</label>'
             + '</details>'
@@ -13318,6 +13453,7 @@
                             adrDScheduleAutoTriggerCheck("pending-retry");
                         }
                         adrDLastChatLengthSeen = len;
+                        try { adrDFloatRefresh(); } catch (eFloatTick) {}   // v1.52.0：楼数变了就过一遍，「这几楼」到期的那段在这里撤下
                         adrDUpdateAutoCounters();
                         adrDCheckNg("poll");
                     } catch (e) {}
