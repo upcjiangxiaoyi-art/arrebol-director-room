@@ -276,8 +276,21 @@ const clone = o => JSON.parse(JSON.stringify(o));
         ok(ep() === both, "把「挂几楼就撤」填成 0：不撤，整份常驻，和以前一样");
         b.win.SillyTavern.getContext().extensionSettings[Object.keys(b.win.SillyTavern.getContext().extensionSettings)[0]].floatShortFloors = 3; T.refresh();
         ok(ep() === aged, "填回 3：又只剩长期的");
+        // 任选：都贴着，还是后来的顶掉先来的
+        {
+            const S0 = b.win.SillyTavern.getContext().extensionSettings; const st0 = S0[Object.keys(S0)[0]];
+            ok(st0.floatKeepBoth !== false && b.doc.querySelectorAll("#adr044-float-keep-both").length >= 1 && b.doc.querySelector("#adr044-float-keep-both").checked, "「两位导演的稿都贴着」默认勾着，面板上有这一枚");
+            st0.floatKeepBoth = false; T.refresh();
+            ok(ep().indexOf("统筹·没收的线（常驻）") >= 0 && ep().indexOf("情感导演") < 0, "取消：只贴最新的那一份（统筹后挂的），情感导演那份不贴了", ep().slice(0, 60));
+            ok(!!b.dmeta().floats.emotion && !!b.dmeta().floats.plot, "两格都还存着，只是先来的不贴");
+            st0.floatKeepBoth = true; T.refresh();
+            ok(ep() === aged, "再勾上：两份都回来");
+            st0.floatKeepBoth = false; T.refresh();
+            ok(T.clearType("plot") === true && ep().indexOf("情感导演·长期边界（常驻）") >= 0 && ep().indexOf("统筹") < 0, "只贴最新一份时，把后来的那份撤掉：先来的那份顶上来");
+            T.write("plot", PLOT_G); st0.floatKeepBoth = true; T.refresh();
+        }
         // 新稿把这一格换掉，重新计楼
-        ok(T.write("emotion", "【这几楼】\n让他先开口。\n\n【长期边界】\n他不会先说喜欢。") === true && ep().indexOf("让他先开口") >= 0 && ep().indexOf("统筹·没收的线（常驻）") >= 0, "情感导演再来一份：它那一格换成新的整份，统筹那格还是只剩收线");
+        ok(T.write("emotion", "【这几楼】\n让他先开口。\n\n【长期边界】\n他不会先说喜欢。") === true && ep().indexOf("让他先开口") >= 0 && ep().indexOf("统筹·最新指导（常驻）") >= 0, "情感导演再来一份：它那一格换成新的整份，统筹那格不受影响");
         // 判「维持」
         const before = ep(), logN = b.dmeta().log.emotion.length;
         T.update("emotion", "【验收】\n执行了。\n\n【判断】\n维持");

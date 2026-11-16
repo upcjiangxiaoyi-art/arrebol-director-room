@@ -1,7 +1,7 @@
 
 /*
  * Arrebol D 暗河红霞导演系统 v1.52.0｜ripple & GPT & Claude
- * v1.52.0 两位导演改四处：贴耳稿各占一格（不再互相顶掉）；稿子分「这几楼」和长期两类，前者挂 3 楼自动撤下；判「维持」时不往楼里挂、不换稿；出厂提示词重写（先分演法不同与真出戏、提醒必须配换成什么、验收有了位置），只升级没改过的（提议 江「情感和统筹还有什么可改进的，能起到真实作用」；施工 Claude）
+ * v1.52.0 两位导演改四处：贴耳稿各占一格（不再互相顶掉，也可以选回只贴最新一份）；稿子分「这几楼」和长期两类，前者挂 3 楼自动撤下；判「维持」时不往楼里挂、不换稿；出厂提示词重写（先分演法不同与真出戏、提醒必须配换成什么、验收有了位置），只升级没改过的（提议 江「情感和统筹还有什么可改进的，能起到真实作用」；施工 Claude）
  * v1.51.1 页签「情感导演」改叫「情感」，五枚页签都是两个字；这一页的分节标题和进度条小标题跟着改；稿子标题、提示词、旧稿识别不动（提议 江「把情感导演改成情感吧，比较统一」；施工 Claude）
  * v1.51.0 第八、九套配色：「素笺墨白」（纯黑白，浅色）与「松烟月色」（松烟墨绿打底、月色淡金点睛，深色）；两套的浮标各有自己的图案——墨白是一枚墨点一枚空圈，松烟是两道山脊一弯月（提议 江「再加一套黑白美化……你再自己选一个配色……浮标图案可以和别的不一样」；施工 Claude）
  * v1.50.1 留白版式的开关撤掉：留白就是浮窗的样子，不再退回旧版式；「不盖毛玻璃」那枚还在；共享设置里一排开关左边对齐（提议 江「留白开关去掉吧，默认留白，不应退回旧版本」；施工 Claude）
@@ -162,6 +162,7 @@
         ngDetectEnabled: true,
         floatInjectEnabled: true,
         floatDepth: 2,
+        floatKeepBoth: true,        // v1.52.0 两位导演的稿都贴着；关掉＝只贴最新的一份，后来的顶掉先来的（稿子太长、想省上下文的人用）
         floatShortFloors: 3,        // v1.52.0 稿子里「这几楼」那部分挂几楼就撤（长期边界一直挂着）；0＝不撤，和以前一样整份常驻
         fabLeft: null,
         fabTop: null,
@@ -904,6 +905,8 @@
         var stm = qForm("adr044-stream-enabled");
         if (stm) save("streamEnabled", !!stm.checked);
 
+        var fkb = qForm("adr044-float-keep-both");
+        if (fkb) save("floatKeepBoth", !!fkb.checked);
         var flt = qForm("adr044-float-inject");
         if (flt) save("floatInjectEnabled", !!flt.checked);
 
@@ -2524,9 +2527,12 @@
         try {
             var slots = adrDFloatSlots(adrDChatState());
             var round = adrDAssistantRoundCount();
-            return ["emotion", "plot"].map(function (k) { return slots[k]; }).filter(function (it) { return it && it.text; })
-                .sort(function (a, b) { return (a.t || 0) - (b.t || 0); })   // 新的那份排在后面，离正文更近
-                .map(function (it) { return adrDFloatSlotText(it, round); }).filter(Boolean).join("\n\n");
+            var list = ["emotion", "plot"].map(function (k) { return slots[k]; }).filter(function (it) { return it && it.text; })
+                .sort(function (a, b) { return (a.t || 0) - (b.t || 0); });   // 新的那份排在后面，离正文更近
+            // 「两位导演的稿都贴着」取消了：只贴最新的那一份，和 v1.52.0 之前一样后来的顶掉先来的。
+            // 两格都还存着，只是先来的那份不贴；再勾上它就回来，后来的被放养撤掉时它也会顶上。
+            if (settings().floatKeepBoth === false && list.length > 1) list = list.slice(-1);
+            return list.map(function (it) { return adrDFloatSlotText(it, round); }).filter(Boolean).join("\n\n");
         } catch (e) { return ""; }
     }
     var adrDFloatLastApplied = null;
@@ -9527,6 +9533,7 @@
             + '<label>正文标签名（默认 content，多个用英文逗号分隔；正文没有标签就填 *，整层楼当正文读）</label>'
             + '<input type="text" id="adr044-content-tags" placeholder="content" value="' + esc(st.contentTagNames || "content") + '">' 
             + '<label class="adr044-check"><input type="checkbox" id="adr044-float-inject"' + (st.floatInjectEnabled !== false ? " checked" : "") + '> 贴耳模式：最新一份稿始终跟着对话走（藏楼/摘要洗不掉）</label>'
+            + '<label class="adr044-check"><input type="checkbox" id="adr044-float-keep-both"' + (st.floatKeepBoth !== false ? " checked" : "") + '> 两位导演的稿都贴着（取消＝只贴最新的一份，后来的顶掉先来的；嫌稿子太长可以取消）</label>'
             + '<label>贴耳位置：稿子塞在倒数第几条（默认 2，不懂别动）</label><input type="number" id="adr044-float-depth" min="0" max="99" value="' + esc(st.floatDepth != null ? st.floatDepth : 2) + '">'
             + '<label>稿子里「这几楼」的话挂几楼就撤（默认 3；长期边界一直挂着；0＝不撤，整份常驻）</label><input type="number" id="adr044-float-short-floors" min="0" max="99" value="' + esc(st.floatShortFloors != null ? st.floatShortFloors : 3) + '">'
             + '<label class="adr044-check"><input type="checkbox" id="adr044-director-log"' + (st.directorLogEnabled !== false ? " checked" : "") + '> 跟组模式：导演记得自己说过什么，不翻烧饼</label>'
@@ -9672,6 +9679,7 @@
             adrDSetAllById("adr044-fab-motion", "", st.fabMotion !== false);
             adrDSetAllById("adr044-popup-clear-veil", "", adr048PopupFlag("popupClearVeil"));
             adrDSetAllById("adr044-float-inject", "", st.floatInjectEnabled !== false);
+            adrDSetAllById("adr044-float-keep-both", "", st.floatKeepBoth !== false);
             adrDSetAllById("adr044-float-depth", String(st.floatDepth != null ? st.floatDepth : 2));
             adrDSetAllById("adr044-float-short-floors", String(st.floatShortFloors != null ? st.floatShortFloors : 3));
             adrDSetAllById("adr044-director-log", "", st.directorLogEnabled !== false);
@@ -11631,6 +11639,7 @@
             + '<label>正文标签名（默认 content，多个用英文逗号分隔；正文没有标签就填 *，整层楼当正文读）</label>'
             + '<input type="text" id="adr044-content-tags" placeholder="content" value="' + esc(st.contentTagNames || "content") + '">' 
             + '<label class="adr048-check"><input type="checkbox" id="adr044-float-inject"' + (st.floatInjectEnabled !== false ? " checked" : "") + '> 贴耳模式：最新一份稿始终跟着对话走（不占楼层）</label>'
+            + '<label class="adr048-check"><input type="checkbox" id="adr044-float-keep-both"' + (st.floatKeepBoth !== false ? " checked" : "") + '> 两位导演的稿都贴着（取消＝只贴最新的一份，后来的顶掉先来的；嫌稿子太长可以取消）</label>'
             + '<label>贴耳位置：稿子塞在倒数第几条（默认 2，不懂别动）</label><input type="number" id="adr044-float-depth" min="0" max="99" value="' + esc(st.floatDepth != null ? st.floatDepth : 2) + '">'
             + '<label>稿子里「这几楼」的话挂几楼就撤（默认 3；长期边界一直挂着；0＝不撤，整份常驻）</label><input type="number" id="adr044-float-short-floors" min="0" max="99" value="' + esc(st.floatShortFloors != null ? st.floatShortFloors : 3) + '">'
             + '<label class="adr048-check"><input type="checkbox" id="adr044-director-log"' + (st.directorLogEnabled !== false ? " checked" : "") + '> 跟组模式：导演记得自己说过什么，不翻烧饼</label>'
