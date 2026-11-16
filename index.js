@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.51.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.51.1｜ripple & GPT & Claude
+ * v1.51.1 页签「情感导演」改叫「情感」，五枚页签都是两个字；这一页的分节标题和进度条小标题跟着改；稿子标题、提示词、旧稿识别不动（提议 江「把情感导演改成情感吧，比较统一」；施工 Claude）
  * v1.51.0 第八、九套配色：「素笺墨白」（纯黑白，浅色）与「松烟月色」（松烟墨绿打底、月色淡金点睛，深色）；两套的浮标各有自己的图案——墨白是一枚墨点一枚空圈，松烟是两道山脊一弯月（提议 江「再加一套黑白美化……你再自己选一个配色……浮标图案可以和别的不一样」；施工 Claude）
  * v1.50.1 留白版式的开关撤掉：留白就是浮窗的样子，不再退回旧版式；「不盖毛玻璃」那枚还在；共享设置里一排开关左边对齐（提议 江「留白开关去掉吧，默认留白，不应退回旧版本」；施工 Claude）
  * v1.50.0 掌灯里的那位可以自己起名字、写人格（留空＝小红霞），面板称呼与提示词跟着换，改稿守则不受影响；「现在蛐蛐一句」挪到左边防误触；不盖毛玻璃与留白版式真机验过，改成默认开，开关留着当退路（提议 江「一个名字一个人格，想是啥人格是啥人格」「吃瓜按钮移到左边」「保留留白格式，去掉毛玻璃」；施工 Claude）
@@ -123,7 +124,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.51.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.51.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容和用户补充信息，只分析情感曲线与人设稳定，不写正文。\n\n你需要判断：\n1. 当前关系阶段是什么。\n2. 情绪温度是否过热、过冷、空转或错拍。\n3. 角色是否出现 OOC 风险。\n4. 是否存在秒爱、秒软、秒承诺、隐藏深情化。\n5. 是否把照顾误写成占有，把心疼误写成告白。\n6. 是否过度代演用户的心理与选择。\n7. 当前角色根据人设应该如何承接情绪。\n8. 下一阶段情感应该升温、降温、维持、错拍，还是延迟。\n\n输出必须短，不超过 300 字。不要写分析过程。不要写正文。只给下一阶段情感方向，要给可执行动作与明确禁区。\n\n固定输出格式：\n【情感方向】\n……\n\n【人设边界】\n……\n\n【避免】\n……";
     var PLOT_PRESET = "你是 RP 剧组统筹。请阅读最近的聊天内容、跟组记录与投卡史，一次调用完成四件事，不写正文。\n\n一、派人：调度 NPC 进出场；把久未出场的冷板凳角色捞回场上；给最近投放的无专名事件卡选角——把「某人/口信/来客」铸成戏里真实存在的具体角色。\n二、顺场：检查转场衔接与叙事流畅，指出哪里硌牙、怎么顺。\n三、收线：盘点既有伏笔与已投的事件卡，点名哪条该兑现、哪条再压一压；撒出去的钩子不许无限堆积。\n四、急诊与验收：若因 NG 会诊被请来，先诊断重 roll 原因；若有此前指导，先用一两句评估执行情况。\n\n输出纪律（硬性）：每条意见必须带名字带条目——「让欠主角人情的老周把口信送到」合格；「推进剧情」「增加张力」这类纯口号视为不合格输出，禁止出现。\n不要替用户决定行动。不要写正文。不要写分析过程。输出必须短，不超过 350 字。\n\n固定输出格式：\n【派人】\n……\n\n【顺场】\n……\n\n【收线】\n……\n\n【本轮重点】\n……";
     // v1.10.0：红霞转岗统筹（派人/顺场/收线/急诊验收四职打包）。旧版预设原文留档，仅用于化石合并。
@@ -9257,7 +9258,7 @@
     function pageHTML(type) {
         var st = settings();
         var p = prefixOf(type);
-        var title = type === "plot" ? "统筹" : "情感导演";
+        var title = type === "plot" ? "统筹" : "情感";   // v1.51.1 面板上的叫法；和「统筹 · API 配置」对得上
         var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
 
         return '<div class="adr044-page" id="adr044-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
@@ -9309,7 +9310,8 @@
         var st = settings();
         var active = st.activeTab === "plot" || st.activeTab === "cd" || st.activeTab === "lamp" || st.activeTab === "theater" ? st.activeTab : "emotion";
         var kinds = ["emotion", "plot", "cd", "lamp", "theater"];
-        var labels = { emotion: "情感导演", plot: "统筹", cd: "抽卡", lamp: "掌灯", theater: "剧场" };
+        // v1.51.1：页签「情感导演」改成「情感」，五枚都是两个字（江：「比较统一」）。只改面板上的叫法，稿子里的标题、提示词、旧稿的识别都没动。
+        var labels = { emotion: "情感", plot: "统筹", cd: "抽卡", lamp: "掌灯", theater: "剧场" };
         var html = '<div class="' + (popup ? 'adr048-tabs' : 'adr044-tabs') + ' adr-top-tabs" role="group" aria-label="切换导演">';
         kinds.forEach(function (type) {
             html += '<button id="adr044-tab-' + type + '" type="button" aria-pressed="' + (active === type) + '" class="' + (active === type ? 'active' : '') + '">' + labels[type] + '</button>';
@@ -11368,7 +11370,7 @@
     function adr048PageHTML(type) {
         var st = settings();
         var p = prefixOf(type);
-        var title = type === "plot" ? "统筹" : "情感导演";
+        var title = type === "plot" ? "统筹" : "情感";   // v1.51.1 面板上的叫法；和「统筹 · API 配置」对得上
         var autoKey = type === "plot" ? "autoInjectPlot" : "autoInjectEmotion";
 
         return '<div class="adr048-page" id="adr048-page-' + type + '"' + (st.activeTab === type ? '' : ' style="display:none"') + '>'
@@ -12720,7 +12722,7 @@
         try {
             var st = settings();
             var enabled = type === "plot" ? !!st.autoTriggerPlot : !!st.autoTriggerEmotion;
-            var label = type === "plot" ? "统筹" : "情感导演";
+            var label = type === "plot" ? "统筹" : "情感";   // v1.51.1 顶上进度条的小标题，跟着页签叫
             var count = adrDAssistantRoundCount();
             var n = autoTriggerRange(type);
 
