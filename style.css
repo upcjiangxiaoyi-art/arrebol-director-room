@@ -8766,3 +8766,63 @@ html #adr048-popup-panel[data-arb-theme="dawn"][data-adr-palette="ink"] #adr048-
 /* 墨白的内嵌抽屉（酒馆扩展页里那一份）：里面还有几处写死的粉（标题珠、总开关的小点、小风铃状态卡），
    整个抽屉收成灰度。那是一页不常开的设置，不像浮窗要跟着聊天滚，套一层滤镜不碍事 */
 html #adr044-drawer[data-adr-palette="ink"] > .inline-drawer { filter: grayscale(1); -webkit-filter: grayscale(1); }
+
+
+/* ============================================================
+   v1.52.1 抽卡页的箱子按钮：选上没选上看得出来（江：「选上没选上看不出来」）
+   v1.47.0 的「细边胶囊」规则把所有按钮统一成一个样子，箱子按钮的选中样式被一起盖掉了，
+   在浮窗里选中和没选中只差一点字色。这里把两种状态分开：
+   · 没选：透明底、细线、淡字。
+   · 选上：主题色的一层底、主题色的边、深字加粗，字前一颗带光晕的小圆点。只看形状（有没有点）也分得出。
+   墨白那一套选上就是实心墨底白字。
+   ============================================================ */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] {
+    --hx-chip-on-bg: var(--hx-glow);
+    --hx-chip-on-line: var(--adr-deck-accent);
+}
+@supports (color: color-mix(in srgb, red 10%, transparent)) {
+    html #adr048-popup-panel[data-arb-theme][data-arb-theme] {
+        --hx-chip-on-bg: color-mix(in srgb, var(--adr-deck-accent) 16%, transparent);
+        --hx-chip-on-line: color-mix(in srgb, var(--adr-deck-accent) 62%, transparent);
+    }
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body button.adr044-cd-chip.adr044-cd-chip.adr044-cd-chip:not(.on) {
+    background: transparent !important;
+    border: 1px solid var(--hx-hair) !important;
+    box-shadow: none !important;
+    color: var(--adr-deck-muted) !important;
+    -webkit-text-fill-color: var(--adr-deck-muted) !important;
+    font-weight: 400 !important;
+    opacity: .82 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body button.adr044-cd-chip.adr044-cd-chip.adr044-cd-chip.on {
+    background: var(--hx-chip-on-bg) !important;
+    border: 1px solid var(--hx-chip-on-line) !important;
+    box-shadow: 0 8px 16px -12px var(--hx-glow) !important;
+    color: var(--adr-deck-ink) !important;
+    -webkit-text-fill-color: var(--adr-deck-ink) !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body button.adr044-cd-chip.adr044-cd-chip.adr044-cd-chip.on::before {
+    content: "";
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin: 0 7px 1px -3px;
+    border-radius: 50%;
+    vertical-align: middle;
+    background: var(--adr-deck-accent);
+    box-shadow: 0 0 0 3px var(--hx-glow);
+}
+/* 还没认箱的（未分箱）：虚线，淡一点 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body button.adr044-cd-chip.adr044-cd-chip.adr044-cd-chip.stray { border-style: dashed !important; opacity: .62 !important; }
+/* 墨白：选上是实心墨底白字，点是白的 */
+html #adr048-popup-panel[data-arb-theme][data-arb-theme][data-adr-palette="ink"] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body button.adr044-cd-chip.adr044-cd-chip.adr044-cd-chip.on {
+    background: #111111 !important;
+    border-color: #111111 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    box-shadow: 0 6px 14px -10px rgba(0, 0, 0, .5) !important;
+}
+html #adr048-popup-panel[data-arb-theme][data-arb-theme][data-adr-palette="ink"] #adr048-popup-body#adr048-popup-body#adr048-popup-body#adr048-popup-body button.adr044-cd-chip.adr044-cd-chip.adr044-cd-chip.on::before { background: #ffffff; box-shadow: none; }
