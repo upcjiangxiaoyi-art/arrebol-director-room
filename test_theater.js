@@ -244,8 +244,9 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     section("篇幅与排版（v1.53.0）：正文至少 2000 字、排版字符不算；开着排版就每一场都排；出厂主题跟着重写");
     {
         const R = T.presetText(), has = (t, arr) => arr.every(x => t.indexOf(x) >= 0);
-        ok(has(R, ["② 篇幅：正文至少 2000 字，不设上限", "HTML 标签、样式、类名这些排版字符一个都不算", "主题里写的条数、格数、轮数是最少的量", "不是车轱辘话"]) && R.indexOf("一屏以内") < 0 && R.indexOf("120–200") < 0, "规矩第二条：正文至少 2000 字、不设上限、排版字符不算、条数格数是下限；旧的「一屏以内、120–200 字」没了");
-        ok(has(R, ["弹幕就做成一条条错落飘过的弹幕", "评论区就做成带昵称、楼层、点赞的评论卡片", "四格就做成带格号的分格", "主题没说怎么排，就照它的体裁自己设计", "正文的 2000 字另算"]), "规矩第六条：照主题体裁做对应的排版，排版不顶字数");
+        ok(has(R, ["② 篇幅：主题里写了字数，就照主题的字数来；没写，正文至少 2000 字，不设上限", "主题里的条数、格数、轮数这时算最少的量", "HTML 标签、样式、类名这些排版字符一个都不算", "不是车轱辘话"]) && R.indexOf("一屏以内") < 0 && R.indexOf("120–200") < 0, "规矩第二条（v1.53.1 照以前的说法）：主题写了字数照主题；没写正文至少 2000 字、条数格数是下限；排版字符不算");
+        ok(has(R, ["弹幕就做成一条条错落飘过的弹幕", "评论区就做成带昵称、楼层、点赞的评论卡片", "四格就做成带格号的分格", "主题没说怎么排，就照它的体裁自己设计", "排版字符不算进正文的字数"]), "规矩第六条：照主题体裁做对应的排版，排版不顶字数");
+        ok(["没写就 120–200 字", "三百字以内", "500 字左右", "写 800-1200 个字", "一千字", "两千字上下"].every(x => T.setsLength(x)) && !["8–12 条", "十几条", "说出那两个字", "每格一行", "二十条以上", "四格"].some(x => T.setsLength(x)) && !Object.values(T.factory).some(x => T.setsLength(x)), "认得出主题自己定了字数（带数字的字数写法），条数、格数和「两个字」不算；出厂六个都没定字数");
         ok(has(R, ["每一场你同时是美编", "照本场主题把它排成对应的样子", "篇幅长，就分段、分块、分组"]) && R.indexOf("一小段场外内容") < 0 && R.indexOf("主题点名要排版时，你同时是美编") < 0, "人设层的美编那段跟着改：每一场都排，篇幅长就分块");
         ok(Object.keys(T.factory).length === 6 && Object.keys(T.factoryV1).length === 6 && Object.keys(T.factory).every(k => T.factory[k] !== T.factoryV1[k] && /排版做成/.test(T.factory[k])), "出厂六个主题都重写了，每个都写明排成什么样；旧的六段留着做比对");
         ok(T.factory["读者评论区"].indexOf("二十条以上") >= 0 && T.factory["Q版四格"].indexOf("三到五个最戳的场面，每个场面一组四格") >= 0 && T.factory["弹幕吐槽"].indexOf("一波一波来") >= 0, "出厂主题的条数格数放大到写得满 2000 字");
@@ -453,7 +454,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     e.setScript((n, body) => isTheater(body) ? dirty : "别的回答");
     await tick(500); click(W, P("#adr044-theater-now")); await tick(1800);
     const lastReq = e.calls[e.calls.length - 1];
-    ok(lastReq.body.messages[0].content.indexOf("⑥ 排版：每一场都用 HTML / CSS 排出来") > 0 && lastReq.body.messages[1].content.indexOf("用 HTML / CSS 照主题排版。正文至少 2000 字（排版字符不算）") > 0, "请求里带的是每一场都排版、正文至少 2000 字");
+    ok(lastReq.body.messages[0].content.indexOf("⑥ 排版：每一场都用 HTML / CSS 排出来") > 0 && lastReq.body.messages[1].content.indexOf("用 HTML / CSS 照主题排版。篇幅照规矩第二条：主题写了字数就照主题，没写正文至少 2000 字（排版字符不算）") > 0, "请求里带的是每一场都排版、篇幅照规矩第二条");
     ok(e.chat[9].mes === pre9 + '\n\n<details class="arrebol-d-theater" open><summary>🎭 红霞剧场 · 弹幕吐槽</summary>' + tidy.text + '</details>', "楼里存的是理过的那段 HTML，外面还是那个折叠块", JSON.stringify(e.chat[9].mes.slice(pre9.length)));
     ok(e.chat[9].mes.slice(pre9.length + 2).indexOf("\n") < 0 && e.chat[9].mes.replace(stripRe, "") === pre9, "整块一行；剥离正则套上去恢复原样");
     ok(fmt.length === 1 && fmt[0].id === 9 && fmt[0].text.indexOf('<details class="arrebol-d-theater" open>') === 0 && fmt[0].isUser === false && fmt[0].name === "阿尔", "那一块交给酒馆自己的 messageFormatting（美化正则、消毒、style 作用域都走它的）", JSON.stringify(fmt.map(x => x.id)));

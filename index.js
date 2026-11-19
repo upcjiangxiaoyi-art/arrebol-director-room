@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.53.0｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.53.1｜ripple & GPT & Claude
+ * v1.53.1 剧场篇幅照以前的说法：主题里写了字数就照主题，没写正文至少 2000 字（排版字符不算）；状态行遇到主题自己定字数的不再提 2000（提议 江「和以前的措辞一样，写了字数按小剧场要求来，没写至少 2000」；施工 Claude）
  * v1.53.0 红霞剧场改长、改成每一场都排版：正文至少 2000 字不设上限（排版字符不算），主题里的条数格数算下限；排版开着就照主题体裁做对应的样子；出厂六个主题重写；状态行报正文字数；长稿等回的时限放到 5 分钟（提议 江「200 个不够干啥的」「一定要做相应的渲染」；施工 Claude）
  * v1.52.1 抽卡页的箱子按钮选上没选上看得出来了：v1.47.0 的胶囊规则把选中样式一起盖掉了；现在没选是透明底淡字，选上是主题色底、加粗、字前一颗小圆点，墨白选上是实心墨底（报告 江「选上没选上看不出来」；施工 Claude）
  * v1.52.0 两位导演改四处：贴耳稿各占一格（不再互相顶掉，也可以选回只贴最新一份）；稿子分「这几楼」和长期两类，前者挂 3 楼自动撤下；判「维持」时不往楼里挂、不换稿；出厂提示词重写（先分演法不同与真出戏、提醒必须配换成什么、验收有了位置），只升级没改过的（提议 江「情感和统筹还有什么可改进的，能起到真实作用」；施工 Claude）
@@ -127,7 +128,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.53.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.53.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     // v1.52.0 两位导演的出厂提示词重写：允许判「维持」、先分「演法不同」和「真出戏」、稿子分「这几楼」和长期两类、
     // 提醒必须配「换成什么」。旧的两份留作 _V1 / _V2：存量设置和模板里逐字相同的才就地升级，人自己改过的不动。
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容、跟组记录和用户补充信息，只看情感曲线与人设稳定，不写正文。\n\n先分清两种情况，再下判断：\n· 演法不同：主模型的演法和你预想的不一样，但从角色出发说得通。这不算出戏，顺着它找补，别拧回你想的那条路。\n· 真出戏：秒爱、秒软、秒承诺、隐藏深情化；把照顾写成占有，把心疼写成告白；替用户演了心理和选择；或者人设明显断了。这才修正。\n\n你要看的：\n1. 现在的关系走到了哪一步。\n2. 情绪温度是过热、过冷、空转，还是错拍。\n3. 角色照人设该怎么接住这份情绪。\n4. 接下来该升温、降温、维持、错拍，还是再等等。\n\n输出纪律（硬性）：\n· 每条意见都要落到一个演得出来的动作，或一句话的方向。「让他先问她吃了没，再绕回正题」合格；「放慢节奏」「注意分寸」这类口号不合格，不要写。\n· 不许只说别做什么。要提醒，就写成「别这样 → 换成这样」，最多两条。\n· 戏走得好好的，就判「维持」，只回【判断】那一行，别硬找毛病。\n· 不替用户决定行动。不写正文。不写分析过程。全文不超过 320 字。\n\n固定输出格式（用不上的栏目整栏不写）：\n【验收】\n有此前指导才写，一句：上次的方向是执行了、没执行，还是执行过头。连着两次没执行，这次换一种说法，别原话重复。\n\n【判断】\n维持 / 找补 / 修正（三选一）\n\n【这几楼】\n只管接下来两三楼的事，过后会自动撤下。\n\n【长期边界】\n要一直守的人设与关系边界。它会一直挂着，所以每次都写全，哪怕和上次一样。\n\n【换个写法】\n别这样 → 换成这样";
@@ -8410,18 +8411,22 @@
         "【红霞剧场 · 规矩】",
         "红霞剧场贴在这部互动小说每一楼的正文后面，是给读者看的场外内容，不是正文：不推进剧情、不替角色做正文里没做的决定、不剧透后面、不给修改意见。",
         "① 只针对本篇这一楼刚发生的事，引用细节要准，别凭印象编；此前剧情只用来接梗、翻旧账。",
-        "② 篇幅：正文至少 2000 字，不设上限。这里的字只算读者读到的文字，HTML 标签、样式、类名这些排版字符一个都不算。主题里写的条数、格数、轮数是最少的量：不到 2000 字就接着往下写，多飘几波弹幕、多画几组四格、多拍几条花絮、采访多问几轮。写长靠的是多挖这一楼的细节、多换几个角度，不是车轱辘话。",
+        "② 篇幅：主题里写了字数，就照主题的字数来；没写，正文至少 2000 字，不设上限，主题里的条数、格数、轮数这时算最少的量，不够就接着往下写（多飘几波弹幕、多画几组四格、多拍几条花絮、采访多问几轮）。字数只算读者读到的文字，HTML 标签、样式、类名这些排版字符一个都不算。写长靠的是多挖这一楼的细节、多换几个角度，不是车轱辘话。",
         "③ 好笑或者戳人，二选一，别端着；可以损，但损的是剧情和角色，不损读者。",
         "④ 人设不崩：角色可以出戏，但嘴脸还是那个人；场外人物说的话要像那种人会说的，名字、称呼、地点都用这个世界里有的。",
         "⑤ 这局的基调（如果有）是底色：甜的局别写成虐的，虐的局可以苦中作乐。"
     ];
     var ADR_THEATER_RULE_PLAIN = "⑥ 纯文本，用换行分条分格，可以有少量 emoji；不要 markdown 标题、不要代码块、不要任何 HTML 标签。";
     // v1.44.0 允许排版时的第六条。v1.53.0 起开着排版就每一场都排（江：「要求一定要做相应的渲染」），不再等主题点名
-    var ADR_THEATER_RULE_RICH = "⑥ 排版：每一场都用 HTML / CSS 排出来，照本场主题的体裁做成对应的样子。弹幕就做成一条条错落飘过的弹幕；评论区就做成带昵称、楼层、点赞的评论卡片；对话就做成聊天气泡或者剧本页；四格就做成带格号的分格；采访就让问和答分成两种样式。主题没说怎么排，就照它的体裁自己设计。排版是给文字穿衣服，不顶字数：正文的 2000 字另算。输出一段自包含的片段，样式写在标签的 style 属性里，或者放一个 <style> 块且每条选择器都以你自己起的类名开头（比如 .hx-danmu）；不要 script、不要 iframe、不要外链图片和字体、不要 position:fixed、不要 <details>、不要整页的 html / body 标签，宽度不超过容器。";
+    var ADR_THEATER_RULE_RICH = "⑥ 排版：每一场都用 HTML / CSS 排出来，照本场主题的体裁做成对应的样子。弹幕就做成一条条错落飘过的弹幕；评论区就做成带昵称、楼层、点赞的评论卡片；对话就做成聊天气泡或者剧本页；四格就做成带格号的分格；采访就让问和答分成两种样式。主题没说怎么排，就照它的体裁自己设计。排版是给文字穿衣服，不顶字数：排版字符不算进正文的字数。输出一段自包含的片段，样式写在标签的 style 属性里，或者放一个 <style> 块且每条选择器都以你自己起的类名开头（比如 .hx-danmu）；不要 script、不要 iframe、不要外链图片和字体、不要 position:fixed、不要 <details>、不要整页的 html / body 标签，宽度不超过容器。";
     var ADR_THEATER_RULE_TAIL = "⑦ 只输出剧场正文本身：不要标题行、不要「好的」、不要解释你在干什么。";
 
     var ADR_THEATER_IDLE_MS = 300000;
     var ADR_THEATER_MIN_CHARS = 2000;
+    // v1.53.1 主题自己写了字数（「120–200 字」「三百字以内」「500 字左右」……）就照主题，不提 2000 字。
+    // 只认带数字的字数写法；「十几条」「两个字」这种不算
+    var ADR_THEATER_LEN_RE = /(?:\d{2,}|[一二三四五六七八九两]?[百千万])\s*(?:[–\-~～到至]\s*(?:\d+|[一二三四五六七八九两]?[百千万]))?\s*(?:个)?字/;
+    function adrTheaterThemeSetsLength(text) { return ADR_THEATER_LEN_RE.test(String(text || "")); }
     // 读者读到的字数：去掉标签和样式、去掉空白
     function adrTheaterBodyChars(text, rich) {
         var plain = rich ? adrTheaterPlainOf(text) : String(text || "");
@@ -8838,7 +8843,7 @@
             var allowRich = adrTheaterRichAllowed();
             var messages = [
                 { role: "system", content: adrTheaterPresetText() + "\n\n" + adrLampMaterialsText(mat) },
-                { role: "user", content: "【本场主题 · " + theme.name + "】\n" + theme.text + "\n\n【任务】针对本篇（#" + idx + "）写一场。只输出剧场正文本身：不要标题、不要解释、不要 markdown 围栏" + (allowRich ? "；用 HTML / CSS 照主题排版。正文至少 2000 字（排版字符不算），主题里的条数格数是下限。" : "、不要 HTML 标签。正文至少 2000 字，主题里的条数格数是下限。") }
+                { role: "user", content: "【本场主题 · " + theme.name + "】\n" + theme.text + "\n\n【任务】针对本篇（#" + idx + "）写一场。只输出剧场正文本身：不要标题、不要解释、不要 markdown 围栏" + (allowRich ? "；用 HTML / CSS 照主题排版。" : "、不要 HTML 标签。") + "篇幅照规矩第二条：主题写了字数就照主题，没写正文至少 2000 字（排版字符不算）。" }
             ];
             var lastPaint = 0;
             var out = await adrDChatCompletionText({
@@ -8865,7 +8870,8 @@
             var how = adrTheaterShow(idx, theme.name, cleaned.text, cleaned.rich);   // v1.43.2 静默上屏：不重画整楼、不广播
             adrTheaterSaveSoon();
             var bodyN = adrTheaterBodyChars(cleaned.text, cleaned.rich);
-            adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾 ✓" + (cleaned.rich ? "（HTML 排版）" : "") + " · 正文 " + bodyN + " 字" + (bodyN < ADR_THEATER_MIN_CHARS ? "（比要求的 " + ADR_THEATER_MIN_CHARS + " 字短）" : "") + (how === "none" ? "（这楼不在画面里，下次重画时出现）" : ""), "#8ed99d");
+            var ownLen = adrTheaterThemeSetsLength(theme.text);
+            adrTheaterStatus("🎬 #" + idx + " 的「" + theme.name + "」已插在楼尾 ✓" + (cleaned.rich ? "（HTML 排版）" : "") + " · 正文 " + bodyN + " 字" + (ownLen ? "（字数照主题）" : (bodyN < ADR_THEATER_MIN_CHARS ? "（比要求的 " + ADR_THEATER_MIN_CHARS + " 字短）" : "")) + (how === "none" ? "（这楼不在画面里，下次重画时出现）" : ""), "#8ed99d");
             try { console.log("[Arrebol D] theater #" + idx + " 「" + theme.name + "」 (" + (reason || "") + ")"); } catch (eL) {}
             return true;
         } catch (e) {
@@ -9188,7 +9194,7 @@
             + secClose()
 
             + secOpen("📚 主题仓 · 这一场怎么写", false, "theater-lib")
-            + '<div class="' + noteClass + '">出厂六个；能改、能加、能删，也能整包导入导出。每个主题就是一段话：谁在说、几条几格、什么腔调、排成什么样。排版开着时每一场都会排，写法里写了长什么样就照它，没写她自己设计。正文至少 2000 字，主题里的条数格数算下限。</div>'
+            + '<div class="' + noteClass + '">出厂六个；能改、能加、能删，也能整包导入导出。每个主题就是一段话：谁在说、几条几格、什么腔调、排成什么样。排版开着时每一场都会排，写法里写了长什么样就照它，没写她自己设计。主题里写了字数就照主题；没写，正文至少 2000 字，条数格数算下限。</div>'
             + '<select id="adr044-theater-select" data-optsig="' + esc(adrCdOptSig("theater", names, sel)) + '">' + adrTheaterOptionsHTML(sel) + '</select>'
             + '<input type="text" id="adr044-theater-name" placeholder="主题名，如：弹幕吐槽 / 场外嗑瓜子 / 你自己起" value="' + esc(sel) + '">'
             + '<textarea id="adr044-theater-text" rows="5" placeholder="这个主题怎么写">' + esc(sel ? String(store[sel] || "") : "") + '</textarea>'
@@ -9379,7 +9385,7 @@
     try {
         rootWin().__adrTheaterTest = {
             now: adrTheaterNow, onMessage: adrTheaterOnMessage, block: adrTheaterBlock, strip: adrTheaterStrip, has: adrTheaterHas, clean: adrTheaterClean,
-            pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, factoryV1: ADR_THEATER_FACTORY_V1, bodyChars: adrTheaterBodyChars, preset: ADR_THEATER_PRESET, presetText: adrTheaterPresetText,
+            pick: adrTheaterPickTheme, store: adrTheaterStore, names: adrTheaterNames, factory: ADR_THEATER_FACTORY, factoryV1: ADR_THEATER_FACTORY_V1, bodyChars: adrTheaterBodyChars, setsLength: adrTheaterThemeSetsLength, preset: ADR_THEATER_PRESET, presetText: adrTheaterPresetText,
             persona: ADR_THEATER_PERSONA, personaText: adrTheaterPersonaText, rulesText: adrTheaterRulesText,
             stance: adrHxStance,
             regexText: ADR_THEATER_STRIP_REGEX_TEXT, state: adrTheaterState, remove: adrTheaterRemoveLatest, write: adrTheaterWrite, abort: adrTheaterAbort,
