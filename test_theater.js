@@ -241,6 +241,26 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     await tick(500); click(W, P("#adr044-theater-remove")); await tick(100);
     ok(P("#adr044-theater-status").textContent.indexOf("没有剧场可撤") >= 0, "没有可撤的时候直说");
 
+    section("篇幅与排版（v1.53.0）：正文至少 2000 字、排版字符不算；开着排版就每一场都排；出厂主题跟着重写");
+    {
+        const R = T.presetText(), has = (t, arr) => arr.every(x => t.indexOf(x) >= 0);
+        ok(has(R, ["② 篇幅：正文至少 2000 字，不设上限", "HTML 标签、样式、类名这些排版字符一个都不算", "主题里写的条数、格数、轮数是最少的量", "不是车轱辘话"]) && R.indexOf("一屏以内") < 0 && R.indexOf("120–200") < 0, "规矩第二条：正文至少 2000 字、不设上限、排版字符不算、条数格数是下限；旧的「一屏以内、120–200 字」没了");
+        ok(has(R, ["弹幕就做成一条条错落飘过的弹幕", "评论区就做成带昵称、楼层、点赞的评论卡片", "四格就做成带格号的分格", "主题没说怎么排，就照它的体裁自己设计", "正文的 2000 字另算"]), "规矩第六条：照主题体裁做对应的排版，排版不顶字数");
+        ok(has(R, ["每一场你同时是美编", "照本场主题把它排成对应的样子", "篇幅长，就分段、分块、分组"]) && R.indexOf("一小段场外内容") < 0 && R.indexOf("主题点名要排版时，你同时是美编") < 0, "人设层的美编那段跟着改：每一场都排，篇幅长就分块");
+        ok(Object.keys(T.factory).length === 6 && Object.keys(T.factoryV1).length === 6 && Object.keys(T.factory).every(k => T.factory[k] !== T.factoryV1[k] && /排版做成/.test(T.factory[k])), "出厂六个主题都重写了，每个都写明排成什么样；旧的六段留着做比对");
+        ok(T.factory["读者评论区"].indexOf("二十条以上") >= 0 && T.factory["Q版四格"].indexOf("三到五个最戳的场面，每个场面一组四格") >= 0 && T.factory["弹幕吐槽"].indexOf("一波一波来") >= 0, "出厂主题的条数格数放大到写得满 2000 字");
+        ok(T.bodyChars('<style>.hx-a{color:red;padding:4px}</style><div class="hx-a" style="font-size:12px">前排 &amp; 打卡</div>', true) === 5 && T.bodyChars("一二三\n四 五", false) === 5, "数正文只数读者读到的字：标签、样式块、空白不算");
+        // 存量迁移
+        const keep = e.st().theaterStore; const keepCur = e.st().theaterCurrent;
+        e.st().theaterStore = { "弹幕吐槽": T.factoryV1["弹幕吐槽"], "花絮NG": T.factoryV1["花絮NG"] + "多写一条。", "奶茶店老板娘": "自己写的" };
+        e.st().theaterSeeded = Object.keys(T.factory);
+        const st2 = T.store();
+        ok(st2["弹幕吐槽"] === T.factory["弹幕吐槽"], "仓里还是上一版出厂原文的主题：换成新的");
+        ok(st2["花絮NG"] === T.factoryV1["花絮NG"] + "多写一条。" && st2["奶茶店老板娘"] === "自己写的", "改过的出厂主题、自己写的主题：一个字不动");
+        ok(!("Q版四格" in st2), "删过的出厂主题不会被迁移带回来");
+        e.st().theaterStore = keep; e.st().theaterCurrent = keepCur;
+    }
+
     section("主题仓：自己写、固定、随机、删除");
     const nameEl = P("#adr044-theater-name"), textEl = P("#adr044-theater-text");
     nameEl.value = "奶茶店老板娘"; textEl.value = "楼下奶茶店老板娘一边摇奶茶一边跟熟客八卦这一楼，三句话，句句带价目表。";
@@ -415,7 +435,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     fold.checked = false; change(W, fold); await tick(50);
     const richBox = P("#adr044-theater-rich");
     ok(!!richBox && richBox.checked && e.st().theaterRich !== false, "「允许 HTML / CSS 排版」默认勾着");
-    ok(T.presetText().indexOf("只有本场主题明确要求用 HTML / CSS 排版时才输出 HTML") > 0 && T.presetText().indexOf("不要 script") > 0 && T.presetText().indexOf("不要 <details>") > 0, "允许时规矩第六条：主题点名才给 HTML，并写明不许的东西");
+    ok(T.presetText().indexOf("⑥ 排版：每一场都用 HTML / CSS 排出来，照本场主题的体裁做成对应的样子") > 0 && T.presetText().indexOf("不要 script") > 0 && T.presetText().indexOf("不要 <details>") > 0 && T.presetText().indexOf("只有本场主题明确要求") < 0, "排版开着时规矩第六条：每一场都排（v1.53.0 起不等主题点名），并写明不许的东西");
     const dirty = '```html\n<style>\n.hx-d { color: red; }\n</style>\n<div class="hx-d" onclick="alert(1)">\n  <span style="color:#f66">前排</span>\n  <details><summary>点开</summary>里面</details>\n  <a href="javascript:alert(2)">链</a>\n  <script>alert(3)</script>\n  <iframe src="x"></iframe>\n</div>\n```';
     const tidy = T.clean(dirty, true);
     ok(tidy.rich === true && tidy.text.indexOf("\n") < 0, "认出是 HTML；有块级结构的整段压成一行（酒馆的 markdown 遇空行会把 HTML 拆散）");
@@ -433,7 +453,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
     e.setScript((n, body) => isTheater(body) ? dirty : "别的回答");
     await tick(500); click(W, P("#adr044-theater-now")); await tick(1800);
     const lastReq = e.calls[e.calls.length - 1];
-    ok(lastReq.body.messages[0].content.indexOf("只有本场主题明确要求用 HTML / CSS 排版时才输出 HTML") > 0 && lastReq.body.messages[1].content.indexOf("主题没点名要 HTML 就用纯文本") > 0, "请求里带的是允许排版的规矩");
+    ok(lastReq.body.messages[0].content.indexOf("⑥ 排版：每一场都用 HTML / CSS 排出来") > 0 && lastReq.body.messages[1].content.indexOf("用 HTML / CSS 照主题排版。正文至少 2000 字（排版字符不算）") > 0, "请求里带的是每一场都排版、正文至少 2000 字");
     ok(e.chat[9].mes === pre9 + '\n\n<details class="arrebol-d-theater" open><summary>🎭 红霞剧场 · 弹幕吐槽</summary>' + tidy.text + '</details>', "楼里存的是理过的那段 HTML，外面还是那个折叠块", JSON.stringify(e.chat[9].mes.slice(pre9.length)));
     ok(e.chat[9].mes.slice(pre9.length + 2).indexOf("\n") < 0 && e.chat[9].mes.replace(stripRe, "") === pre9, "整块一行；剥离正则套上去恢复原样");
     ok(fmt.length === 1 && fmt[0].id === 9 && fmt[0].text.indexOf('<details class="arrebol-d-theater" open>') === 0 && fmt[0].isUser === false && fmt[0].name === "阿尔", "那一块交给酒馆自己的 messageFormatting（美化正则、消毒、style 作用域都走它的）", JSON.stringify(fmt.map(x => x.id)));
@@ -665,7 +685,7 @@ const isTheater = body => body.messages[0].content.indexOf("红霞剧场") >= 0 
         richBox.checked = false; change(W, richBox); await tick(80);
         ok(T.presetText().indexOf(T.persona) === 0 && T.presetText().indexOf("不要任何 HTML 标签") > 0 && P("#adr044-theater-rules-view").textContent.indexOf("不要任何 HTML 标签") > 0, "关掉排版：人设不变，规矩第六条换成纯文本，面板里的规矩全文跟着变");
         richBox.checked = wasRich; change(W, richBox); await tick(80);
-        ok(P("#adr044-theater-rules-view").textContent.indexOf("才输出 HTML") > 0, "开回来规矩全文也跟着变回去");
+        ok(P("#adr044-theater-rules-view").textContent.indexOf("⑥ 排版：每一场都用 HTML / CSS 排出来") > 0, "开回来规矩全文也跟着变回去");
         W.__adrDGenTest.setQuietMs(4000);
     }
 
