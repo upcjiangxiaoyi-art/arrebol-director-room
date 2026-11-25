@@ -1,6 +1,7 @@
 
 /*
- * Arrebol D 暗河红霞导演系统 v1.53.1｜ripple & GPT & Claude
+ * Arrebol D 暗河红霞导演系统 v1.54.0｜ripple & GPT & Claude
+ * v1.54.0 第十套配色「绯霞星屑」：红云、白雾、一带星屑和几片彩虹光斑，台头压在红云上用白字；浮标是红云白雾上撒着星屑、两颗四角星（提议 江，发来一张图「就这种感觉，能做成一个新 ui 么」；施工 Claude）
  * v1.53.1 剧场篇幅照以前的说法：主题里写了字数就照主题，没写正文至少 2000 字（排版字符不算）；状态行遇到主题自己定字数的不再提 2000（提议 江「和以前的措辞一样，写了字数按小剧场要求来，没写至少 2000」；施工 Claude）
  * v1.53.0 红霞剧场改长、改成每一场都排版：正文至少 2000 字不设上限（排版字符不算），主题里的条数格数算下限；排版开着就照主题体裁做对应的样子；出厂六个主题重写；状态行报正文字数；长稿等回的时限放到 5 分钟（提议 江「200 个不够干啥的」「一定要做相应的渲染」；施工 Claude）
  * v1.52.1 抽卡页的箱子按钮选上没选上看得出来了：v1.47.0 的胶囊规则把选中样式一起盖掉了；现在没选是透明底淡字，选上是主题色底、加粗、字前一颗小圆点，墨白选上是实心墨底（报告 江「选上没选上看不出来」；施工 Claude）
@@ -128,7 +129,7 @@
     "use strict";
 
     var EXT = "arrebol-d-final-v1040-stable-settings";
-    var ADR_D_VERSION = "1.53.1";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
+    var ADR_D_VERSION = "1.54.0";   // 台头与抽屉标题显示用，升级后一眼看出浏览器跑的是不是新代码
     // v1.52.0 两位导演的出厂提示词重写：允许判「维持」、先分「演法不同」和「真出戏」、稿子分「这几楼」和长期两类、
     // 提醒必须配「换成什么」。旧的两份留作 _V1 / _V2：存量设置和模板里逐字相同的才就地升级，人自己改过的不动。
     var EMOTION_PRESET = "你是 RP 情感导演。请阅读最近的聊天内容、跟组记录和用户补充信息，只看情感曲线与人设稳定，不写正文。\n\n先分清两种情况，再下判断：\n· 演法不同：主模型的演法和你预想的不一样，但从角色出发说得通。这不算出戏，顺着它找补，别拧回你想的那条路。\n· 真出戏：秒爱、秒软、秒承诺、隐藏深情化；把照顾写成占有，把心疼写成告白；替用户演了心理和选择；或者人设明显断了。这才修正。\n\n你要看的：\n1. 现在的关系走到了哪一步。\n2. 情绪温度是过热、过冷、空转，还是错拍。\n3. 角色照人设该怎么接住这份情绪。\n4. 接下来该升温、降温、维持、错拍，还是再等等。\n\n输出纪律（硬性）：\n· 每条意见都要落到一个演得出来的动作，或一句话的方向。「让他先问她吃了没，再绕回正题」合格；「放慢节奏」「注意分寸」这类口号不合格，不要写。\n· 不许只说别做什么。要提醒，就写成「别这样 → 换成这样」，最多两条。\n· 戏走得好好的，就判「维持」，只回【判断】那一行，别硬找毛病。\n· 不替用户决定行动。不写正文。不写分析过程。全文不超过 320 字。\n\n固定输出格式（用不上的栏目整栏不写）：\n【验收】\n有此前指导才写，一句：上次的方向是执行了、没执行，还是执行过头。连着两次没执行，这次换一种说法，别原话重复。\n\n【判断】\n维持 / 找补 / 修正（三选一）\n\n【这几楼】\n只管接下来两三楼的事，过后会自动撤下。\n\n【长期边界】\n要一直守的人设与关系边界。它会一直挂着，所以每次都写全，哪怕和上次一样。\n\n【换个写法】\n别这样 → 换成这样";
@@ -148,7 +149,7 @@
         popupClearVeil: true,       // 浮窗周围不盖毛玻璃。v1.49.0 是默认关的试验开关；江在 iPhone 上两枚都验过没事，v1.50.0 起默认开，开关留着当退路
         popupSkinV150: false,       // 一次性迁移记号：v1.49.0 存下来的「关」是那一版的默认值，不是谁选的；升上来时打开一次，之后听人的
         // 留白版式 v1.49.0–1.50.0 也有一枚开关（popupAiry）；v1.50.1 起它就是浮窗的样子，不再能退回旧版式，开关和这个设置都撤了
-        themePalette: "",          // dusk / sunset / pearl / celadon / wine / morandi / skyrose / ink / pine; empty migrates the previous light switch.
+        themePalette: "",          // dusk / sunset / pearl / celadon / wine / morandi / skyrose / ink / pine / scarlet; empty migrates the previous light switch.
         dawnTheme: false,           // v1.14.4 开灯：浮窗朝霞浅色皮，默认关（暗河红霞）
         showAutoTriggerPopup: true,
         streamEnabled: true,        // v1.27.1 导演请求流式接收；中转站不支持流式时可关
@@ -11856,7 +11857,7 @@
                 var veil = palette === "celadon" ? "rgba(205,220,228,.42)"
                     : (palette === "morandi" ? "rgba(214,192,196,.42)"
                     : (palette === "skyrose" ? "rgba(226,214,234,.40)"
-                    : (inkPal ? "rgba(238,238,236,.46)" : "rgba(228,207,224,.40)")));
+                    : (inkPal ? "rgba(238,238,236,.46)" : (palette === "scarlet" ? "rgba(240,214,218,.42)" : "rgba(228,207,224,.40)"))));
                 if (mode.clear) {
                     // 不盖毛玻璃：幕布透明，而且不接点击——浮窗万一没画出来，页面也不会被一层看不见的东西盖死。
                     // transform 是为了让幕布继续当浮窗的定位参照：原来靠 backdrop-filter 顺带当着，去掉模糊以后这层关系要自己留住。
@@ -12133,10 +12134,11 @@
     // v1.36.0：第七套「晴空粉霞」（skyrose），浅色。顺序：夜色 → 粉霞 → 雾珠 → 天青 → 红霞 → 烟粉 → 晴空 → 回到夜色。
     // v1.51.0：第八套「素笺墨白」（ink），浅色，纯黑白；第九套「松烟月色」（pine），深色组第三员，松烟墨绿打底、月色淡金点睛。
     // 顺序：夜色 → 粉霞 → 雾珠 → 天青 → 红霞 → 烟粉 → 晴空 → 墨白 → 松烟 → 回到夜色。这两套的浮标各有自己的图案。
-    var ADR_PALETTES = ["dusk", "sunset", "pearl", "celadon", "wine", "morandi", "skyrose", "ink", "pine"];
+    // v1.54.0：第十套「绯霞星屑」（scarlet），浅色。红云、白雾、一带星屑和几片彩虹光斑；台头压在红云上，字是白的。接在松烟后面。
+    var ADR_PALETTES = ["dusk", "sunset", "pearl", "celadon", "wine", "morandi", "skyrose", "ink", "pine", "scarlet"];
     var ADR_DARK_PALETTES = ["dusk", "wine", "pine"];
-    var ADR_PALETTE_LABEL = { dusk: "暗河夜色", sunset: "粉霞水光", pearl: "雾珠月汐", celadon: "天青如梦", wine: "暗河红霞", morandi: "莫兰迪烟粉", skyrose: "晴空粉霞", ink: "素笺墨白", pine: "松烟月色" };
-    var ADR_PALETTE_ICON = { dusk: "🌙", sunset: "🌸", pearl: "🫧", celadon: "🕊️", wine: "🌹", morandi: "🎀", skyrose: "🌤️", ink: "◐", pine: "🌲" };
+    var ADR_PALETTE_LABEL = { dusk: "暗河夜色", sunset: "粉霞水光", pearl: "雾珠月汐", celadon: "天青如梦", wine: "暗河红霞", morandi: "莫兰迪烟粉", skyrose: "晴空粉霞", ink: "素笺墨白", pine: "松烟月色", scarlet: "绯霞星屑" };
+    var ADR_PALETTE_ICON = { dusk: "🌙", sunset: "🌸", pearl: "🫧", celadon: "🕊️", wine: "🌹", morandi: "🎀", skyrose: "🌤️", ink: "◐", pine: "🌲", scarlet: "✨" };
 
     function adr048IsDarkPalette(palette) { return ADR_DARK_PALETTES.indexOf(palette) >= 0; }
 
@@ -12215,6 +12217,18 @@
                 + '<path class="arb-fab-ridge-far" d="M0 44 L0 33 Q 12 27 24 31 T 50 29 T 78 32 T 104 27 T 120 30 L120 44 Z" fill="#3f7a68" opacity=".55"/>'
                 + '<path class="arb-fab-ridge-near" d="M0 44 L0 39 Q 16 34 34 38 T 70 36 T 100 39 T 120 36 L120 44 Z" fill="#0a1714" opacity=".92"/>'
                 + '<path class="arb-fab-moon-arc" d="M21 9.5 A 7.5 7.5 0 0 0 21 24.5 A 9.6 9.6 0 0 1 21 9.5 Z" fill="#e8d9a8"/>'
+                + '</g>'
+                // 绯霞星屑：一带斜着撒过去的星屑，一颗四角星
+                + '<g class="arb-fab-art arb-fab-art-scarlet" display="none" clip-path="url(#pkARB-clip)">'
+                + '<g fill="#fff">'
+                + '<circle cx="12" cy="9" r="1" opacity=".9"/><circle cx="17" cy="14" r=".7" opacity=".7"/><circle cx="22" cy="11" r="1.2"/><circle cx="26" cy="17" r=".8" opacity=".8"/>'
+                + '<circle cx="31" cy="13" r=".6" opacity=".7"/><circle cx="15" cy="20" r=".6" opacity=".6"/><circle cx="35" cy="20" r=".9" opacity=".75"/><circle cx="29" cy="24" r=".6" opacity=".6"/>'
+                + '<circle cx="88" cy="24" r=".7" opacity=".7"/><circle cx="93" cy="29" r="1.1"/><circle cx="98" cy="25" r=".7" opacity=".8"/><circle cx="102" cy="32" r=".9" opacity=".85"/>'
+                + '<circle cx="107" cy="28" r=".6" opacity=".7"/><circle cx="96" cy="35" r=".6" opacity=".6"/><circle cx="109" cy="36" r="1" opacity=".9"/><circle cx="85" cy="31" r=".5" opacity=".6"/>'
+                + '</g>'
+                + '<g fill="#ffe7b0"><circle cx="19" cy="17" r=".8"/><circle cx="33" cy="16" r=".6"/><circle cx="100" cy="29" r=".7"/><circle cx="91" cy="34" r=".6"/></g>'
+                + '<path class="arb-fab-star" d="M24 5.5 Q24.6 10.4 29.5 11 Q24.6 11.6 24 16.5 Q23.4 11.6 18.5 11 Q23.4 10.4 24 5.5 Z" fill="#fff"/>'
+                + '<path class="arb-fab-star" d="M104 27 Q104.4 30.1 107.5 30.5 Q104.4 30.9 104 34 Q103.6 30.9 100.5 30.5 Q103.6 30.1 104 27 Z" fill="#fff" opacity=".9"/>'
                 + '</g>'
                 + '<g class="arb-fab-art arb-fab-art-ink" display="none">'
                 + '<circle class="arb-fab-ink-dot" cx="18" cy="22" r="4.4" fill="#111"/>'
